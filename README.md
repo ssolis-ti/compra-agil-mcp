@@ -102,11 +102,11 @@ El servidor está configurado para empaquetarse de manera compacta. Si decides p
 1. **Configuración directa en el cliente MCP:**
    Se puede configurar el comando de inicio usando `npx`:
    ```bash
-   npx mcp-compra-agil
+   npx @ssolis-ti/mcp-compra-agil
    ```
 2. **Instalación global en el sistema:**
    ```bash
-   npm install -g mcp-compra-agil
+   npm install -g @ssolis-ti/mcp-compra-agil
    # Ejecución directa del binario registrado
    mcp-compra-agil
    ```
