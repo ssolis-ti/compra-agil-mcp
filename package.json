@@ -1,5 +1,5 @@
 {
-  "name": "mcp-compra-agil",
+  "name": "@ssolis-ti/mcp-compra-agil",
   "version": "1.0.0",
   "description": "Servidor MCP para la API Compra Ágil v2 de Mercado Público (Chile)",
   "type": "module",
