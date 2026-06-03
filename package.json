@@ -9,6 +9,15 @@
   "files": [
     "dist"
   ],
+  "author": "ssolis-ti",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ssolis-ti/compra-agil-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ssolis-ti/compra-agil-mcp/issues"
+  },
+  "homepage": "https://github.com/ssolis-ti/compra-agil-mcp#readme",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
