@@ -1,0 +1,108 @@
+/**
+ * Tool: verificar_orden_compra
+ *
+ * Verifica si una Compra Ágil ya tiene una Orden de Compra (OC) emitida.
+ * Resuelve la limitación documentada donde el estado "oc_emitida" no aparece
+ * en la práctica y el campo codigo_orden_compra retorna null incluso con OC emitida.
+ *
+ * Implementa la lógica del Ejemplo 8.6 de la documentación oficial.
+ */
+
+import { z } from 'zod';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { CompraAgilApiError } from '../utils/error-handler.js';
+import { logger } from '../utils/logger.js';
+
+const TOOL_NAME = 'verificar_orden_compra';
+
+const TOOL_DESCRIPTION = `Verifica si una Compra Ágil específica ya tiene una Orden de Compra (OC) emitida.
+IMPORTANTE: El estado "oc_emitida" de la API NO funciona en la práctica. Esta herramienta resuelve esa limitación
+consultando el detalle del proceso y cruzando con la API de Órdenes de Compra de Mercado Público si existe un id_orden_compra.`;
+
+const inputSchema = {
+  codigo: z.string().describe(
+    'Código único de la Compra Ágil a verificar. Formato: XXXXXX-YYY-COTXX. Ej: "1057539-228-COT26".'
+  ),
+};
+
+export function registerVerificarOC(server: McpServer, client: CompraAgilClient): void {
+  server.registerTool(
+    TOOL_NAME,
+    {
+      description: TOOL_DESCRIPTION,
+      inputSchema: inputSchema,
+    },
+    async (args) => {
+      try {
+        const detalle = await client.detalle(args.codigo);
+
+        const idOrdenCompra = detalle.id_orden_compra ?? detalle.orden_compra?.id_orden_compra ?? null;
+        const idOc = detalle.orden_compra?.id_oc ?? null;
+        const tieneOC = idOrdenCompra !== null && idOrdenCompra !== undefined;
+
+        let detalleOCInfo = null;
+        if (tieneOC) {
+          try {
+            const ocResponse = await client.obtenerDetalleOC(idOrdenCompra);
+            if (ocResponse.Listado && ocResponse.Listado.length > 0) {
+              const oc = ocResponse.Listado[0];
+              detalleOCInfo = {
+                codigo_oc: oc.Codigo,
+                nombre_oc: oc.Nombre,
+                estado_oc: oc.Estado,
+                codigo_estado_oc: oc.CodigoEstado,
+                monto_total: oc.Total,
+                fecha_creacion: oc.FechaCreacion,
+                fecha_aceptacion: oc.FechaAceptacion,
+              };
+            }
+          } catch (e) {
+            logger.warn(`No se pudo obtener el detalle de la OC ${idOrdenCompra} desde la API: ${String(e)}`);
+          }
+        }
+
+        const result = {
+          codigo: detalle.codigo,
+          nombre: detalle.nombre,
+          estado_actual: detalle.estado.glosa,
+          convocatoria: detalle.convocatoria.descripcion,
+          verificacion_oc: {
+            tiene_orden_compra: tieneOC,
+            id_orden_compra: idOrdenCompra,
+            id_oc: idOc,
+            codigo_orden_compra: detalleOCInfo?.codigo_oc ?? detalle.orden_compra?.codigo_orden_compra ?? null,
+            estado_orden_compra: detalleOCInfo?.estado_oc ?? detalle.orden_compra?.estado_orden_compra ?? null,
+            detalle_orden: detalleOCInfo,
+            nota: tieneOC
+              ? `La OC fue emitida. Código: ${detalleOCInfo?.codigo_oc ?? 'Desconocido'}. Usa la herramienta obtener_detalle_orden_compra para profundizar.`
+              : 'No se ha emitido una Orden de Compra para esta Compra Ágil aún.',
+          },
+          proveedor_seleccionado: detalle.proveedores_cotizando
+            .filter((p) => p.proveedor_seleccionado === 1 || p.proveedor_seleccionado === true || p.seleccion?.proveedor_seleccionado === true || p.estado_por_comprador === '1')
+            .map((p) => ({
+              rut: p.rut_proveedor,
+              razon_social: p.razon_social,
+              monto_total: p.monto_total,
+            })),
+          presupuesto_clp: detalle.presupuesto.monto_disponible_clp,
+        };
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (error) {
+        const message = error instanceof CompraAgilApiError
+          ? error.actionableMessage
+          : `Error inesperado: ${String(error)}`;
+        return {
+          content: [{ type: 'text' as const, text: message }],
+          isError: true,
+        };
+      }
+    }
+  );
+}
