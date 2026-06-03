@@ -1,0 +1,103 @@
+#!/usr/bin/env node
+
+/**
+ * MCP Server: Compra Ágil v2 — Mercado Público de Chile
+ *
+ * Servidor MCP que envuelve la API REST de Compra Ágil v2,
+ * permitiendo a cualquier IA, agente o cliente MCP consultar
+ * procesos de compra pública del Estado de Chile.
+ *
+ * Transporte: Stdio (compatible con Claude Desktop, Cursor, OpenClaw, etc.)
+ */
+
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+import { CompraAgilClient } from './api/compra-agil-client.js';
+import { logger, setMcpServer } from './utils/logger.js';
+
+// Tools
+import { registerBuscarCompras } from './tools/buscar-compras.js';
+import { registerDetalleCompra } from './tools/detalle-compra.js';
+import { registerMonitorearCambios } from './tools/monitorear-cambios.js';
+import { registerVerificarOC } from './tools/verificar-oc.js';
+import { registerEstadisticasUso } from './tools/estadisticas-uso.js';
+import { registerDetalleOC } from './tools/detalle-oc.js';
+
+// Resources
+import { registerRegionesResource } from './resources/regiones.js';
+import { registerEstadosResource } from './resources/estados.js';
+import { registerGlosarioResource } from './resources/glosario.js';
+import { registerComprasTemplateResource } from './resources/compras-template.js';
+
+// Prompts
+import { registerBuscarOportunidadesPrompt } from './prompts/buscar-oportunidades.js';
+import { registerAnalizarCompetenciaPrompt } from './prompts/analizar-competencia.js';
+
+// ─── Configuración ──────────────────────────────────────────────────
+
+const TICKET = process.env.COMPRA_AGIL_TICKET;
+const BASE_URL = process.env.COMPRA_AGIL_BASE_URL || 'https://api2.mercadopublico.cl';
+
+if (!TICKET) {
+  logger.error(
+    'Variable de entorno COMPRA_AGIL_TICKET no configurada. ' +
+    'Obtén tu ticket en https://www.chilecompra.cl/api/ y configúrala antes de iniciar el servidor.'
+  );
+  process.exit(1);
+}
+
+// Ticket validado — asignar a const tipada para usar dentro de main()
+const VALID_TICKET: string = TICKET;
+
+// ─── Inicialización ─────────────────────────────────────────────────
+
+async function main() {
+  logger.info('Iniciando servidor MCP Compra Ágil v2...');
+
+  // 1. Crear cliente HTTP para la API de Mercado Público
+  const client = new CompraAgilClient(VALID_TICKET, BASE_URL);
+  logger.info(`Cliente API configurado → ${BASE_URL}`);
+
+  // 2. Crear servidor MCP
+  const server = new McpServer({
+    name: 'mcp-compra-agil',
+    version: '1.0.0',
+  });
+
+  // 3. Registrar herramientas (Tools)
+  registerBuscarCompras(server, client);
+  registerDetalleCompra(server, client);
+  registerMonitorearCambios(server, client);
+  registerVerificarOC(server, client);
+  registerEstadisticasUso(server, client);
+  registerDetalleOC(server, client);
+  logger.info('6 herramientas registradas: buscar_compras_agiles, obtener_detalle_compra, monitorear_cambios_recientes, verificar_orden_compra, obtener_estadisticas_uso, obtener_detalle_orden_compra');
+
+  // 4. Registrar recursos (Resources)
+  registerRegionesResource(server);
+  registerEstadosResource(server);
+  registerGlosarioResource(server);
+  registerComprasTemplateResource(server, client);
+  logger.info('4 recursos registrados: regiones, estados, glosario, compra-agil://compras/{codigo}');
+
+  // 5. Registrar prompts
+  registerBuscarOportunidadesPrompt(server);
+  registerAnalizarCompetenciaPrompt(server);
+  logger.info('2 prompts registrados: buscar_oportunidades_proveedor, analizar_competencia');
+
+  // 6. Conectar al transporte Stdio
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+
+  // 7. Enlazar logger con la instancia del servidor conectado para logs nativos
+  setMcpServer(server);
+
+  logger.info('Servidor MCP Compra Ágil v2 listo y escuchando via Stdio.');
+}
+
+main().catch((error) => {
+  logger.error('Error fatal al iniciar el servidor MCP:', error);
+  process.exit(1);
+});
+
