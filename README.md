@@ -65,7 +65,7 @@ El ticket es una credencial de acceso gratuita que identifica tus peticiones ant
 2. **Solicitar ticket:** Haz clic en el botón destacado **«Pide tu ticket»**.
 3. **Autenticación con Clave Única:** Acepta los términos y condiciones de uso e inicia sesión con tu **Clave Única** del Estado de Chile.
 4. **Formulario de solicitud:** Completa los datos requeridos en el formulario y presiona el botón **«Solicitar ticket»**.
-5. **Recepción por correo:** Recibirás tu ticket alfanumérico (ej: `55640D0B-89D0-4B23-B9FA-395EBC0A12DC`) de forma inmediata en tu casilla de correo electrónico.
+5. **Recepción por correo:** Recibirás tu ticket alfanumérico (ej: `XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX`) de forma inmediata en tu casilla de correo electrónico.
    * *Consejo: Si no lo visualizas en tu bandeja de entrada en unos minutos, revisa la carpeta de Correo no deseado o Spam.*
 
 Una vez que tengas tu ticket alfanumérico copiado, puedes proceder a la instalación.
