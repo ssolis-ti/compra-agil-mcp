@@ -9,7 +9,7 @@ Servidor [MCP (Model Context Protocol)](https://modelcontextprotocol.io) desarro
 
 El proyecto está diseñado bajo una arquitectura modular y cuenta con dos modos de operación principales:
 1. **Servidor Interactivo MCP:** Comunicación bidireccional vía Stdio para integrarse directamente con el chat y herramientas de tu IDE o cliente (Cursor, Claude Desktop, Windsurf, etc.).
-2. **Demonio de Alertas en Segundo Plano:** Servicio de consulta incremental autónomo que rastrea procesos de alto valor con **0 oferentes** y guarda alertas automatizadas en un registro local.
+2. **Daemon de Alertas en Segundo Plano:** Servicio de consulta incremental autónomo que rastrea procesos de alto valor con **0 oferentes** y guarda alertas automatizadas en un registro local.
 
 ---
 
