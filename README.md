@@ -43,8 +43,28 @@ Compra Ágil es el mecanismo de adquisición simplificado y directo del Estado d
 
 ---
 
+## 🎯 ¿A quién está dirigido?
+
+Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado Público, siendo de alto valor tanto para compradores del Estado como para proveedores privados:
+
+### 🏛️ Para Compradores Públicos (Organismos del Estado)
+* **Estudios de Mercado Eficientes:** Permite realizar análisis históricos rápidos de adjudicaciones y precios de referencia antes de publicar nuevas adquisiciones.
+* **Control y Auditoría Interna:** Facilita la fiscalización de procesos pasados, evaluando los motivos de adjudicación y comparando todas las ofertas recibidas para asegurar la probidad administrativa.
+* **Control de Órdenes de Compra (OC):** Monitoreo masivo de estados de aceptación y desgloses de productos facturados por los proveedores.
+
+### 💼 Para Proveedores (Empresas y Pymes)
+* **Inteligencia Competitiva:** Analizar ofertas ganadoras y perdedoras, precios de la competencia y spreads en procesos cerrados.
+* **Prospectar Oportunidades:** Monitorear llamados activos sin oferentes mediante filtros locales avanzados.
+* **Alertas Automatizadas:** El demonio en segundo plano notifica oportunidades que coincidan con tu presupuesto mínimo y rubro.
+
+---
+
 ## ⚡ Características Clave
 * **Modernizado para SDK v1.12+:** Carga declarativa y robusta de herramientas, recursos y prompts bajo los nuevos estándares del protocolo.
+* **Carga de Entorno Autónoma:** El servidor detecta y carga de forma automática y manual el archivo `.env` del directorio de trabajo al iniciarse, facilitando la conexión en clientes MCP de escritorio sin necesidad de configurar variables de sistema globales.
+* **Lector de Documentación Integrado (Recursos):** Exposición nativa de guías, normativas y manuales en PDF (dentro de la carpeta `docs/`) como recursos del protocolo MCP (`compra-agil://documentacion/{filename}`). El servidor extrae el texto del PDF de manera local y lo inyecta en el LLM bajo demanda.
+* **Filtrado Inteligente Anti-Ruido:** Filtros locales en la herramienta `buscar_compras_agiles` (`palabras_clave_requeridas` y `palabras_clave_excluidas`) para afinar búsquedas amplias de la API y remover ofertas irrelevantes.
+* **Paginación Inteligente y Monitoreo Completo:** La herramienta de cambios recientes admite navegación de páginas (`numero_pagina`), y el demonio de monitoreo periódico procesa de forma recursiva todas las páginas de resultados (`client.buscarTodo()`) para evitar pérdidas de alertas.
 * **Integración del Detalle de OC:** Resuelve de forma dinámica el código alfanumérico o ID numérico de las Órdenes de Compra utilizando la API legada de Mercado Público.
 * **Enriquecimiento Inteligente de la OC:** Corrige las limitaciones de la API oficial donde el estado `oc_emitida` no funciona en producción. El servidor busca de forma recursiva a nivel raíz y anidado el `id_orden_compra` y enlaza el desglose de productos y datos del proveedor ganador.
 * **Rate Limiting Local:** Algoritmo *Token Bucket* integrado que limita el consumo (máximo 40 llamadas por minuto) y procesa el error 429 de forma transparente para evitar la inhabilitación temporal del ticket.
@@ -289,12 +309,19 @@ const resources = await client.listResources();
 
 | Nombre de la Herramienta | Descripción de Entrada / Salida |
 | :--- | :--- |
-| `buscar_compras_agiles` | Busca procesos utilizando palabras clave, región (1-16), estado (publicada, cerrada, etc.) y ventana temporal. Parámetros `q` e `id` son excluyentes. |
+| `buscar_compras_agiles` | Busca procesos utilizando palabras clave (con filtros inteligentes locales), región (1-16), estado y ventana temporal. Parámetros `q` e `id` son excluyentes. |
 | `obtener_detalle_compra` | Detalle exhaustivo de una cotización: descripción, ítems y cotizaciones recibidas (confidenciales hasta el estado *Cerrada*). |
-| `monitorear_cambios_recientes` | Sincronización reactiva e incremental en los últimos N minutos (ventana máxima de 1440 min / 24 horas). |
+| `monitorear_cambios_recientes` | Sincronización reactiva e incremental en los últimos N minutos (ventana máxima de 1440 min / 24 horas), con soporte para paginación. |
 | `verificar_orden_compra` | Comprobación de emisión de OC resolviendo inconsistencias de la API pública. Retorna el ID de la OC y acopla dinámicamente los desgloses económicos y datos del adjudicado. |
 | `obtener_detalle_orden_compra` | Consulta detallada del desglose de productos y facturación de una OC utilizando su código alfanumérico o ID numérico. |
 | `obtener_estadisticas_uso` | Retorna las estadísticas del limitador de solicitudes local (`requestsToday`, `isLimited`) para optimizar el consumo de la cuota del ticket. |
+| `obtener_enlace_documento` | Genera el link público y oficial de descarga de un archivo adjunto del proceso de Mercado Público. |
+| `descargar_y_leer_documento` | Descarga y extrae el texto plano de un documento adjunto en PDF del proceso de compra de forma remota, permitiendo realizar búsquedas de palabras clave. |
+| `consultar_documentos_locales` | Busca y extrae fragmentos coincidentes dentro de los archivos PDF/TXT/MD de ayuda de Compra Ágil guardados en la carpeta local `docs/`. |
+| `recomendar_precio_ganador` | Analiza precios históricos unitarios y totales de proveedores ganadores en procesos cerrados y sugiere un precio competitivo ajustado (percentil 40). |
+| `auditar_compras_desiertas` | Analiza las causales de convocatorias sin ofertas (desiertas) cruzando presupuesto, duración del llamado y requisitos especiales contra históricos exitosos. |
+| `generar_borrador_cotizacion` | Auto-completa propuestas JSON de cotización bajo el esquema oficial, calculando impuestos (19% IVA), sumatorios y redactando cartas formales de presentación. |
+| `radar_oportunidades_calientes` | Califica y ordena convocatorias publicadas según un score ponderado (Hot Score) de competencia (sin oferentes), urgencia, presupuesto y simplicidad. |
 
 ### Recursos Disponibles (Resources)
 
@@ -304,6 +331,7 @@ const resources = await client.listResources();
 | `compra-agil://estados` | `application/json` | Estados admitidos por la API y notas técnicas sobre su comportamiento real para optimizar las queries. |
 | `compra-agil://glosario` | `application/json` | Glosario de acrónimos del dominio de ChileCompra para contextualización semántica de la IA. |
 | `compra-agil://compras/{codigo}` | `application/json` | Recurso dinámico que resuelve el objeto JSON puro devuelto por la API v2 de una Compra Ágil usando su código único. |
+| `compra-agil://documentacion/{filename}` | `text/plain` | Recurso dinámico que lee y extrae todo el contenido de texto de un PDF/TXT/MD local en la carpeta `docs/` en tiempo real. |
 
 ### Prompts Disponibles
 
