@@ -30,6 +30,9 @@ const inputSchema = {
   tamano_pagina: z.number().min(10).max(50).default(50).describe(
     'Resultados por página (10-50, default 50).'
   ),
+  numero_pagina: z.number().min(1).optional().describe(
+    'Número de página a consultar (comienza en 1).'
+  ),
 };
 
 export function registerMonitorearCambios(server: McpServer, client: CompraAgilClient): void {
@@ -47,6 +50,7 @@ export function registerMonitorearCambios(server: McpServer, client: CompraAgilC
           estado: args.estado,
           region: args.region,
           tamano_pagina: args.tamano_pagina,
+          numero_pagina: args.numero_pagina,
         });
 
         const summary = response.items.map((item) => ({
