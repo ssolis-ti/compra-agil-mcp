@@ -38,6 +38,12 @@ const inputSchema = {
   publicado_hasta: z.string().optional().describe(
     'Fecha máxima de publicación en formato ISO-8601. Ej: "2026-01-31T23:59:59Z".'
   ),
+  palabras_clave_requeridas: z.string().optional().describe(
+    'Lista de palabras clave separadas por comas que DEBEN estar presentes en el nombre de la compra (filtro local. Ej: "software,desarrollo").'
+  ),
+  palabras_clave_excluidas: z.string().optional().describe(
+    'Lista de palabras clave separadas por comas que NO DEBEN estar en el nombre de la compra (filtro local. Ej: "soporte,licencias").'
+  ),
   ordenar_por: z.enum(['FechaUltimaModificacion', 'FechaPublicacion']).optional().describe(
     'Criterio de ordenamiento. "FechaPublicacion" para las más recientes primero, "FechaUltimaModificacion" (default) para las últimas modificadas.'
   ),
@@ -82,7 +88,37 @@ export function registerBuscarCompras(server: McpServer, client: CompraAgilClien
         });
 
         // Formatear resultado compacto para el LLM
-        const summary = response.items.map((item) => ({
+        let filteredItems = response.items;
+
+        // Filtrado local por palabras_clave_requeridas (AND lógico entre los términos)
+        if (args.palabras_clave_requeridas) {
+          const reqKeywords = args.palabras_clave_requeridas
+            .split(',')
+            .map(kw => kw.trim().toLowerCase())
+            .filter(Boolean);
+          if (reqKeywords.length > 0) {
+            filteredItems = filteredItems.filter(item => {
+              const nameLower = item.nombre.toLowerCase();
+              return reqKeywords.every(kw => nameLower.includes(kw));
+            });
+          }
+        }
+
+        // Filtrado local por palabras_clave_excluidas (OR lógico entre los términos)
+        if (args.palabras_clave_excluidas) {
+          const excKeywords = args.palabras_clave_excluidas
+            .split(',')
+            .map(kw => kw.trim().toLowerCase())
+            .filter(Boolean);
+          if (excKeywords.length > 0) {
+            filteredItems = filteredItems.filter(item => {
+              const nameLower = item.nombre.toLowerCase();
+              return !excKeywords.some(kw => nameLower.includes(kw));
+            });
+          }
+        }
+
+        const summary = filteredItems.map((item) => ({
           codigo: item.codigo,
           nombre: item.nombre,
           estado: item.estado.glosa,
@@ -98,6 +134,7 @@ export function registerBuscarCompras(server: McpServer, client: CompraAgilClien
 
         const result = {
           total_resultados: response.paginacion.total_resultados,
+          total_filtrados_en_pagina: filteredItems.length,
           pagina: `${response.paginacion.numero_pagina} de ${response.paginacion.total_paginas}`,
           resultados: summary,
         };
