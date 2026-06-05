@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+import { loadEnvManual } from './utils/env-loader.js';
+// Inicializar entorno antes de cualquier otra importación o llamada
+loadEnvManual();
+
 /**
  * MCP Server: Compra Ágil v2 — Mercado Público de Chile
  *
@@ -23,12 +27,18 @@ import { registerMonitorearCambios } from './tools/monitorear-cambios.js';
 import { registerVerificarOC } from './tools/verificar-oc.js';
 import { registerEstadisticasUso } from './tools/estadisticas-uso.js';
 import { registerDetalleOC } from './tools/detalle-oc.js';
+import { registerDocumentosTools } from './tools/documentos.js';
+import { registerRecomendarPrecio } from './tools/recomendar-precio.js';
+import { registerAuditarDesiertas } from './tools/auditar-desiertas.js';
+import { registerGenerarBorrador } from './tools/generar-borrador.js';
+import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
 
 // Resources
 import { registerRegionesResource } from './resources/regiones.js';
 import { registerEstadosResource } from './resources/estados.js';
 import { registerGlosarioResource } from './resources/glosario.js';
 import { registerComprasTemplateResource } from './resources/compras-template.js';
+import { registerDocumentacionResource } from './resources/documentacion.js';
 
 // Prompts
 import { registerBuscarOportunidadesPrompt } from './prompts/buscar-oportunidades.js';
@@ -72,14 +82,20 @@ async function main() {
   registerVerificarOC(server, client);
   registerEstadisticasUso(server, client);
   registerDetalleOC(server, client);
-  logger.info('6 herramientas registradas: buscar_compras_agiles, obtener_detalle_compra, monitorear_cambios_recientes, verificar_orden_compra, obtener_estadisticas_uso, obtener_detalle_orden_compra');
+  registerDocumentosTools(server);
+  registerRecomendarPrecio(server, client);
+  registerAuditarDesiertas(server, client);
+  registerGenerarBorrador(server, client);
+  registerRadarOportunidades(server, client);
+  logger.info('13 herramientas registradas: buscar_compras_agiles, obtener_detalle_compra, monitorear_cambios_recientes, verificar_orden_compra, obtener_estadisticas_uso, obtener_detalle_orden_compra, obtener_enlace_documento, descargar_y_leer_documento, consultar_documentos_locales, recomendar_precio_ganador, auditar_compras_desiertas, generar_borrador_cotizacion, radar_oportunidades_calientes');
 
   // 4. Registrar recursos (Resources)
   registerRegionesResource(server);
   registerEstadosResource(server);
   registerGlosarioResource(server);
   registerComprasTemplateResource(server, client);
-  logger.info('4 recursos registrados: regiones, estados, glosario, compra-agil://compras/{codigo}');
+  registerDocumentacionResource(server);
+  logger.info('5 recursos registrados: regiones, estados, glosario, compra-agil://compras/{codigo}, compra-agil://documentacion/{filename}');
 
   // 5. Registrar prompts
   registerBuscarOportunidadesPrompt(server);

@@ -5,35 +5,10 @@
  * Busca oportunidades vigentes (publicada), con 0 ofertas, que superen un presupuesto mínimo
  * y que contengan palabras clave específicas. Guarda las alertas en alerts.log.
  */
-
 import fs from 'fs';
 import path from 'path';
+import { loadEnvManual } from '../utils/env-loader.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
-
-// Cargar variables de entorno manualmente como fallback de robustez
-function loadEnvManual() {
-  try {
-    const envPath = path.resolve(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, 'utf8');
-      for (const line of content.split('\n')) {
-        const trimmed = line.trim();
-        if (trimmed && !trimmed.startsWith('#')) {
-          const parts = trimmed.split('=');
-          const key = parts[0]?.trim();
-          const value = parts.slice(1).join('=').trim();
-          if (key && value) {
-            // Eliminar comillas si las hay
-            const cleanValue = value.replace(/^['"]|['"]$/g, '');
-            process.env[key] = cleanValue;
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Error al parsear el archivo .env de forma manual:', e);
-  }
-}
 
 // Inicializar entorno
 loadEnvManual();
@@ -74,17 +49,18 @@ async function runCheck() {
     const bufferMinutes = 5;
     const ttlMs = (INTERVAL_MINUTES + bufferMinutes) * 60 * 1000;
 
-    // Buscar cambios recientes en todo el país
-    const response = await client.cambiosRecientes(ttlMs, {
+    // Buscar cambios recientes en todo el país (auto-paginado completo hasta 10 páginas)
+    const items = await client.buscarTodo({
+      ttl_cambio_ms: ttlMs,
       estado: 'publicada',
       tamano_pagina: 50
     });
 
-    console.log(`[${timestamp}] Se encontraron ${response.items.length} procesos modificados/creados recientemente.`);
+    console.log(`[${timestamp}] Se encontraron ${items.length} procesos modificados/creados recientemente.`);
 
     let alertCount = 0;
 
-    for (const item of response.items) {
+    for (const item of items) {
       // Filtro 1: Debe estar en estado "publicada"
       if (item.estado.codigo !== 'publicada') continue;
 
