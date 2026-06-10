@@ -46,7 +46,7 @@ function getActionableMessage(httpStatus: number, apiErrors: ApiError[]): string
     case 403:
       return `Ticket de acceso inválido, inactivo o bloqueado. Verifica que el ticket sea correcto y esté vigente. Si fue bloqueado, solicita uno nuevo en https://www.chilecompra.cl/api/.${detail}`;
     case 404:
-      return `No se encontró una Compra Ágil con el código proporcionado. Verifica que el código tenga el formato correcto (ej: 1057539-228-COT26) y que el proceso exista y sea público.${detail}`;
+      return `No se encontró el recurso solicitado (Compra Ágil u Orden de Compra) con el código proporcionado. Verifica que el código sea correcto, que exista y sea público.${detail}`;
     case 429:
       return formatRateLimitMessage(detail);
     case 500:
@@ -73,11 +73,11 @@ function formatRateLimitMessage(detail: string): string {
  */
 export async function handleApiResponse(response: Response): Promise<unknown> {
   if (response.ok) {
-    const json = await response.json() as { success: string; payload: unknown };
-    if (json.success === 'NOK') {
+    const json = await response.json() as { success?: string; payload?: unknown };
+    if (json && json.success === 'NOK') {
       throw new CompraAgilApiError(response.status, (json as unknown as ApiErrorResponse).errors);
     }
-    return json.payload;
+    return (json && typeof json === 'object' && 'payload' in json) ? json.payload : json;
   }
 
   let apiErrors: ApiError[] = [];
