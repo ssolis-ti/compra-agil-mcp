@@ -4,6 +4,21 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [1.0.3] - 2026-06-10
+
+### Corregido
+* **Manejo de respuestas legacy en `error-handler.ts`:** La función `handleApiResponse` ahora soporta endpoints heredados (como `OrdenCompra.json`) que retornan el payload directamente en la raíz del JSON, sin envolverlo en la propiedad `payload`. Esto prevenía un `TypeError` silencioso en `obtener_detalle_orden_compra`.
+* **Mensaje de error 404 genérico:** El mensaje de error HTTP 404 ahora cubre tanto búsquedas de Compras Ágiles como de Órdenes de Compra, evitando mensajes confusos al usuario.
+* **Seguridad de documentos adjuntos (UUID):** Las herramientas `obtener_enlace_documento` y `descargar_y_leer_documento` ya no retornan enlaces de descarga directa protegidos por Clave Única que generaban el error `Authentication parameters missing`. Ahora redirigen al usuario exclusivamente a la ficha pública del proceso en el buscador de Mercado Público (`https://buscador.mercadopublico.cl/ficha?code={codigo}`).
+* **Robustez en búsquedas históricas de `recomendar_precio_ganador`:** El filtro de estado en la búsqueda de procesos históricos se amplió de `proveedor_seleccionado` a `cerrada,proveedor_seleccionado`, resolviendo el problema donde la API retornaba 0 resultados con el filtro estricto.
+
+### Modificado
+* **`obtener_enlace_documento`:** El parámetro `codigo_compra` pasó de ser opcional a requerido para garantizar la generación del enlace público alternativo.
+* **README.md:** Se reemplazó el término "demonio" por "Daemon" en todas las referencias al servicio de monitoreo en segundo plano. Se añadió documentación de la característica de manejo seguro de documentos UUID en la sección de Características Clave.
+* **Redacción de logs del ticket:** El cliente HTTP `compra-agil-client.ts` enmascara el valor del ticket de acceso como `REDACTED` en los mensajes de log de depuración para prevenir filtraciones de credenciales.
+
+---
+
 ## [1.1.0] - 2026-06-03
 
 ### Añadido

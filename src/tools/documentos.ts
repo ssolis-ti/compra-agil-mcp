@@ -9,11 +9,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageDocsDir = path.resolve(__dirname, '../../docs');
 const cwdDocsDir = path.resolve(process.cwd(), 'docs');
 
-let DOCS_DIR = cwdDocsDir;
-if (fs.existsSync(packageDocsDir) && fs.readdirSync(packageDocsDir).some(f => f.toLowerCase().endsWith('.pdf'))) {
-  DOCS_DIR = packageDocsDir;
-}
-
 /**
  * Obtiene de forma recursiva todos los archivos dentro de un directorio,
  * retornando sus rutas relativas formateadas con barras diagonales (/).
@@ -35,6 +30,17 @@ function getRelativeFilesRecursively(dir: string, baseDir: string = dir): string
   return results;
 }
 
+let DOCS_DIR = cwdDocsDir;
+if (fs.existsSync(packageDocsDir)) {
+  const hasLocalDocs = getRelativeFilesRecursively(packageDocsDir).some(file => {
+    const ext = path.extname(file).toLowerCase();
+    return ext === '.pdf' || ext === '.txt' || ext === '.md';
+  });
+  if (hasLocalDocs) {
+    DOCS_DIR = packageDocsDir;
+  }
+}
+
 /**
  * Registra las herramientas relacionadas con documentos y especificaciones en el servidor MCP.
  */
@@ -44,19 +50,32 @@ export function registerDocumentosTools(server: McpServer): void {
   server.registerTool(
     'obtener_enlace_documento',
     {
-      description: 'Genera el enlace oficial de descarga pública en Mercado Público para un adjunto (bases, especificaciones o anexos) usando su ID de documento.',
+      description: 'Genera el enlace oficial en Mercado Público para acceder a un adjunto de forma pública y sin requerir inicio de sesión.',
       inputSchema: {
-        id_documento: z.string().describe('ID único del documento. Ej: "123456" de la lista de documentos de una compra.'),
+        id_documento: z.string().describe('ID único del documento. Ej: "123456" o un UUID como "5f47e991-c525-40a0-b36c-44d53e538ae5".'),
+        codigo_compra: z.string().describe('Código de la Compra Ágil asociada (Ej: "2494-141-COT26"). Requerido para generar el enlace de la ficha pública.'),
       },
     },
     async (args) => {
-      const url = `https://www.mercadopublico.cl/FichaLicitacion/RetornaDocumento.aspx?id=${args.id_documento}`;
-      return {
-        content: [{
-          type: 'text' as const,
-          text: `Enlace de descarga oficial del documento:\n${url}\n\nNota: Este enlace es público y se puede abrir directamente en el navegador para descargar el archivo.`,
-        }],
-      };
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(args.id_documento);
+      const fichaUrl = `https://buscador.mercadopublico.cl/ficha?code=${args.codigo_compra}`;
+
+      if (isUuid) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `El documento solicitado (${args.id_documento}) corresponde a un archivo adjunto de Compra Ágil. Debido a las políticas de seguridad del portal, los enlaces de descarga directa requieren autenticación activa (Clave Única) y arrojan error si se abren directamente.\n\nPara acceder y descargar el archivo de forma pública y sin iniciar sesión, visita la ficha del proceso en el buscador de Mercado Público:\n${fichaUrl}`,
+          }],
+        };
+      } else {
+        const directUrl = `https://www.mercadopublico.cl/FichaLicitacion/RetornaDocumento.aspx?id=${args.id_documento}`;
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Este documento es de tipo tradicional (ID numérico) y se puede descargar directamente.\n\nEnlace de descarga directa:\n${directUrl}\n\nEnlace alternativo a la ficha pública del proceso:\n${fichaUrl}`,
+          }],
+        };
+      }
     }
   );
 
@@ -66,17 +85,38 @@ export function registerDocumentosTools(server: McpServer): void {
     {
       description: 'Descarga un documento adjunto de Mercado Público (bases técnicas/administrativas) en formato PDF usando su ID, extrae su texto y lo retorna al LLM. Útil para auditar requisitos técnicos de una oferta.',
       inputSchema: {
-        id_documento: z.string().describe('ID único del documento. Ej: "123456".'),
+        id_documento: z.string().describe('ID único del documento. Ej: "123456" o un UUID.'),
+        codigo_compra: z.string().optional().describe('Código de la Compra Ágil asociada (Ej: "2494-141-COT26"). Permite guiar al usuario a la ficha pública en caso de fallar la descarga.'),
         query: z.string().optional().describe('Si se proporciona, busca y retorna solo fragmentos que contengan este término (case-insensitive).'),
         max_caracteres: z.number().min(500).max(15000).default(5000).optional().describe('Límite de caracteres a retornar (default 5000) para evitar saturar el contexto de la IA.'),
       },
     },
     async (args) => {
       try {
-        const url = `https://www.mercadopublico.cl/FichaLicitacion/RetornaDocumento.aspx?id=${args.id_documento}`;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(args.id_documento);
+        const url = isUuid
+          ? `https://adjunto.mercadopublico.cl/adjunto-compra-agil/descargar/${args.id_documento}`
+          : `https://www.mercadopublico.cl/FichaLicitacion/RetornaDocumento.aspx?id=${args.id_documento}`;
         
         // Descargar PDF
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        });
+ 
+        if (response.status === 403 || response.status === 401) {
+          const fichaMsg = args.codigo_compra
+            ? `\n\nPor favor, descarga el archivo de forma pública e independiente desde la ficha del proceso en el buscador de Mercado Público:\nhttps://buscador.mercadopublico.cl/ficha?code=${args.codigo_compra}`
+            : '\n\nPor favor, descarga el archivo manualmente buscando el código de la compra en el buscador público de Mercado Público.';
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `No es posible descargar ni procesar este archivo de forma automática porque el servidor de Mercado Público requiere autenticación (Clave Única) o bloquea las solicitudes programáticas (HTTP ${response.status}).${fichaMsg}`,
+            }],
+          };
+        }
+
         if (!response.ok) {
           throw new Error(`Error HTTP al intentar descargar el documento: ${response.status} ${response.statusText}`);
         }

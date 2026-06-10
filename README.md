@@ -55,7 +55,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 ### 💼 Para Proveedores (Empresas y Pymes)
 * **Inteligencia Competitiva:** Analizar ofertas ganadoras y perdedoras, precios de la competencia y spreads en procesos cerrados.
 * **Prospectar Oportunidades:** Monitorear llamados activos sin oferentes mediante filtros locales avanzados.
-* **Alertas Automatizadas:** El demonio en segundo plano notifica oportunidades que coincidan con tu presupuesto mínimo y rubro.
+* **Alertas Automatizadas:** El Daemon en segundo plano notifica oportunidades que coincidan con tu presupuesto mínimo y rubro.
 
 ---
 
@@ -69,6 +69,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 * **Enriquecimiento Inteligente de la OC:** Corrige las limitaciones de la API oficial donde el estado `oc_emitida` no funciona en producción. El servidor busca de forma recursiva a nivel raíz y anidado el `id_orden_compra` y enlaza el desglose de productos y datos del proveedor ganador.
 * **Rate Limiting Local:** Algoritmo *Token Bucket* integrado que limita el consumo (máximo 40 llamadas por minuto) y procesa el error 429 de forma transparente para evitar la inhabilitación temporal del ticket.
 * **Logs Nativos en el Protocolo:** Inyección de la notificación `sendLoggingMessage` de MCP para registrar y depurar la actividad del servidor directamente dentro de la interfaz del cliente.
+* **Manejo Seguro de Documentos (UUID):** Evita errores de tipo `Authentication parameters missing` al tratar con archivos adjuntos protegidos de Compra Ágil (UUIDs) redirigiendo al usuario a la ficha pública del buscador (`https://buscador.mercadopublico.cl/ficha?code={codigo}`) en lugar de entregar enlaces de descarga directa inaccesibles.
 
 ---
 
@@ -172,7 +173,7 @@ npm start
 ```
 
 ### Monitoreo Autónomo
-Para ejecutar el demonio de alertas en segundo plano (vigila oportunidades sin oferentes y escribe los reportes en `alerts.log`):
+Para ejecutar el Daemon de alertas en segundo plano (vigila oportunidades sin oferentes y escribe los reportes en `alerts.log`):
 ```bash
 npm run monitor
 ```

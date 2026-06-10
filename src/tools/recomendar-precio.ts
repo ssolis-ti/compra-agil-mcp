@@ -66,7 +66,7 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
         const limit = args.limite_analisis || 5;
         const searchResponse = await client.buscar({
           q: keyword,
-          estado: 'proveedor_seleccionado',
+          estado: 'cerrada,proveedor_seleccionado',
           region: region || undefined,
           tamano_pagina: 10, // API v2 requiere mínimo 10
           numero_pagina: 1,

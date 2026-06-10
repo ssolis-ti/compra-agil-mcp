@@ -268,7 +268,11 @@ export class CompraAgilClient {
       }
     }
 
-    logger.debug(`API Request: GET ${url.toString()}`);
+    const sanitizedUrl = new URL(url.toString());
+    if (sanitizedUrl.searchParams.has('ticket')) {
+      sanitizedUrl.searchParams.set('ticket', 'REDACTED');
+    }
+    logger.debug(`API Request: GET ${sanitizedUrl.toString()}`);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
