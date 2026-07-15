@@ -16,6 +16,10 @@ loadEnvManual();
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const { version: PKG_VERSION } = require('../package.json') as { version: string };
 
 import { CompraAgilClient } from './api/compra-agil-client.js';
 import { logger, setMcpServer } from './utils/logger.js';
@@ -72,7 +76,7 @@ async function main() {
   // 2. Crear servidor MCP
   const server = new McpServer({
     name: 'mcp-compra-agil',
-    version: '1.0.0',
+    version: PKG_VERSION,
   });
 
   // 3. Registrar herramientas (Tools)
@@ -82,12 +86,19 @@ async function main() {
   registerVerificarOC(server, client);
   registerEstadisticasUso(server, client);
   registerDetalleOC(server, client);
-  registerDocumentosTools(server);
+  registerDocumentosTools(server); // registra 3 tools de documentos
   registerRecomendarPrecio(server, client);
   registerAuditarDesiertas(server, client);
   registerGenerarBorrador(server, client);
   registerRadarOportunidades(server, client);
-  logger.info('13 herramientas registradas: buscar_compras_agiles, obtener_detalle_compra, monitorear_cambios_recientes, verificar_orden_compra, obtener_estadisticas_uso, obtener_detalle_orden_compra, obtener_enlace_documento, descargar_y_leer_documento, consultar_documentos_locales, recomendar_precio_ganador, auditar_compras_desiertas, generar_borrador_cotizacion, radar_oportunidades_calientes');
+  const TOOL_NAMES = [
+    'buscar_compras_agiles', 'obtener_detalle_compra', 'monitorear_cambios_recientes',
+    'verificar_orden_compra', 'obtener_estadisticas_uso', 'obtener_detalle_orden_compra',
+    'obtener_enlace_documento', 'descargar_y_leer_documento', 'consultar_documentos_locales',
+    'recomendar_precio_ganador', 'auditar_compras_desiertas', 'generar_borrador_cotizacion',
+    'radar_oportunidades_calientes',
+  ];
+  logger.info(`${TOOL_NAMES.length} herramientas registradas: ${TOOL_NAMES.join(', ')}`);
 
   // 4. Registrar recursos (Resources)
   registerRegionesResource(server);
@@ -95,12 +106,17 @@ async function main() {
   registerGlosarioResource(server);
   registerComprasTemplateResource(server, client);
   registerDocumentacionResource(server);
-  logger.info('5 recursos registrados: regiones, estados, glosario, compra-agil://compras/{codigo}, compra-agil://documentacion/{filename}');
+  const RESOURCE_NAMES = [
+    'regiones', 'estados', 'glosario',
+    'compra-agil://compras/{codigo}', 'compra-agil://documentacion/{filename}',
+  ];
+  logger.info(`${RESOURCE_NAMES.length} recursos registrados: ${RESOURCE_NAMES.join(', ')}`);
 
   // 5. Registrar prompts
   registerBuscarOportunidadesPrompt(server);
   registerAnalizarCompetenciaPrompt(server);
-  logger.info('2 prompts registrados: buscar_oportunidades_proveedor, analizar_competencia');
+  const PROMPT_NAMES = ['buscar_oportunidades_proveedor', 'analizar_competencia'];
+  logger.info(`${PROMPT_NAMES.length} prompts registrados: ${PROMPT_NAMES.join(', ')}`);
 
   // 6. Conectar al transporte Stdio
   const transport = new StdioServerTransport();

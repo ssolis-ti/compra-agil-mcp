@@ -14,12 +14,40 @@ export class RateLimiter {
   private isLimited = false;
   private limitResetTime: Date | null = null;
 
-  constructor() {
+  // Throttle proactivo por minuto (ventana deslizante de timestamps).
+  private readonly maxPerMinute: number;
+  private requestTimestamps: number[] = [];
+
+  constructor(maxPerMinute = 40) {
     this.currentDay = this.getTodayUTC();
+    this.maxPerMinute = maxPerMinute;
   }
 
   private getTodayUTC(): string {
     return new Date().toISOString().split('T')[0];
+  }
+
+  /**
+   * Espera (si es necesario) hasta que haya cupo dentro de la ventana de 1 minuto,
+   * de forma proactiva, ANTES de enviar la solicitud. Evita gatillar 429 por ráfagas.
+   */
+  async throttle(): Promise<void> {
+    // Purgar timestamps con más de 60s de antigüedad
+    const cutoff = Date.now() - 60_000;
+    this.requestTimestamps = this.requestTimestamps.filter((t) => t > cutoff);
+
+    if (this.requestTimestamps.length >= this.maxPerMinute) {
+      // Esperar hasta que el request más antiguo salga de la ventana
+      const oldest = this.requestTimestamps[0];
+      const waitMs = Math.max(0, oldest + 60_000 - Date.now()) + 5;
+      logger.debug(`Rate limiter: throttling ${waitMs}ms (${this.requestTimestamps.length}/${this.maxPerMinute} req/min).`);
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      // Repurgar tras la espera
+      const cutoff2 = Date.now() - 60_000;
+      this.requestTimestamps = this.requestTimestamps.filter((t) => t > cutoff2);
+    }
+
+    this.requestTimestamps.push(Date.now());
   }
 
   /**

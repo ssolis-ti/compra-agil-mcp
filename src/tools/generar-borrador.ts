@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
+import { esGanador, extraerPrecioUnitario, extraerMontoNeto } from '../utils/quotation.js';
 
 const TOOL_NAME = 'generar_borrador_cotizacion';
 
@@ -30,8 +31,12 @@ export function registerGenerarBorrador(server: McpServer, client: CompraAgilCli
         logger.info(`generar_borrador_cotizacion: Obteniendo detalle de la compra activa ${args.codigo_compra}`);
         const targetDetail = await client.detalle(args.codigo_compra);
 
+        // Detectar qué campos son placeholders (no aportados por el usuario) para advertir en la salida.
+        const advertencias: string[] = [];
         const rutProv = args.rut_proveedor || '76.000.000-0';
         const razonSocial = args.razon_social || 'Proveedor Demo SpA';
+        if (!args.rut_proveedor) advertencias.push('rut_proveedor es un valor PLACEHOLDER; reemplázalo por el RUT real del proveedor antes de presentar.');
+        if (!args.razon_social) advertencias.push('razon_social es un valor PLACEHOLDER; reemplázalo por la razón social real.');
         const customPrice = args.precio_unitario_personalizado;
         
         let plazoEntrega = args.plazo_entrega_dias;
@@ -73,22 +78,15 @@ export function registerGenerarBorrador(server: McpServer, client: CompraAgilCli
                 for (const item of itemsToProcess) {
                   try {
                     const detail = await client.detalle(item.codigo);
-                    const winner = detail.proveedores_cotizando?.find(prov => 
-                      prov.proveedor_seleccionado === true || 
-                      prov.proveedor_seleccionado === 1 ||
-                      (prov.seleccion && prov.seleccion.proveedor_seleccionado === true)
-                    );
+                    const winner = detail.proveedores_cotizando?.find(esGanador);
 
                     if (winner) {
-                      let unitPrice = null;
-                      if (winner.productos_cotizados && winner.productos_cotizados.length > 0) {
-                        const matched = winner.productos_cotizados.find(p => 
-                          p.nombre_producto.toLowerCase().includes(keyword.toLowerCase())
-                        );
-                        unitPrice = matched ? matched.precio_unitario : winner.productos_cotizados[0].precio_unitario;
+                      // Preferir precio unitario (comparable); si no hay, no mezclar con el total:
+                      // el total solo se usa como referencia si no existe ningún unitario en el lote.
+                      const unitPrice = extraerPrecioUnitario(winner, keyword);
+                      if (unitPrice !== null) {
+                        prices.push(unitPrice);
                       }
-                      const val = unitPrice || winner.valor_neto || winner.monto_total || 0;
-                      if (val > 0) prices.push(val);
                     }
                   } catch (e) {
                     // ignore errors for individual historical lookups
@@ -154,13 +152,19 @@ export function registerGenerarBorrador(server: McpServer, client: CompraAgilCli
           `Atentamente,\n` +
           `${razonSocial}\nRUT: ${rutProv}`;
 
+        if (!isPriceSuggested) {
+          advertencias.push(`precio_unitario es un valor por defecto ($${suggestedPrice.toLocaleString('es-CL')}); no se pudo estimar de mercado. Ingresa "precio_unitario_personalizado".`);
+        }
+
         const borradorCotizacion = {
+          _advertencia: '⚠ BORRADOR AUTOGENERADO. Revisa y reemplaza los campos marcados como placeholder antes de presentar la cotización real. Este documento no ha sido enviado a Mercado Público.',
+          _campos_a_revisar: advertencias,
           codigo_compra: targetDetail.codigo,
           nombre_compra: targetDetail.nombre,
           organismo_comprador: targetDetail.institucion?.organismo_comprador || 'No especificado',
           rut_proveedor: rutProv,
           razon_social: razonSocial,
-          es_emt: true,
+          es_emt: null, // Desconocido: depende del Registro de Proveedores del RUT real, no se asume.
           activo: true,
           plazo_entrega_dias: plazoEntrega,
           valor_neto: valorNeto,
