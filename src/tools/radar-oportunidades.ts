@@ -17,7 +17,7 @@ const inputSchema = {
   max_paginas: z.number().min(1).max(10).default(3).optional().describe('Cuántas páginas de 50 resultados escanear antes de rankear (1-10, default 3 = hasta 150 procesos). Más páginas = más cobertura pero más consumo de cuota.'),
 };
 
-interface OportunidadRadar {
+export interface OportunidadRadar {
   codigo: string;
   nombre: string;
   organismo: string;
@@ -114,6 +114,65 @@ export function evaluarOportunidad(
   };
 }
 
+export interface RadarParams {
+  region?: string;
+  q?: string;
+  presupuesto_minimo?: number;
+  limite_resultados?: number;
+  max_paginas?: number;
+}
+
+export interface RadarDatos {
+  /** Oportunidades vigentes ya rankeadas y recortadas al límite pedido. */
+  oportunidades: OportunidadRadar[];
+  /** Total de oportunidades vigentes encontradas antes de aplicar el límite. */
+  totalAnalizadas: number;
+  limite: number;
+  paginasEscaneadas: number;
+}
+
+/**
+ * Recolecta y rankea las oportunidades del radar.
+ *
+ * Función pura de datos (sin formato de salida): la comparten la tool
+ * `radar_oportunidades_calientes` (que emite JSON para el LLM) y el informe
+ * HTML/PDF, garantizando que ambos muestren exactamente lo mismo.
+ */
+export async function recolectarDatosRadar(
+  client: CompraAgilClient,
+  params: RadarParams,
+  now: number = Date.now()
+): Promise<RadarDatos> {
+  const maxPaginas = params.max_paginas || 3;
+  logger.info(`radar: escaneando procesos activos (hasta ${maxPaginas} pág.) region="${params.region || 'Todas'}" q="${params.q || 'Todos'}"`);
+
+  // Auto-paginación: escanear varias páginas para no perder oportunidades en páginas 2+
+  const items = await client.buscarTodo({
+    estado: 'publicada',
+    region: params.region || undefined,
+    q: params.q || undefined,
+    tamano_pagina: 50,
+  }, maxPaginas);
+
+  const minBudget = params.presupuesto_minimo || 0;
+  const opportunities: OportunidadRadar[] = [];
+  for (const item of items) {
+    const evaluada = evaluarOportunidad(item, now, minBudget);
+    if (evaluada) opportunities.push(evaluada);
+  }
+
+  // Ordenar descendentemente por puntuación caliente
+  opportunities.sort((a, b) => b.puntuacion_caliente - a.puntuacion_caliente);
+
+  const limite = params.limite_resultados || 10;
+  return {
+    oportunidades: opportunities.slice(0, limite),
+    totalAnalizadas: opportunities.length,
+    limite,
+    paginasEscaneadas: maxPaginas,
+  };
+}
+
 export function registerRadarOportunidades(server: McpServer, client: CompraAgilClient): void {
   server.registerTool(
     TOOL_NAME,
@@ -123,18 +182,9 @@ export function registerRadarOportunidades(server: McpServer, client: CompraAgil
     },
     async (args) => {
       try {
-        const maxPaginas = args.max_paginas || 3;
-        logger.info(`radar_oportunidades_calientes: Escaneando procesos activos (hasta ${maxPaginas} pág.) para region="${args.region || 'Todas'}" q="${args.q || 'Todos'}"`);
+        const datos = await recolectarDatosRadar(client, args);
 
-        // Auto-paginación: escanear varias páginas para no perder oportunidades en páginas 2+
-        const items = await client.buscarTodo({
-          estado: 'publicada',
-          region: args.region || undefined,
-          q: args.q || undefined,
-          tamano_pagina: 50,
-        }, maxPaginas);
-
-        if (items.length === 0) {
+        if (datos.totalAnalizadas === 0) {
           return {
             content: [{
               type: 'text' as const,
@@ -143,26 +193,10 @@ export function registerRadarOportunidades(server: McpServer, client: CompraAgil
           };
         }
 
-        const now = Date.now();
-        const minBudget = args.presupuesto_minimo || 0;
-
-        const opportunities: OportunidadRadar[] = [];
-        for (const item of items) {
-          const evaluada = evaluarOportunidad(item, now, minBudget);
-          if (evaluada) opportunities.push(evaluada);
-        }
-
-        // Ordenar descendentemente por puntuación caliente
-        opportunities.sort((a, b) => b.puntuacion_caliente - a.puntuacion_caliente);
-
-        // Aplicar límite
-        const limit = args.limite_resultados || 10;
-        const rankedOpportunities = opportunities.slice(0, limit);
-
         const result = {
-          total_oportunidades_analizadas: opportunities.length,
-          radar_limite_resultados: limit,
-          oportunidades_calientes: rankedOpportunities,
+          total_oportunidades_analizadas: datos.totalAnalizadas,
+          radar_limite_resultados: datos.limite,
+          oportunidades_calientes: datos.oportunidades,
         };
 
         return {
