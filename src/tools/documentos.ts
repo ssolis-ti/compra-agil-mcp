@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
+import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
 
@@ -153,7 +154,7 @@ export function registerDocumentosTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: `Error al procesar el documento remoto: ${error.message || String(error)}`,
+            text: `Error al procesar el documento remoto: ${safeError(error)}`,
           }],
           isError: true,
         };
@@ -245,7 +246,7 @@ export function registerDocumentosTools(server: McpServer): void {
               }
             }
           } catch (e: any) {
-            results.push(`### Archivo: ${file}\nError al leer o parsear: ${e.message || String(e)}`);
+            results.push(`### Archivo: ${file}\nError al leer o parsear: ${safeError(e)}`);
           }
         }
 
@@ -268,7 +269,7 @@ export function registerDocumentosTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: `Error al consultar documentos locales: ${error.message || String(error)}`,
+            text: `Error al consultar documentos locales: ${safeError(error)}`,
           }],
           isError: true,
         };

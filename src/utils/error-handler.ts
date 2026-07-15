@@ -5,6 +5,8 @@
  * exactamente qué salió mal y qué acción tomar.
  */
 
+import { redact } from './redact.js';
+
 export interface ApiError {
   codigo: string;
   mensaje: string;
@@ -34,8 +36,10 @@ export class CompraAgilApiError extends Error {
 }
 
 function getActionableMessage(httpStatus: number, apiErrors: ApiError[]): string {
+  // El mensaje viene de la API: no se controla su contenido y podría hacer eco
+  // de la URL solicitada (que en el endpoint legado lleva el ticket en la query).
   const detail = apiErrors.length > 0
-    ? ` Detalle de la API: "${apiErrors[0].mensaje}"`
+    ? ` Detalle de la API: "${redact(apiErrors[0].mensaje ?? '')}"`
     : '';
 
   switch (httpStatus) {
