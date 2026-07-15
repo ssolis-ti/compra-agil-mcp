@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
+import { esGanador, extraerMontoNeto } from '../utils/quotation.js';
 
 const TOOL_NAME = 'auditar_compras_desiertas';
 
@@ -107,15 +108,11 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
           for (const item of itemsToProcess) {
             try {
               const detail = await client.detalle(item.codigo);
-              const winner = detail.proveedores_cotizando?.find(prov => {
-                if (prov.proveedor_seleccionado === true || prov.proveedor_seleccionado === 1) return true;
-                if (prov.seleccion && prov.seleccion.proveedor_seleccionado === true) return true;
-                return false;
-              });
+              const winner = detail.proveedores_cotizando?.find(esGanador);
 
               if (winner) {
-                const totalNeto = winner.valor_neto || winner.monto_total || 0;
-                
+                const totalNeto = extraerMontoNeto(winner) ?? 0;
+
                 let successDuration = 0;
                 if (detail.fechas?.fecha_cierre && detail.fechas?.fecha_publicacion) {
                   const start = new Date(detail.fechas.fecha_publicacion).getTime();

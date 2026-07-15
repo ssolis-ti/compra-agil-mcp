@@ -3,12 +3,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
+import { esGanador, extraerPrecioUnitario, extraerMontoNeto } from '../utils/quotation.js';
 
 const TOOL_NAME = 'recomendar_precio_ganador';
 
-const TOOL_DESCRIPTION = `Analiza procesos históricos similares de Compra Ágil que ya fueron cerrados y adjudicados para estimar y sugerir un precio unitario o total óptimo y competitivo para postular.
+const TOOL_DESCRIPTION = `Analiza procesos históricos similares de Compra Ágil que ya fueron cerrados y adjudicados para estimar y sugerir un precio competitivo para postular.
 Admite ingresar el código de una compra activa para extraer automáticamente las palabras clave o un término de búsqueda genérico.
-Nota: Realiza consultas en paralelo acotadas por el rate limiter.`;
+Distingue entre precio UNITARIO (comparable directamente) y monto NETO total adjudicado, reportando cada estadística por separado.
+Nota: Las consultas históricas se realizan de forma secuencial y respetan el límite de tasa (throttle) interno para no agotar la cuota diaria de la API.`;
 
 const inputSchema = {
   codigo_compra: z.string().optional().describe('Código de la Compra Ágil activa para analizar (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
@@ -81,8 +83,11 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
           };
         }
 
-        // 3. Consultar en paralelo (acotado por el limitador interno de la clase client) los detalles para obtener el ganador
-        const prices: number[] = [];
+        // 3. Consultar los detalles (secuencial, respetando el throttle del client) para obtener el ganador.
+        //    IMPORTANTE (C2): se mantienen DOS series separadas — precios unitarios y montos netos totales —
+        //    porque no son comparables entre sí y mezclarlos corrompe las estadísticas.
+        const unitPrices: number[] = [];
+        const totalPrices: number[] = [];
         const processedItems: any[] = [];
         const itemsToProcess = searchResponse.items.slice(0, limit);
 
@@ -91,38 +96,16 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
         for (const item of itemsToProcess) {
           try {
             const detail = await client.detalle(item.codigo);
-            
-            // Buscar al adjudicado/ganador
-            const winner = detail.proveedores_cotizando?.find(prov => {
-              if (prov.proveedor_seleccionado === true || prov.proveedor_seleccionado === 1) return true;
-              if (prov.seleccion && prov.seleccion.proveedor_seleccionado === true) return true;
-              return false;
-            });
+
+            // Buscar al adjudicado/ganador con la heurística centralizada (C1)
+            const winner = detail.proveedores_cotizando?.find(esGanador);
 
             if (winner) {
-              const totalNeto = winner.valor_neto || winner.monto_total || 0;
-              let unitPrice = null;
+              const unitPrice = extraerPrecioUnitario(winner, keyword);
+              const totalNeto = extraerMontoNeto(winner);
 
-              // Intentar extraer el precio unitario del producto cotizado
-              if (winner.productos_cotizados && winner.productos_cotizados.length === 1) {
-                unitPrice = winner.productos_cotizados[0].precio_unitario;
-              } else if (winner.productos_cotizados && winner.productos_cotizados.length > 1) {
-                // Buscar el producto cotizado que más coincida con la keyword original
-                const matchedProd = winner.productos_cotizados.find(p => 
-                  p.nombre_producto.toLowerCase().includes(keyword.toLowerCase())
-                );
-                if (matchedProd) {
-                  unitPrice = matchedProd.precio_unitario;
-                } else {
-                  // Fallback: usar el precio del primer item
-                  unitPrice = winner.productos_cotizados[0].precio_unitario;
-                }
-              }
-
-              const priceValue = unitPrice || totalNeto;
-              if (priceValue > 0) {
-                prices.push(priceValue);
-              }
+              if (unitPrice !== null) unitPrices.push(unitPrice);
+              if (totalNeto !== null) totalPrices.push(totalNeto);
 
               processedItems.push({
                 codigo: item.codigo,
@@ -130,7 +113,7 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
                 fecha_cierre: item.fechas.fecha_cierre,
                 ganador: winner.razon_social,
                 es_emt: winner.es_emt,
-                monto_total_adjudicado: winner.monto_total,
+                monto_neto_adjudicado: totalNeto,
                 precio_unitario_adjudicado: unitPrice,
                 criterio_seleccion: winner.seleccion?.criterio_seleccion || 'No especificado',
               });
@@ -140,7 +123,7 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
           }
         }
 
-        if (prices.length === 0) {
+        if (unitPrices.length === 0 && totalPrices.length === 0) {
           return {
             content: [{
               type: 'text' as const,
@@ -149,34 +132,27 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
           };
         }
 
-        // 4. Calcular estadísticas
-        prices.sort((a, b) => a - b);
-        const min = prices[0];
-        const max = prices[prices.length - 1];
-        const sum = prices.reduce((acc, val) => acc + val, 0);
-        const avg = Math.round(sum / prices.length);
-        
-        // Mediana
-        const mid = Math.floor(prices.length / 2);
-        const median = prices.length % 2 !== 0 ? prices[mid] : Math.round((prices[mid - 1] + prices[mid]) / 2);
+        // 4. Calcular estadísticas por serie. Se prioriza la serie de precios UNITARIOS
+        //    para la recomendación (comparable directamente); si no hay, se usa el monto neto.
+        const statsUnitarios = calcularEstadisticas(unitPrices);
+        const statsTotales = calcularEstadisticas(totalPrices);
+        const baseStats = statsUnitarios ?? statsTotales!;
+        const baseTipo = statsUnitarios ? 'precio_unitario' : 'monto_neto_total';
 
-        // 5. Sugerir precio competitivo (5% por debajo del promedio como referencia competitiva, acotada por el mínimo)
-        let recommended = Math.round(avg * 0.95);
-        if (recommended < min) {
-          recommended = min;
+        // 5. Sugerir precio competitivo (5% por debajo del promedio, acotado por el mínimo)
+        let recommended = Math.round(baseStats.promedio * 0.95);
+        if (recommended < baseStats.minimo) {
+          recommended = baseStats.minimo;
         }
 
         const result = {
           proceso_activo: targetProductDetail || undefined,
           termino_clave_utilizado: keyword,
           region_analisis: region ? `Región ${region}` : 'Todas las regiones',
-          procesos_analizados_exitosamente: prices.length,
-          estadisticas_precios: {
-            minimo_historico: min,
-            maximo_historico: max,
-            promedio_historico: avg,
-            mediana_historica: median,
-          },
+          procesos_adjudicados_analizados: processedItems.length,
+          estadisticas_precio_unitario: statsUnitarios,
+          estadisticas_monto_neto_total: statsTotales,
+          base_de_la_recomendacion: baseTipo,
           sugerencia_de_precio_competitivo: recommended,
           rango_sugerido: {
             min: Math.round(recommended * 0.95),
@@ -203,4 +179,29 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
       }
     }
   );
+}
+
+interface EstadisticasPrecio {
+  muestras: number;
+  minimo: number;
+  maximo: number;
+  promedio: number;
+  mediana: number;
+}
+
+/**
+ * Calcula min/max/promedio/mediana de una serie de precios.
+ * Retorna null si la serie está vacía (para poder distinguir "sin datos").
+ */
+export function calcularEstadisticas(valores: number[]): EstadisticasPrecio | null {
+  if (!valores || valores.length === 0) return null;
+  const sorted = [...valores].sort((a, b) => a - b);
+  const min = sorted[0];
+  const max = sorted[sorted.length - 1];
+  const avg = Math.round(sorted.reduce((acc, v) => acc + v, 0) / sorted.length);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 !== 0
+    ? sorted[mid]
+    : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  return { muestras: sorted.length, minimo: min, maximo: max, promedio: avg, mediana: median };
 }

@@ -4,6 +4,27 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [1.1.0] - 2026-07-15
+
+### Corregido
+* **Detección del proveedor ganador centralizada (`utils/quotation.ts`):** Se unificó en una sola función `esGanador()` la heurística de adjudicación, combinando todas las señales conocidas (`proveedor_seleccionado`, `seleccion.proveedor_seleccionado`, `estado_por_comprador`, `motivo/criterio_seleccion`). Antes, `recomendar_precio_ganador`, `auditar_compras_desiertas` y `generar_borrador_cotizacion` solo miraban campos marcados como "no confirmados en la respuesta real" por la API, provocando resultados vacíos con datos reales.
+* **`recomendar_precio_ganador` — mezcla de precios corregida:** Ya no se combinan precios unitarios y montos totales en la misma distribución estadística. Ahora se reportan por separado (`estadisticas_precio_unitario` y `estadisticas_monto_neto_total`), evitando recomendaciones sin sentido.
+* **Versionado coherente:** La versión del servidor MCP se lee dinámicamente desde `package.json` en lugar de estar hardcodeada (`index.ts` reportaba `1.0.0`). Se corrigió el orden de las entradas de este CHANGELOG.
+* **Manejo defensivo de `TotalLnea`/`TotalLinea`:** `obtener_detalle_orden_compra` tolera ambas variantes del campo de total de línea de la API legada.
+
+### Añadido
+* **Rate limiter proactivo (throttle):** El `RateLimiter` ahora espacia las solicitudes por debajo de un máximo por minuto (configurable) antes de enviarlas, además de reaccionar al 429. Alinea el comportamiento con lo documentado.
+* **`radar_oportunidades_calientes` con auto-paginación:** Escanea más allá de la primera página para no perder oportunidades relevantes.
+* **Daemon de monitoreo con deduplicación:** Las alertas ya no se repiten entre ciclos gracias a un archivo de estado (`.monitor-state.json`).
+* **Advertencias en `generar_borrador_cotizacion`:** El borrador marca explícitamente los campos placeholder (RUT, razón social, precio por defecto) y ya no asume `es_emt: true`.
+* **Suite de tests (Vitest):** Cobertura unitaria de `error-handler`, `quotation`, `rate-limiter` y el scoring del radar. Nuevo script `npm test`.
+
+### Modificado
+* **Utilidad compartida `utils/docs-locator.ts`:** Se centralizó la lógica de localización de documentos locales, antes duplicada e inconsistente entre `tools/documentos.ts` y `resources/documentacion.ts`.
+* **Conteo dinámico de capacidades:** Los logs de arranque derivan la cantidad de tools/recursos/prompts de listas en lugar de números hardcodeados.
+
+---
+
 ## [1.0.3] - 2026-06-10
 
 ### Corregido
@@ -19,7 +40,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
-## [1.1.0] - 2026-06-03
+## [1.0.1] - 2026-06-03
+
+> Nota: esta entrada estaba erróneamente etiquetada como `1.1.0` y fechada fuera de orden. Se renumeró a `1.0.1` para respetar el orden cronológico y SemVer (precede a `1.0.3`).
 
 ### Añadido
 * **Integración de Órdenes de Compra (OC API):**

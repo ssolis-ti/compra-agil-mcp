@@ -106,7 +106,9 @@ export interface OrdenCompraDetalle {
       Producto: string;
       Cantidad: number;
       PrecioNeto: number;
-      TotalLnea: number;
+      // La API legada de ChileCompra ha usado ambas variantes del nombre del campo.
+      TotalLnea?: number;
+      TotalLinea?: number;
     }>;
   };
 }
@@ -244,7 +246,7 @@ export class CompraAgilClient {
    * Realiza un GET autenticado a la API.
    */
   private async request<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
-    // Verificar rate limit antes de enviar
+    // Verificar rate limit diario antes de enviar
     const limitCheck = this.rateLimiter.checkLimit();
     if (limitCheck.limited) {
       throw new CompraAgilApiError(429, [{
@@ -253,6 +255,9 @@ export class CompraAgilClient {
         detalle: null,
       }]);
     }
+
+    // Throttle proactivo: espaciar solicitudes bajo el máximo por minuto para no gatillar 429 por ráfagas
+    await this.rateLimiter.throttle();
 
     // Construir URL con query params
     const base = path.startsWith('/servicios') ? 'https://api.mercadopublico.cl' : this.baseUrl;
