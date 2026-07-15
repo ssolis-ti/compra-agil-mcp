@@ -4,6 +4,35 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [1.2.0] - 2026-07-15
+
+### Añadido
+* **Capa de informes (`src/reports/`):** Nueva arquitectura para generar informes profesionales imprimibles en HTML autocontenido (sin scripts ni recursos externos).
+  * `theme.ts`: design system print-first — tokens de color/tipografía/espaciado y CSS de impresión como fuente única de verdad.
+  * `components.ts`: componentes puros (`portada`, `kpiRow`, `tabla`, `badge`, `callout`, `barChartSVG`, `pieDoc`) con escapado HTML obligatorio.
+  * `format.ts`: localización chilena centralizada (CLP, fechas, RUT, horas).
+  * `render.ts` / `export.ts`: shell del documento y escritura a disco.
+  * `templates/radar-oportunidades.ts`: primera plantilla — KPIs, gráfico de puntuación, fichas destacadas y listado completo.
+* **Tool `generar_informe`:** Genera el informe y devuelve la RUTA del archivo, nunca su contenido — un informe pesa decenas de KB y retornarlo consumiría miles de tokens de contexto por llamada.
+* **Formatos de papel chilenos:** `carta` (216×279mm, **por defecto**, estándar de oficina en Chile), `oficio`/folio (216×330mm, documentos oficiales) y `a4` (210×297mm, ISO). El Oficio se declara con dimensiones explícitas porque **no** equivale al `legal` de CSS (216×356mm, US Legal) — hay un test de regresión que lo blinda.
+* **Gráficos en SVG inline generados a mano:** vectoriales, imprimen nítidos a cualquier DPI y no requieren JS ni librerías de charting.
+* **`scripts/preview-informe.ts`:** Vista previa con datos de muestra para iterar el diseño sin consumir cuota de la API ni requerir ticket. Genera los tres formatos de papel.
+* **34 tests nuevos** cubriendo formato chileno, escapado anti-inyección (incluido dentro del SVG), medidas de papel y render del informe. Total: 65 tests.
+
+### Modificado
+* **`radar_oportunidades_calientes` refactorizado:** se extrajo `recolectarDatosRadar()` como función pura de datos. La tool JSON y el informe HTML consumen el mismo dataset, garantizando que no puedan divergir.
+* La vista previa en pantalla (`@media screen`) sigue al formato de papel real, para que lo que se ve coincida con lo impreso.
+
+### Corregido
+* **Gráfico "Top N" desordenado:** el template asumía que su entrada venía rankeada. Ahora ordena defensivamente — un gráfico Top N desordenado es un error visible y silencioso. Cubierto por test.
+* **Regex de diacríticos ilegible en `slug()`:** se reemplazaron los caracteres combinantes crudos (invisibles en el código fuente) por escapes `\u0300-\u036f`.
+
+### Notas
+* Actualmente solo está implementada la plantilla `radar`. Las plantillas `cotizacion`, `competencia`, `precio` y `auditoria` están planificadas.
+* La ruta `API real → recolectarDatosRadar → plantilla` aún no se ha ejercitado con datos productivos (requiere un ticket válido). La plantilla se validó con fixtures.
+
+---
+
 ## [1.1.0] - 2026-07-15
 
 ### Corregido
