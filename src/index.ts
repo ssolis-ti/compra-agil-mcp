@@ -36,6 +36,7 @@ import { registerRecomendarPrecio } from './tools/recomendar-precio.js';
 import { registerAuditarDesiertas } from './tools/auditar-desiertas.js';
 import { registerGenerarBorrador } from './tools/generar-borrador.js';
 import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
+import { registerGenerarInforme } from './tools/generar-informe.js';
 
 // Resources
 import { registerRegionesResource } from './resources/regiones.js';
@@ -91,12 +92,13 @@ async function main() {
   registerAuditarDesiertas(server, client);
   registerGenerarBorrador(server, client);
   registerRadarOportunidades(server, client);
+  registerGenerarInforme(server, client);
   const TOOL_NAMES = [
     'buscar_compras_agiles', 'obtener_detalle_compra', 'monitorear_cambios_recientes',
     'verificar_orden_compra', 'obtener_estadisticas_uso', 'obtener_detalle_orden_compra',
     'obtener_enlace_documento', 'descargar_y_leer_documento', 'consultar_documentos_locales',
     'recomendar_precio_ganador', 'auditar_compras_desiertas', 'generar_borrador_cotizacion',
-    'radar_oportunidades_calientes',
+    'radar_oportunidades_calientes', 'generar_informe',
   ];
   logger.info(`${TOOL_NAMES.length} herramientas registradas: ${TOOL_NAMES.join(', ')}`);
 

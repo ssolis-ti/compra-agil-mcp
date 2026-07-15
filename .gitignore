@@ -36,3 +36,6 @@ alerts.log
 .DS_Store
 Thumbs.db
 ehthumbs.db
+
+# Informes generados
+informes/
