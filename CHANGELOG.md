@@ -4,6 +4,41 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [2.0.0] - 2026-07-15
+
+Primera versión validada **contra la API real de Mercado Público**. Las pruebas revelaron que la documentación oficial difiere de la realidad en puntos que invalidaban tres herramientas, y que se corrigen aquí.
+
+### ⚠ BREAKING CHANGES
+* **Eliminada la herramienta `recomendar_precio_ganador`.** Buscaba procesos adjudicados, que la API no expone: era incapaz de encontrar datos.
+* **Nueva herramienta `analizar_precios_mercado`** en su reemplazo. Analiza la distribución de precios **cotizados** (dato real disponible) en lugar de precios ganadores (inexistente).
+* **Semántica de salida modificada** en `auditar_compras_desiertas`: los campos `casos_exitosos_*` y `*_adjudicado` pasan a `procesos_comparables_*` y `*_cotizado`, porque no había adjudicación que reportar.
+
+### Hallazgos verificados contra la API real (45 procesos, 52 cotizaciones)
+La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta en:
+* **`estado=proveedor_seleccionado` devuelve SIEMPRE 0 resultados.** El parámetro se acepta, pero no retorna nada.
+* **`estado=oc_emitida` devuelve HTTP 400** — ni siquiera es un filtro válido, pese a estar documentado.
+* **Ningún proceso expone adjudicaciones:** `proveedor_seleccionado` valió `0` en el 100% de las cotizaciones y ningún proceso traía `id_orden_compra`.
+* **El sub-objeto `orden_compra` no existe**; solo `id_orden_compra` en la raíz.
+* **`seleccion.*` y `estado_cotizacion.*` no existen.** En su lugar hay `estado` (número).
+* **`proveedor_seleccionado` es un número**, no un booleano.
+* **La API rechaza consultas sin filtros** con HTTP 500, y exige `tamano_pagina >= 10` (confirmado: 1 y 5 devuelven 400).
+* **Solo los procesos `desierta` publican sus cotizaciones** (medido: desierta 5/8 con precios, cerrada 0/8).
+
+### Corregido
+* **`verificar_ticket` devolvía HTTP 500:** consultaba sin filtros. Ahora usa una ventana `ttl_cambio_ms` de 1 hora — la consulta más liviana (~1s). Verificado contra la API real.
+* **`auditar_compras_desiertas` y `generar_borrador_cotizacion` no encontraban nada nunca:** buscaban `estado=proveedor_seleccionado` (0 resultados). Ahora usan `desierta` y agregan precios cotizados.
+* **Filtro de admisibilidad demasiado agresivo:** se excluían las cotizaciones declaradas inadmisibles, pero en los procesos desiertos —única fuente de precios— casi todas lo son, dejando la muestra vacía. Ahora se incluyen y se reporta el motivo de cada una: un precio ofertado es señal de mercado aunque se haya rechazado el papeleo.
+* **Recurso `compra-agil://estados` actualizado** con el comportamiento real medido, marcando qué estados funcionan y cuáles no.
+* **`verificar_orden_compra` es honesto:** un resultado "sin OC" ya no implica que la OC no exista, sino que la API no la publica.
+
+### Añadido
+* **Control de dispersión en `analizar_precios_mercado`:** si el precio máximo supera 10 veces la mediana, advierte que el término de búsqueda está mezclando productos distintos y que la sugerencia tiene poco valor. Evita entregar números con falsa precisión (verificado: "reparacion" → 500× la mediana, advierte; "resmas papel" → 2,8×, no advierte).
+* **Percentil 25 como criterio de sugerencia**, en reemplazo de "5% bajo el promedio": resiste valores atípicos y ubica la oferta en el cuarto más económico.
+* **Herramientas de depuración** (`scripts/debug-*.ts`): consultan la API real y redactan su propia salida, escribiendo el crudo en `debug/` (gitignored) para inspección humana. Son las que produjeron los hallazgos de esta versión.
+* **14 tests de regresión** sobre la realidad medida de la API (100 en total): si alguien vuelve a confiar en la documentación oficial, fallan y explican por qué.
+
+---
+
 ## [1.3.0] - 2026-07-15
 
 ### Seguridad
