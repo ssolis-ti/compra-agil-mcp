@@ -8,6 +8,7 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
+import { safeError } from '../utils/redact.js';
 
 export function registerComprasTemplateResource(server: McpServer, client: CompraAgilClient): void {
   // Crear plantilla de URI para compra-agil://compras/{codigo}
@@ -40,7 +41,7 @@ export function registerComprasTemplateResource(server: McpServer, client: Compr
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
-          : `Error al leer recurso de Compra Ágil: ${String(error)}`;
+          : `Error al leer recurso de Compra Ágil: ${safeError(error)}`;
         throw new Error(message);
       }
     }

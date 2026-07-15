@@ -6,6 +6,8 @@
  * Todo el logging va exclusivamente a stderr (console.error).
  */
 
+import { redact } from './redact.js';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 const LOG_LEVELS: Record<LogLevel, number> = {
@@ -31,19 +33,21 @@ function log(level: LogLevel, message: string, data?: unknown): void {
   if (LOG_LEVELS[level] < LOG_LEVELS[currentLevel]) return;
 
   const prefix = `[${formatTimestamp()}] [${level.toUpperCase()}]`;
-  const line = data
-    ? `${prefix} ${message} ${JSON.stringify(data)}`
-    : `${prefix} ${message}`;
+  // Redacción en el punto de salida: cubre tanto el mensaje como los datos
+  // adjuntos, sin importar de qué ruta provengan.
+  const cuerpo = data ? `${message} ${JSON.stringify(data)}` : message;
+  const seguro = redact(cuerpo);
 
   // SIEMPRE stderr, NUNCA stdout
-  console.error(line);
+  console.error(`${prefix} ${seguro}`);
 
-  // Intentar enviar el log de forma nativa al cliente MCP si el servidor está configurado
+  // El cliente MCP recibe los logs de forma nativa — es decir, van al contexto
+  // del LLM y a la transcripción. Se envía la versión ya redactada.
   if (mcpServer) {
     mcpServer.sendLoggingMessage({
       level,
       logger: 'mcp-compra-agil',
-      data: data ? `${message} ${JSON.stringify(data)}` : message,
+      data: seguro,
     }).catch(() => {
       // Ignorar fallos silenciosamente para no interrumpir el flujo principal
     });

@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
+import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'monitorear_cambios_recientes';
 
@@ -80,7 +81,7 @@ export function registerMonitorearCambios(server: McpServer, client: CompraAgilC
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
-          : `Error inesperado: ${String(error)}`;
+          : `Error inesperado: ${safeError(error)}`;
         return {
           content: [{ type: 'text' as const, text: message }],
           isError: true,
