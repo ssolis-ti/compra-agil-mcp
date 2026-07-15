@@ -1,6 +1,6 @@
 {
   "name": "@ssolis-ti/mcp-compra-agil",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Servidor MCP para la API Compra Ágil v2 de Mercado Público (Chile)",
   "type": "module",
   "bin": {
@@ -24,7 +24,9 @@
     "dev": "tsx watch src/index.ts",
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
     "monitor": "node dist/services/monitor.js",
-    "prepublishOnly": "npm run build"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
@@ -33,9 +35,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/pdf-parse": "^1.1.5",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.7"
   },
   "keywords": [
     "mcp",

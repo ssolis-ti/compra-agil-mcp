@@ -13,6 +13,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
+import { esGanador } from '../utils/quotation.js';
 
 const TOOL_NAME = 'verificar_orden_compra';
 
@@ -79,7 +80,7 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
               : 'No se ha emitido una Orden de Compra para esta Compra Ágil aún.',
           },
           proveedor_seleccionado: detalle.proveedores_cotizando
-            .filter((p) => p.proveedor_seleccionado === 1 || p.proveedor_seleccionado === true || p.seleccion?.proveedor_seleccionado === true || p.estado_por_comprador === '1')
+            .filter(esGanador)
             .map((p) => ({
               rut: p.rut_proveedor,
               razon_social: p.razon_social,

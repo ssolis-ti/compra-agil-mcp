@@ -20,6 +20,9 @@ tsconfig.tsbuildinfo
 *.log
 alerts.log
 
+# Daemon state (deduplicación de alertas)
+.monitor-state.json
+
 # IDEs and Editors
 .idea/
 .vscode/
