@@ -7,9 +7,12 @@
 
 Servidor [MCP (Model Context Protocol)](https://modelcontextprotocol.io) desarrollado en TypeScript que envuelve e integra de forma avanzada la API REST de **Compra Ágil v2** y la API de **Órdenes de Compra (OC)** de [Mercado Público](https://www.mercadopublico.cl). Permite a cualquier IA, agente autónomo o cliente compatible interrogar, filtrar, auditar y prospectar procesos de compra estatal del gobierno de Chile.
 
-El proyecto está diseñado bajo una arquitectura modular y cuenta con dos modos de operación principales:
+El proyecto está diseñado bajo una arquitectura modular y cuenta con tres modos de operación:
 1. **Servidor Interactivo MCP:** Comunicación bidireccional vía Stdio para integrarse directamente con el chat y herramientas de tu IDE o cliente (Cursor, Claude Desktop, Windsurf, etc.).
 2. **Daemon de Alertas en Segundo Plano:** Servicio de consulta incremental autónomo que rastrea procesos de alto valor con **0 oferentes** y guarda alertas automatizadas en un registro local.
+3. **Generador de Informes:** Produce documentos imprimibles autocontenidos en formatos **Carta, Oficio y A4**.
+
+> 📌 **Antes de usarlo en decisiones de negocio**, lee [Limitaciones conocidas de la API](#️-limitaciones-conocidas-de-la-api). La documentación oficial de ChileCompra difiere del comportamiento real en puntos importantes — este servidor implementa lo que la API **hace**, no lo que promete.
 
 ---
 
@@ -32,8 +35,10 @@ El proyecto está diseñado bajo una arquitectura modular y cuenta con dos modos
   * [Herramientas Disponibles (Tools)](#herramientas-disponibles-tools)
   * [Recursos Disponibles (Resources)](#recursos-disponibles-resources)
   * [Prompts Disponibles](#prompts-disponibles)
-* [Ejemplos Prácticos de Interacción](#ejemplos-prácticos-de-interacción)
-* [Licencia](#licencia)
+* [⚠️ Limitaciones conocidas de la API](#️-limitaciones-conocidas-de-la-api)
+* [🖨️ Informes imprimibles](#️-informes-imprimibles)
+* [Ejemplos Prácticos de Interacción](#-ejemplos-prácticos-de-interacción)
+* [Licencia](#-licencia)
 
 ---
 
@@ -48,14 +53,16 @@ Compra Ágil es el mecanismo de adquisición simplificado y directo del Estado d
 Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado Público, siendo de alto valor tanto para compradores del Estado como para proveedores privados:
 
 ### 🏛️ Para Compradores Públicos (Organismos del Estado)
-* **Estudios de Mercado Eficientes:** Permite realizar análisis históricos rápidos de adjudicaciones y precios de referencia antes de publicar nuevas adquisiciones.
-* **Control y Auditoría Interna:** Facilita la fiscalización de procesos pasados, evaluando los motivos de adjudicación y comparando todas las ofertas recibidas para asegurar la probidad administrativa.
-* **Control de Órdenes de Compra (OC):** Monitoreo masivo de estados de aceptación y desgloses de productos facturados por los proveedores.
+* **Estudios de Mercado:** Analiza los precios que el mercado cotizó en procesos similares antes de publicar una nueva adquisición.
+* **Auditoría de Procesos Desiertos:** Entiende por qué una convocatoria no recibió ofertas válidas, cruzando presupuesto y plazo contra el comportamiento del mercado.
+* **Informes Imprimibles:** Genera reportes profesionales en formato Carta, Oficio o A4 listos para presentar.
 
 ### 💼 Para Proveedores (Empresas y Pymes)
-* **Inteligencia Competitiva:** Analizar ofertas ganadoras y perdedoras, precios de la competencia y spreads en procesos cerrados.
-* **Prospectar Oportunidades:** Monitorear llamados activos sin oferentes mediante filtros locales avanzados.
+* **Inteligencia de Precios:** Analiza a cuánto está cotizando la competencia en procesos del mismo rubro para posicionar tu oferta.
+* **Prospectar Oportunidades:** Monitorea llamados activos sin oferentes con un ranking ponderado (Hot Score) y filtros locales.
 * **Alertas Automatizadas:** El Daemon en segundo plano notifica oportunidades que coincidan con tu presupuesto mínimo y rubro.
+
+> ⚠️ **Importante:** la API de Mercado Público **no publica qué oferta ganó**. Todo el análisis de precios se basa en cotizaciones presentadas, no en adjudicaciones. Lee [Limitaciones conocidas](#-limitaciones-conocidas-de-la-api) antes de usarlo en decisiones de negocio.
 
 ---
 
@@ -66,8 +73,10 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 * **Filtrado Inteligente Anti-Ruido:** Filtros locales en la herramienta `buscar_compras_agiles` (`palabras_clave_requeridas` y `palabras_clave_excluidas`) para afinar búsquedas amplias de la API y remover ofertas irrelevantes.
 * **Paginación Inteligente y Monitoreo Completo:** La herramienta de cambios recientes admite navegación de páginas (`numero_pagina`), y el demonio de monitoreo periódico procesa de forma recursiva todas las páginas de resultados (`client.buscarTodo()`) para evitar pérdidas de alertas.
 * **Integración del Detalle de OC:** Resuelve de forma dinámica el código alfanumérico o ID numérico de las Órdenes de Compra utilizando la API legada de Mercado Público.
-* **Enriquecimiento Inteligente de la OC:** Corrige las limitaciones de la API oficial donde el estado `oc_emitida` no funciona en producción. El servidor busca de forma recursiva a nivel raíz y anidado el `id_orden_compra` y enlaza el desglose de productos y datos del proveedor ganador.
-* **Rate Limiting Local:** Algoritmo *Token Bucket* integrado que limita el consumo (máximo 40 llamadas por minuto) y procesa el error 429 de forma transparente para evitar la inhabilitación temporal del ticket.
+* **Validado contra la API real:** El comportamiento documentado por ChileCompra difiere del real en varios puntos. Este servidor implementa lo que la API **hace**, no lo que promete, y lo documenta en [Limitaciones conocidas](#-limitaciones-conocidas-de-la-api). Hay tests de regresión que blindan cada hallazgo.
+* **Redacción de credenciales:** Todo texto que sale del proceso (logs, errores, respuestas) pasa por un punto único de redacción que borra el ticket. Es relevante porque `sendLoggingMessage` envía los logs al cliente MCP — es decir, al contexto del modelo y a la transcripción.
+* **Rate Limiting Local:** Throttle proactivo que espacia las solicitudes bajo un máximo por minuto **antes** de enviarlas, además de reaccionar al error 429 para evitar la inhabilitación temporal del ticket.
+* **Informes imprimibles:** Genera documentos HTML autocontenidos con diseño de impresión real (`@page`, saltos controlados, cabeceras de tabla repetidas) en formatos **Carta, Oficio y A4**.
 * **Logs Nativos en el Protocolo:** Inyección de la notificación `sendLoggingMessage` de MCP para registrar y depurar la actividad del servidor directamente dentro de la interfaz del cliente.
 * **Manejo Seguro de Documentos (UUID):** Evita errores de tipo `Authentication parameters missing` al tratar con archivos adjuntos protegidos de Compra Ágil (UUIDs) redirigiendo al usuario a la ficha pública del buscador (`https://buscador.mercadopublico.cl/ficha?code={codigo}`) en lugar de entregar enlaces de descarga directa inaccesibles.
 
@@ -137,7 +146,11 @@ El servidor está configurado para empaquetarse de manera compacta. Si decides p
 
 ## ⚙️ Configuración de Variables de Entorno
 
-Crea un archivo `.env` en la raíz del directorio `mcp-compra-agil/` para ingresar tus credenciales y ajustar las configuraciones por defecto:
+Copia la plantilla y complétala con tus credenciales:
+
+```bash
+cp .env.example .env   # en Windows: copy .env.example .env
+```
 
 ```env
 # Ticket oficial de acceso a la API (Obligatorio)
@@ -146,7 +159,10 @@ COMPRA_AGIL_TICKET=tu_ticket_aqui
 # URL Base para las llamadas a la API v2 (por defecto api2.mercadopublico.cl)
 COMPRA_AGIL_BASE_URL=https://api2.mercadopublico.cl
 
-# --- Parámetros del Demonio de Monitoreo ---
+# Nivel de log: debug | info | warn | error
+LOG_LEVEL=info
+
+# --- Parámetros del Daemon de Monitoreo ---
 # Intervalo entre búsquedas en minutos (por defecto 1 hora)
 MONITOR_INTERVAL_MINUTES=60
 # Presupuesto mínimo en CLP para emitir alerta (ej: 5.000.000)
@@ -154,6 +170,16 @@ MONITOR_MIN_BUDGET_CLP=5000000
 # Palabras clave a buscar separadas por coma
 MONITOR_KEYWORDS=software, desarrollo, licencias, plataforma, sistema, soporte, cloud
 ```
+
+### 🔐 Manejo seguro del ticket
+
+El ticket es una credencial personal. Aunque el servidor **redacta el ticket de todo log, error y respuesta** (`src/utils/redact.ts`), esa es la última línea de defensa, no un permiso para exponerlo:
+
+* Guárdalo **solo** en el `.env` — ya está en `.gitignore`.
+* **No lo pegues** en chats, issues ni capturas de pantalla.
+* **No lo pases inline en la terminal** (`COMPRA_AGIL_TICKET=xxx node ...`): queda en el historial del shell y visible en la lista de procesos.
+* Para comprobar que funciona usa la herramienta **`verificar_ticket`**: valida contra la API y solo muestra `••••1234`.
+* Si trabajas con un agente de IA con acceso a tu disco, considera añadir reglas que le impidan leer el `.env`.
 
 ---
 
@@ -313,23 +339,25 @@ const resources = await client.listResources();
 | `buscar_compras_agiles` | Busca procesos utilizando palabras clave (con filtros inteligentes locales), región (1-16), estado y ventana temporal. Parámetros `q` e `id` son excluyentes. |
 | `obtener_detalle_compra` | Detalle exhaustivo de una cotización: descripción, ítems y cotizaciones recibidas (confidenciales hasta el estado *Cerrada*). |
 | `monitorear_cambios_recientes` | Sincronización reactiva e incremental en los últimos N minutos (ventana máxima de 1440 min / 24 horas), con soporte para paginación. |
-| `verificar_orden_compra` | Comprobación de emisión de OC resolviendo inconsistencias de la API pública. Retorna el ID de la OC y acopla dinámicamente los desgloses económicos y datos del adjudicado. |
+| `verificar_orden_compra` | Comprueba si un proceso tiene OC emitida leyendo `id_orden_compra` y cruzándolo con la API de OC. ⚠ En la práctica reportará "sin OC" casi siempre: la API no publica adjudicaciones — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
 | `obtener_detalle_orden_compra` | Consulta detallada del desglose de productos y facturación de una OC utilizando su código alfanumérico o ID numérico. |
 | `obtener_estadisticas_uso` | Retorna las estadísticas del limitador de solicitudes local (`requestsToday`, `isLimited`) para optimizar el consumo de la cuota del ticket. |
+| `verificar_ticket` | Comprueba que el ticket configurado funcione contra la API real **sin revelar su valor** (solo muestra `••••1234`). Primer diagnóstico recomendado. |
 | `obtener_enlace_documento` | Genera el link público y oficial de descarga de un archivo adjunto del proceso de Mercado Público. |
 | `descargar_y_leer_documento` | Descarga y extrae el texto plano de un documento adjunto en PDF del proceso de compra de forma remota, permitiendo realizar búsquedas de palabras clave. |
 | `consultar_documentos_locales` | Busca y extrae fragmentos coincidentes dentro de los archivos PDF/TXT/MD de ayuda de Compra Ágil guardados en la carpeta local `docs/`. |
-| `recomendar_precio_ganador` | Analiza precios históricos unitarios y totales de proveedores ganadores en procesos cerrados y sugiere un precio competitivo ajustado (percentil 40). |
-| `auditar_compras_desiertas` | Analiza las causales de convocatorias sin ofertas (desiertas) cruzando presupuesto, duración del llamado y requisitos especiales contra históricos exitosos. |
-| `generar_borrador_cotizacion` | Auto-completa propuestas JSON de cotización bajo el esquema oficial, calculando impuestos (19% IVA), sumatorios y redactando cartas formales de presentación. |
-| `radar_oportunidades_calientes` | Califica y ordena convocatorias publicadas según un score ponderado (Hot Score) de competencia (sin oferentes), urgencia, presupuesto y simplicidad. |
+| `analizar_precios_mercado` | Analiza la distribución de precios **cotizados** por la competencia en procesos similares (mín/p25/mediana/promedio/máx) y sugiere un precio competitivo. Advierte cuando la muestra es demasiado dispersa. ⚠ Analiza precios cotizados, **no adjudicados** — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
+| `auditar_compras_desiertas` | Analiza por qué una convocatoria quedó desierta, cruzando su presupuesto y plazo contra los precios que el mercado cotizó en procesos del mismo rubro. Reporta el motivo oficial de deserción. |
+| `generar_borrador_cotizacion` | Auto-completa propuestas JSON de cotización bajo el esquema oficial, calculando impuestos (19% IVA) y redactando la carta de presentación. Marca explícitamente los campos placeholder. |
+| `radar_oportunidades_calientes` | Califica y ordena convocatorias publicadas según un score ponderado (Hot Score) de competencia (sin oferentes), urgencia, presupuesto y simplicidad. Auto-pagina. |
+| `generar_informe` | Genera un **informe profesional imprimible** (HTML autocontenido, diseño A4/Carta/Oficio) y devuelve la ruta del archivo. Ver [Informes](#-informes-imprimibles). |
 
 ### Recursos Disponibles (Resources)
 
 | URI del Recurso | Tipo de Mime | Descripción de Contenido |
 | :--- | :--- | :--- |
 | `compra-agil://regiones` | `application/json` | Catálogo maestro de mapeo de las 16 regiones administrativas de Chile y sus identificadores numéricos. |
-| `compra-agil://estados` | `application/json` | Estados admitidos por la API y notas técnicas sobre su comportamiento real para optimizar las queries. |
+| `compra-agil://estados` | `application/json` | Estados de la API con su comportamiento **real verificado**: marca cuáles funcionan (`publicada`, `cerrada`, `desierta`, `cancelada`) y cuáles no (`proveedor_seleccionado` devuelve 0; `oc_emitida` da HTTP 400), pese a estar ambos documentados oficialmente. |
 | `compra-agil://glosario` | `application/json` | Glosario de acrónimos del dominio de ChileCompra para contextualización semántica de la IA. |
 | `compra-agil://compras/{codigo}` | `application/json` | Recurso dinámico que resuelve el objeto JSON puro devuelto por la API v2 de una Compra Ágil usando su código único. |
 | `compra-agil://documentacion/{filename}` | `text/plain` | Recurso dinámico que lee y extrae todo el contenido de texto de un PDF/TXT/MD local en la carpeta `docs/` en tiempo real. |
@@ -337,7 +365,60 @@ const resources = await client.listResources();
 ### Prompts Disponibles
 
 * **`buscar_oportunidades_proveedor`:** Plantilla estructurada para guiar a la IA a consultar la región del proveedor, buscar compras publicadas afines y filtrar las 5 mejores ofertas libres de competidores.
-* **`analizar_competencia`:** Plantilla de comandos para comparar precios unitarios y totales de los participantes de un proceso finalizado, identificando la brecha económica (spread) y el motivo de selección.
+* **`analizar_competencia`:** Plantilla de comandos para comparar precios unitarios y totales de los participantes de un proceso finalizado, identificando la brecha económica (spread) entre ofertas. *Nota: el motivo de selección no está disponible — la API no publica adjudicaciones.*
+
+---
+
+## ⚠️ Limitaciones conocidas de la API
+
+Estos hallazgos fueron **verificados empíricamente** contra el servicio real de Mercado Público (julio 2026, 45 procesos y 52 cotizaciones inspeccionados). La [Guía oficial API Compra Ágil v2](docs/api/) documenta un comportamiento distinto en cada uno de estos puntos.
+
+### 🔴 La API no publica adjudicaciones
+
+| La documentación dice | La API real hace |
+| :--- | :--- |
+| `estado=proveedor_seleccionado` es un filtro válido | Se acepta, pero devuelve **siempre 0 resultados** |
+| `estado=oc_emitida` "está definido en el modelo" | **HTTP 400** — no es un filtro válido |
+| `orden_compra.id_orden_compra` | El sub-objeto **no existe**; solo `id_orden_compra` en la raíz |
+| `seleccion.*`, `estado_cotizacion.*` | **No existen**; hay `estado` (número) |
+| `proveedor_seleccionado: boolean` | Es un **número** (`0` \| `1`) |
+
+En la muestra, `proveedor_seleccionado` valió `0` en el **100 %** de las cotizaciones y **ningún** proceso traía `id_orden_compra`.
+
+**Consecuencia práctica:** no es posible saber qué oferta ganó ni obtener precios adjudicados. `analizar_precios_mercado` se apoya en precios **cotizados**, que sí son señal de mercado real. `verificar_orden_compra` reportará "sin OC" casi siempre — lo que **no prueba** que la OC no exista, solo que la API no la publica.
+
+### 📊 Dónde viven los precios
+
+Solo los procesos **`desierta`** publican sus cotizaciones (medido: `desierta` 5/8 procesos con precios; `cerrada` 0/8). Por eso el análisis de precios se basa en ellos.
+
+Casi todas esas cotizaciones están declaradas *inadmisibles* — es justamente lo que dejó desierto al proceso. **Se incluyen igualmente** en las estadísticas: un precio ofertado es señal de mercado aunque le hayan rechazado el papeleo, y los motivos reales observados son mayoritariamente formales (*"no cumple con garantía"*, *"no cuenta con giro acorde"*), no de precio. La herramienta reporta los motivos para que puedas ponderarlos.
+
+### 🐌 Otras restricciones medidas
+
+* **Las consultas sin filtros devuelven HTTP 500.** Hay que enviar al menos un filtro.
+* **`tamano_pagina` mínimo es 10** (valores `1` y `5` devuelven HTTP 400).
+* **La API es lenta:** entre 1 y 14 segundos por consulta según el tamaño de página.
+
+---
+
+## 🖨️ Informes imprimibles
+
+`generar_informe` produce un HTML autocontenido (sin scripts ni recursos externos) con diseño de impresión real, y **devuelve la ruta del archivo, no su contenido** — un informe pesa decenas de KB y retornarlo al modelo consumiría miles de tokens de contexto.
+
+| Formato | Medidas | Uso |
+| :--- | :--- | :--- |
+| **`carta`** (por defecto) | 216 × 279 mm | Estándar de oficina en Chile |
+| **`oficio`** | 216 × 330 mm | Folio chileno, documentos oficiales |
+| **`a4`** | 210 × 297 mm | Estándar ISO |
+
+> El oficio chileno **no** equivale al `legal` de CSS (216 × 356 mm, US Legal): usarlo agregaría 26 mm de alto. Va declarado con dimensiones explícitas.
+
+Abre el archivo en tu navegador y usa **Ctrl+P** para exportarlo a PDF, seleccionando el papel correspondiente en el diálogo de impresión.
+
+Para iterar el diseño sin consumir cuota de la API ni requerir ticket:
+```bash
+npx tsx scripts/preview-informe.ts   # genera los tres formatos con datos de muestra
+```
 
 ---
 
@@ -346,9 +427,15 @@ const resources = await client.listResources();
 * **Búsqueda Multi-Filtro:**
   * *Usuario:* "¿Qué compras ágiles de materiales eléctricos están publicadas en Valparaíso?"
   * *Acción del LLM:* Traduce "Valparaíso" al código de región `5` usando `compra-agil://regiones` y llama a `buscar_compras_agiles` con `q="materiales electricos"`, `estado="publicada"`, `region="5"`.
-* **Auditoría de Adjudicaciones:**
-  * *Usuario:* "¿Quién ganó la licitación de computadores con código `2376-331-COT26`?"
-  * *Acción del LLM:* Llama a `verificar_orden_compra` con `codigo="2376-331-COT26"` para identificar al proveedor seleccionado, y luego consulta el desglose de productos utilizando `obtener_detalle_orden_compra` con el ID de la OC devuelto.
+* **Análisis de precios para cotizar:**
+  * *Usuario:* "Quiero cotizar resmas de papel, ¿a qué precio está el mercado?"
+  * *Acción del LLM:* Llama a `analizar_precios_mercado` con `q="resmas papel"`. Recibe la distribución de precios cotizados y el percentil 25 como referencia competitiva.
+* **Informe de oportunidades:**
+  * *Usuario:* "Genérame un informe en oficio del radar de oportunidades de la RM."
+  * *Acción del LLM:* Llama a `generar_informe` con `tipo="radar"`, `region="13"`, `formato_papel="oficio"`. Recibe la ruta del HTML listo para imprimir.
+* **Auditoría de un proceso desierto:**
+  * *Usuario:* "¿Por qué quedó desierta la compra `758-329-COT26`?"
+  * *Acción del LLM:* Llama a `auditar_compras_desiertas` con `codigo_compra="758-329-COT26"`. Recibe el motivo oficial, las brechas de presupuesto/plazo frente al mercado y recomendaciones.
 
 ---
 
