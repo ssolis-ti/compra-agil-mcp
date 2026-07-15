@@ -4,6 +4,28 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [1.3.0] - 2026-07-15
+
+### Seguridad
+* **Redactor de secretos (`utils/redact.ts`) — punto único de estrangulamiento.** Todo texto que sale del proceso (logs, errores, respuestas de tools) pasa por `redact()`, que borra el ticket de acceso. Motivación verificada empíricamente: algunos errores de `fetch` incluyen la URL completa en su mensaje (`TypeError: Failed to parse URL from http://host/x?ticket=SECRETO`), y ese texto termina en el contexto del LLM, la transcripción y las capturas de pantalla. Auditar caso por caso cada ruta de error es inviable; el chokepoint cubre también las rutas imprevistas.
+  * Defensa en dos capas: coincidencia exacta de secretos registrados + patrón `ticket=` en query strings y pares JSON/header, por si el secreto aún no se registró.
+  * Registra también la variante URL-encodeada del secreto.
+  * Longitud mínima de 8 caracteres para no redactar texto legítimo por coincidencia.
+* **`String(error)` → `safeError(error)` en 22 sitios de 14 archivos.** Todos los catch de tools, recursos y el daemon ahora sanitizan antes de devolver el mensaje al LLM.
+* **El logger redacta en el punto de salida.** Es especialmente relevante porque `sendLoggingMessage` envía los logs de forma nativa al cliente MCP — es decir, directo al contexto del modelo.
+* **El error-handler redacta el mensaje de la API.** Ese texto no está bajo nuestro control y podría hacer eco de la URL solicitada (que en el endpoint legado lleva el ticket en la query string).
+* **El cliente HTTP se auto-protege:** `CompraAgilClient` registra el ticket como secreto en su constructor, cubriendo a cualquier consumidor (servidor MCP, daemon, scripts, tests) sin que tenga que acordarse.
+
+### Añadido
+* **Tool `verificar_ticket`:** valida la credencial contra la API real sin revelarla — solo muestra una pista (`••••2345`). Permite hacer el primer diagnóstico end-to-end sin imprimir, pegar ni compartir el ticket.
+* **Tests E2E con fixtures (`test/e2e-informe.test.ts`):** ejercitan por primera vez el camino completo cliente HTTP → `recolectarDatosRadar` → plantilla, sustituyendo `fetch` por una respuesta grabada y sanitizada (`test/fixtures/`). Se prueba el código real (incluido `handleApiResponse` y el parseo del envoltorio `payload`) **sin que exista credencial alguna**.
+* **21 tests nuevos** (86 en total) cubriendo la redacción — incluida la fuga concreta demostrada — y el camino E2E.
+
+### Notas
+* La ruta con datos productivos reales sigue sin ejercitarse (requiere ticket). Los fixtures replican la forma documentada de la respuesta, pero no sustituyen una verificación contra el servicio real; `verificar_ticket` está pensada precisamente para hacerla de forma segura.
+
+---
+
 ## [1.2.0] - 2026-07-15
 
 ### Añadido

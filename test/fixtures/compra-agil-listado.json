@@ -1,0 +1,88 @@
+{
+  "_nota": "Respuesta de muestra de GET /v2/compra-agil, con la forma documentada en docs/api §6. Datos ficticios y sanitizados: NO contiene credenciales reales. Permite ejercitar el camino cliente -> recolectarDatosRadar -> plantilla sin necesitar un ticket.",
+  "success": "OK",
+  "trace": null,
+  "errors": null,
+  "payload": {
+    "items": [
+      {
+        "codigo": "1057539-228-COT26",
+        "nombre": "Adquisición de licencias de software de ofimática",
+        "estado": { "id_estado": 1, "codigo": "publicada", "glosa": "Publicada" },
+        "convocatoria": { "estado_convocatoria": 1, "descripcion": "Primer llamado" },
+        "documentos": [],
+        "fechas": {
+          "fecha_publicacion": "2026-07-14T10:00:00Z",
+          "fecha_cierre": "2026-07-15T15:00:00Z",
+          "fecha_ultimo_cambio": "2026-07-15T09:00:00Z",
+          "fecha_cancelacion": null
+        },
+        "montos": { "moneda": "CLP", "monto_disponible": 8450000, "monto_disponible_clp": 8450000 },
+        "institucion": {
+          "organismo_comprador": "Servicio de Salud Metropolitano Occidente",
+          "rut": "61.608.100-3",
+          "unidad_compra": "Abastecimiento",
+          "region": 13,
+          "nombre_region": "Metropolitana"
+        },
+        "resumen": { "total_ofertas_recibidas": 0 },
+        "motivos": { "motivo_cancelacion": null, "motivo_desierta": null, "motivo_seleccion": null },
+        "links": { "detalle": "/v2/compra-agil/1057539-228-COT26" }
+      },
+      {
+        "codigo": "2494-141-COT26",
+        "nombre": "Servicio de soporte & mantención de equipos <computacionales>",
+        "estado": { "id_estado": 1, "codigo": "publicada", "glosa": "Publicada" },
+        "convocatoria": { "estado_convocatoria": 1, "descripcion": "Primer llamado" },
+        "documentos": [{ "id": "5f47e991-c525-40a0-b36c-44d53e538ae5", "nombre": "bases.pdf" }],
+        "fechas": {
+          "fecha_publicacion": "2026-07-13T08:00:00Z",
+          "fecha_cierre": "2026-07-16T12:00:00Z",
+          "fecha_ultimo_cambio": "2026-07-15T08:00:00Z",
+          "fecha_cancelacion": null
+        },
+        "montos": { "moneda": "CLP", "monto_disponible": 2400000, "monto_disponible_clp": 2400000 },
+        "institucion": {
+          "organismo_comprador": "Municipalidad de Ñuñoa",
+          "rut": "69.070.100-6",
+          "unidad_compra": "Informática",
+          "region": 13,
+          "nombre_region": "Metropolitana"
+        },
+        "resumen": { "total_ofertas_recibidas": 1 },
+        "motivos": { "motivo_cancelacion": null, "motivo_desierta": null, "motivo_seleccion": null },
+        "links": { "detalle": "/v2/compra-agil/2494-141-COT26" }
+      },
+      {
+        "codigo": "9999-99-COT26",
+        "nombre": "Proceso ya cerrado que el radar debe descartar",
+        "estado": { "id_estado": 1, "codigo": "publicada", "glosa": "Publicada" },
+        "convocatoria": { "estado_convocatoria": 1, "descripcion": "Primer llamado" },
+        "documentos": [],
+        "fechas": {
+          "fecha_publicacion": "2026-07-01T10:00:00Z",
+          "fecha_cierre": "2026-07-10T15:00:00Z",
+          "fecha_ultimo_cambio": "2026-07-10T15:00:00Z",
+          "fecha_cancelacion": null
+        },
+        "montos": { "moneda": "CLP", "monto_disponible": 500000, "monto_disponible_clp": 500000 },
+        "institucion": {
+          "organismo_comprador": "Organismo de prueba",
+          "rut": "60.000.000-0",
+          "unidad_compra": "Test",
+          "region": 5,
+          "nombre_region": "Valparaíso"
+        },
+        "resumen": { "total_ofertas_recibidas": 0 },
+        "motivos": { "motivo_cancelacion": null, "motivo_desierta": null, "motivo_seleccion": null },
+        "links": { "detalle": "/v2/compra-agil/9999-99-COT26" }
+      }
+    ],
+    "paginacion": {
+      "total_paginas": 1,
+      "numero_pagina": 1,
+      "tamano_pagina": 50,
+      "total_resultados": 3
+    }
+  }
+}

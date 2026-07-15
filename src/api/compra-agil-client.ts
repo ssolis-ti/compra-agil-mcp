@@ -10,6 +10,7 @@
 import { logger } from '../utils/logger.js';
 import { handleApiResponse, CompraAgilApiError } from '../utils/error-handler.js';
 import { RateLimiter } from '../utils/rate-limiter.js';
+import { registrarSecreto } from '../utils/redact.js';
 
 // ─── Tipos ──────────────────────────────────────────────────────────
 
@@ -240,6 +241,9 @@ export class CompraAgilClient {
     this.ticket = ticket;
     this.baseUrl = baseUrl || 'https://api2.mercadopublico.cl';
     this.rateLimiter = new RateLimiter();
+    // El cliente se auto-protege: cualquier consumidor (servidor MCP, daemon,
+    // scripts, tests) queda cubierto sin tener que acordarse de registrarlo.
+    registrarSecreto(ticket);
   }
 
   /**

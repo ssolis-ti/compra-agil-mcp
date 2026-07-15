@@ -23,6 +23,7 @@ const { version: PKG_VERSION } = require('../package.json') as { version: string
 
 import { CompraAgilClient } from './api/compra-agil-client.js';
 import { logger, setMcpServer } from './utils/logger.js';
+import { registrarSecreto, pista } from './utils/redact.js';
 
 // Tools
 import { registerBuscarCompras } from './tools/buscar-compras.js';
@@ -37,6 +38,7 @@ import { registerAuditarDesiertas } from './tools/auditar-desiertas.js';
 import { registerGenerarBorrador } from './tools/generar-borrador.js';
 import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
 import { registerGenerarInforme } from './tools/generar-informe.js';
+import { registerVerificarTicket } from './tools/verificar-ticket.js';
 
 // Resources
 import { registerRegionesResource } from './resources/regiones.js';
@@ -53,6 +55,11 @@ import { registerAnalizarCompetenciaPrompt } from './prompts/analizar-competenci
 
 const TICKET = process.env.COMPRA_AGIL_TICKET;
 const BASE_URL = process.env.COMPRA_AGIL_BASE_URL || 'https://api2.mercadopublico.cl';
+
+// Registrar el ticket como secreto ANTES de cualquier log o request: a partir de
+// aquí, `redact()` lo borra de todo texto que salga del proceso (logs, errores,
+// respuestas de tools). Ver src/utils/redact.ts.
+registrarSecreto(TICKET);
 
 if (!TICKET) {
   logger.error(
@@ -93,12 +100,13 @@ async function main() {
   registerGenerarBorrador(server, client);
   registerRadarOportunidades(server, client);
   registerGenerarInforme(server, client);
+  registerVerificarTicket(server, client);
   const TOOL_NAMES = [
     'buscar_compras_agiles', 'obtener_detalle_compra', 'monitorear_cambios_recientes',
     'verificar_orden_compra', 'obtener_estadisticas_uso', 'obtener_detalle_orden_compra',
     'obtener_enlace_documento', 'descargar_y_leer_documento', 'consultar_documentos_locales',
     'recomendar_precio_ganador', 'auditar_compras_desiertas', 'generar_borrador_cotizacion',
-    'radar_oportunidades_calientes', 'generar_informe',
+    'radar_oportunidades_calientes', 'generar_informe', 'verificar_ticket',
   ];
   logger.info(`${TOOL_NAMES.length} herramientas registradas: ${TOOL_NAMES.join(', ')}`);
 

@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
+import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'radar_oportunidades_calientes';
 
@@ -209,7 +210,7 @@ export function registerRadarOportunidades(server: McpServer, client: CompraAgil
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
-          : `Error inesperado en radar de oportunidades: ${String(error)}`;
+          : `Error inesperado en radar de oportunidades: ${safeError(error)}`;
         return {
           content: [{ type: 'text' as const, text: message }],
           isError: true,
