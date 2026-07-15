@@ -39,3 +39,6 @@ ehthumbs.db
 
 # Informes generados
 informes/
+
+# Salidas de depuración (crudas, pueden contener datos de la API)
+debug/

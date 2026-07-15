@@ -3,13 +3,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
-import { esGanador, extraerMontoNeto } from '../utils/quotation.js';
+import { esAdmisible, extraerMontoNeto } from '../utils/quotation.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'auditar_compras_desiertas';
 
-const TOOL_DESCRIPTION = `Audita un proceso de Compra Ágil que haya quedado "desierto" (sin ofertas) para identificar los motivos (plazo ajustado, presupuesto bajo, requisitos restrictivos) comparándolo con procesos exitosos similares en el mercado.
-Admite ingresar el código de la compra o un término de búsqueda para encontrar un proceso desierto reciente.`;
+const TOOL_DESCRIPTION = `Audita un proceso de Compra Ágil que haya quedado "desierto" para identificar por qué falló (plazo ajustado, presupuesto bajo, requisitos restrictivos), comparándolo con los precios que el mercado cotizó en procesos similares.
+Admite el código de la compra o un término de búsqueda para encontrar un proceso desierto reciente.
+NOTA: la comparación se hace contra precios COTIZADOS por proveedores en procesos del mismo rubro, no contra precios adjudicados: la API de Mercado Público no expone qué oferta ganó (verificado empíricamente).
+También reporta el motivo oficial de deserción y las cotizaciones declaradas inadmisibles, que suelen explicar el fracaso mejor que el precio.`;
 
 const inputSchema = {
   codigo_compra: z.string().optional().describe('Código de la Compra Ágil desierta para auditar (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
@@ -89,13 +91,16 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
           }
         }
 
-        // 3. Buscar procesos similares exitosos (proveedor_seleccionado)
-        logger.info(`auditar_compras_desiertas: Buscando procesos exitosos similares para "${keyword}"`);
+        // 3. Buscar procesos comparables del mismo rubro que publiquen cotizaciones.
+        //    Solo `desierta`: medido contra la API real, es el único estado que las
+        //    expone (desierta 5/8 procesos con precios; cerrada 0/8).
+        //    `proveedor_seleccionado` devuelve 0 resultados.
+        logger.info(`auditar_compras_desiertas: Buscando procesos comparables para "${keyword}"`);
         const limit = args.limite_analisis || 5;
         const searchResponse = await client.buscar({
           q: keyword,
-          estado: 'proveedor_seleccionado',
-          tamano_pagina: 10, // API v2 requiere mínimo 10
+          estado: 'desierta',
+          tamano_pagina: 50, // el mínimo de la API es 10; 50 maximiza el material por consulta
           numero_pagina: 1,
         });
 
@@ -105,38 +110,53 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
         const itemsToProcess = (searchResponse.items || []).slice(0, limit);
 
         if (itemsToProcess.length > 0) {
-          logger.info(`auditar_compras_desiertas: Analizando detalles de ${itemsToProcess.length} procesos exitosos`);
+          logger.info(`auditar_compras_desiertas: Analizando detalles de ${itemsToProcess.length} procesos comparables`);
           for (const item of itemsToProcess) {
             try {
               const detail = await client.detalle(item.codigo);
-              const winner = detail.proveedores_cotizando?.find(esGanador);
 
-              if (winner) {
-                const totalNeto = extraerMontoNeto(winner) ?? 0;
+              // Se recolectan TODAS las cotizaciones del proceso, incluidas las
+              // declaradas inadmisibles: en los procesos desiertos casi todas lo son
+              // (por eso quedaron desiertos) y filtrarlas dejaba la muestra vacía.
+              // El precio ofertado sigue siendo señal de mercado.
+              // Antes se buscaba solo al adjudicado, pero la API nunca marca un
+              // ganador (verificado), así que ese camino no encontraba nada.
+              const cotizaciones = detail.proveedores_cotizando ?? [];
+              if (cotizaciones.length === 0) continue;
+              const inadmisibles = cotizaciones.filter((c) => !esAdmisible(c)).length;
 
-                let successDuration = 0;
-                if (detail.fechas?.fecha_cierre && detail.fechas?.fecha_publicacion) {
-                  const start = new Date(detail.fechas.fecha_publicacion).getTime();
-                  const end = new Date(detail.fechas.fecha_cierre).getTime();
-                  successDuration = Math.round(((end - start) / (1000 * 60 * 60 * 24)) * 10) / 10;
-                  successDurations.push(successDuration);
-                }
+              const netos = cotizaciones
+                .map((c) => extraerMontoNeto(c))
+                .filter((n): n is number => n !== null);
+              if (netos.length === 0) continue;
 
-                if (totalNeto > 0) {
-                  successPrices.push(totalNeto);
-                }
+              // Referencia por proceso: la cotización más económica — es el precio
+              // al que ese mercado estuvo dispuesto a atender la necesidad.
+              const menorNeto = Math.min(...netos);
+              successPrices.push(menorNeto);
 
-                processedCases.push({
-                  codigo: item.codigo,
-                  institucion: item.institucion?.organismo_comprador || 'Desconocido',
-                  monto_adjudicado: totalNeto,
-                  duracion_dias: successDuration,
-                  fecha_cierre: item.fechas?.fecha_cierre,
-                  ganador: winner.razon_social || 'Desconocido',
-                });
+              let successDuration = 0;
+              if (detail.fechas?.fecha_cierre && detail.fechas?.fecha_publicacion) {
+                const start = new Date(detail.fechas.fecha_publicacion).getTime();
+                const end = new Date(detail.fechas.fecha_cierre).getTime();
+                successDuration = Math.round(((end - start) / (1000 * 60 * 60 * 24)) * 10) / 10;
+                successDurations.push(successDuration);
               }
+
+              processedCases.push({
+                codigo: item.codigo,
+                estado: detail.estado?.glosa,
+                institucion: item.institucion?.organismo_comprador || 'Desconocido',
+                cotizaciones_recibidas: cotizaciones.length,
+                cotizaciones_inadmisibles: inadmisibles,
+                menor_monto_cotizado: menorNeto,
+                mayor_monto_cotizado: Math.max(...netos),
+                duracion_dias: successDuration,
+                fecha_cierre: item.fechas?.fecha_cierre,
+                motivo_desierta: detail.motivos?.motivo_desierta ?? null,
+              });
             } catch (detailError) {
-              logger.warn(`auditar_compras_desiertas: Error al consultar detalle de exitoso ${item.codigo}: ${safeError(detailError)}`);
+              logger.warn(`auditar_compras_desiertas: Error al consultar detalle de ${item.codigo}: ${safeError(detailError)}`);
             }
           }
         }
@@ -199,18 +219,18 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
         if (analisis_critico.presupuesto_insuficiente) {
           if (targetBudget > 0) {
             recomendaciones.push(
-              `Aumentar el presupuesto disponible. El presupuesto actual de $${targetBudget.toLocaleString('es-CL')} es un ${Math.abs(analisis_critico.diferencia_presupuesto_porcentaje)}% inferior al promedio de adjudicación histórico ($${avgPrice.toLocaleString('es-CL')}). Se sugiere incrementarlo a al menos $${Math.round(avgPrice * 1.05).toLocaleString('es-CL')}.`
+              `Aumentar el presupuesto disponible. El presupuesto actual de $${targetBudget.toLocaleString('es-CL')} es un ${Math.abs(analisis_critico.diferencia_presupuesto_porcentaje)}% inferior al promedio de lo que el mercado cotizó en procesos similares ($${avgPrice.toLocaleString('es-CL')}). Se sugiere incrementarlo a al menos $${Math.round(avgPrice * 1.05).toLocaleString('es-CL')}.`
             );
           } else {
             recomendaciones.push(
-              `Especificar o incrementar el presupuesto estimado. El promedio histórico adjudicado para productos similares es de $${avgPrice.toLocaleString('es-CL')}.`
+              `Especificar o incrementar el presupuesto estimado. El promedio de lo cotizado por el mercado para productos similares es de $${avgPrice.toLocaleString('es-CL')}.`
             );
           }
         }
 
         if (analisis_critico.plazo_insuficiente) {
           recomendaciones.push(
-            `Extender el plazo de postulación. El proceso actual ofreció un plazo de ${targetDuration} días (cierre y publicación), mientras que los procesos exitosos de mercado promedian ${avgDuration} días. Se recomienda extender el plazo a un mínimo de 3 a 5 días hábiles.`
+            `Extender el plazo de postulación. El proceso actual ofreció ${targetDuration} días entre publicación y cierre, mientras que los procesos comparables promedian ${avgDuration} días. Se recomienda extender el plazo a un mínimo de 3 a 5 días hábiles.`
           );
         }
 
@@ -243,13 +263,13 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
           },
           busqueda_comparativa: {
             termino_clave: keyword,
-            casos_exitosos_encontrados: successPrices.length,
-            estadisticas_precios_exitosos: successPrices.length > 0 ? {
-              minimo_adjudicado: minPrice,
-              maximo_adjudicado: maxPrice,
-              promedio_adjudicado: avgPrice,
+            procesos_comparables_con_cotizaciones: successPrices.length,
+            estadisticas_montos_cotizados: successPrices.length > 0 ? {
+              minimo_cotizado: minPrice,
+              maximo_cotizado: maxPrice,
+              promedio_cotizado: avgPrice,
             } : null,
-            estadisticas_duracion_exitosa: successDurations.length > 0 ? {
+            estadisticas_duracion: successDurations.length > 0 ? {
               minimo_dias: minDuration,
               maximo_dias: maxDuration,
               promedio_dias: avgDuration,
@@ -257,7 +277,8 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
           },
           analisis_de_brechas: analisis_critico,
           recomendaciones_de_optimizacion: recomendaciones,
-          casos_exitosos_analizados: processedCases,
+          procesos_comparables_analizados: processedCases,
+          _nota_metodologica: 'La comparación usa el MENOR monto cotizado de cada proceso similar (cerrado o desierto), no montos adjudicados: la API de Mercado Público no expone qué oferta ganó. Revisa también "motivo_desierta": muchas deserciones se explican por incumplimientos formales (garantías, certificados) y no por precio.',
         };
 
         return {

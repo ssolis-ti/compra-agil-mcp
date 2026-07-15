@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
-import { esGanador, extraerPrecioUnitario, extraerMontoNeto } from '../utils/quotation.js';
+import { esAdmisible, extraerPrecioUnitario, percentil } from '../utils/quotation.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'generar_borrador_cotizacion';
@@ -65,29 +65,31 @@ export function registerGenerarBorrador(server: McpServer, client: CompraAgilCli
 
           if (keyword) {
             try {
-              logger.info(`generar_borrador_cotizacion: Consultando precios de referencia históricos para "${keyword}"`);
+              logger.info(`generar_borrador_cotizacion: Consultando precios cotizados por el mercado para "${keyword}"`);
+              // Solo `desierta`: medido contra la API real, es el único estado que
+              // publica cotizaciones (desierta 5/8 procesos con precios; cerrada 0/8).
+              // `proveedor_seleccionado` devuelve 0 resultados.
               const searchResponse = await client.buscar({
                 q: keyword,
-                estado: 'proveedor_seleccionado',
-                tamano_pagina: 10, // API v2 requiere mínimo 10
+                estado: 'desierta',
+                tamano_pagina: 50, // mínimo de la API: 10
                 numero_pagina: 1,
               });
 
               const prices: number[] = [];
-              const itemsToProcess = (searchResponse.items || []).slice(0, 3);
+              const itemsToProcess = (searchResponse.items || []).slice(0, 5);
               if (itemsToProcess.length > 0) {
                 for (const item of itemsToProcess) {
                   try {
                     const detail = await client.detalle(item.codigo);
-                    const winner = detail.proveedores_cotizando?.find(esGanador);
-
-                    if (winner) {
-                      // Preferir precio unitario (comparable); si no hay, no mezclar con el total:
-                      // el total solo se usa como referencia si no existe ningún unitario en el lote.
-                      const unitPrice = extraerPrecioUnitario(winner, keyword);
-                      if (unitPrice !== null) {
-                        prices.push(unitPrice);
-                      }
+                    // Se toman TODAS las cotizaciones, incluidas las inadmisibles: en los
+                    // procesos desiertos casi todas lo son (por eso quedaron desiertos), y
+                    // el precio ofertado sigue siendo señal de mercado. Filtrarlas dejaba
+                    // la muestra vacía. La API nunca marca un ganador, así que la
+                    // referencia es lo que ofertó la competencia.
+                    for (const prov of detail.proveedores_cotizando ?? []) {
+                      const unitPrice = extraerPrecioUnitario(prov, keyword);
+                      if (unitPrice !== null) prices.push(unitPrice);
                     }
                   } catch (e) {
                     // ignore errors for individual historical lookups
@@ -97,13 +99,11 @@ export function registerGenerarBorrador(server: McpServer, client: CompraAgilCli
 
               if (prices.length > 0) {
                 prices.sort((a, b) => a - b);
-                const avg = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-                // Sugerir un precio competitivo (5% menor al promedio adjudicado)
-                suggestedPrice = Math.round(avg * 0.95);
-                if (suggestedPrice < prices[0]) {
-                  suggestedPrice = prices[0];
-                }
-                priceSource = 'Sugerencia automática: Percentil de mercado (5% bajo promedio histórico)';
+                // Percentil 25 de lo cotizado: ubica la oferta en el cuarto más
+                // económico sin regalar margen, y resiste valores atípicos mejor
+                // que un promedio.
+                suggestedPrice = percentil(prices, 25);
+                priceSource = `Sugerencia automática: percentil 25 de ${prices.length} precio(s) cotizado(s) por el mercado en procesos similares (NO son precios adjudicados: la API no los expone)`;
                 isPriceSuggested = true;
               } else {
                 // Fallback: usar presupuesto estimado del comprador si existe

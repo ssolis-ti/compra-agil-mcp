@@ -33,7 +33,7 @@ import { registerVerificarOC } from './tools/verificar-oc.js';
 import { registerEstadisticasUso } from './tools/estadisticas-uso.js';
 import { registerDetalleOC } from './tools/detalle-oc.js';
 import { registerDocumentosTools } from './tools/documentos.js';
-import { registerRecomendarPrecio } from './tools/recomendar-precio.js';
+import { registerAnalizarPreciosMercado } from './tools/analizar-precios-mercado.js';
 import { registerAuditarDesiertas } from './tools/auditar-desiertas.js';
 import { registerGenerarBorrador } from './tools/generar-borrador.js';
 import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
@@ -95,7 +95,7 @@ async function main() {
   registerEstadisticasUso(server, client);
   registerDetalleOC(server, client);
   registerDocumentosTools(server); // registra 3 tools de documentos
-  registerRecomendarPrecio(server, client);
+  registerAnalizarPreciosMercado(server, client);
   registerAuditarDesiertas(server, client);
   registerGenerarBorrador(server, client);
   registerRadarOportunidades(server, client);
@@ -105,7 +105,7 @@ async function main() {
     'buscar_compras_agiles', 'obtener_detalle_compra', 'monitorear_cambios_recientes',
     'verificar_orden_compra', 'obtener_estadisticas_uso', 'obtener_detalle_orden_compra',
     'obtener_enlace_documento', 'descargar_y_leer_documento', 'consultar_documentos_locales',
-    'recomendar_precio_ganador', 'auditar_compras_desiertas', 'generar_borrador_cotizacion',
+    'analizar_precios_mercado', 'auditar_compras_desiertas', 'generar_borrador_cotizacion',
     'radar_oportunidades_calientes', 'generar_informe', 'verificar_ticket',
   ];
   logger.info(`${TOOL_NAMES.length} herramientas registradas: ${TOOL_NAMES.join(', ')}`);
