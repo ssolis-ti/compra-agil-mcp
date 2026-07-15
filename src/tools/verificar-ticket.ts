@@ -45,8 +45,13 @@ export function registerVerificarTicket(server: McpServer, client: CompraAgilCli
       }
 
       try {
-        // Consulta mínima: una sola página con el tamaño más chico posible.
-        const resp = await client.buscar({ tamano_pagina: 10, numero_pagina: 1 });
+        // Consulta de humo mínima: ventana de cambios de 1 hora.
+        //
+        // IMPORTANTE: la API NO acepta consultas sin filtros — devuelve HTTP 500
+        // (verificado contra el servicio real). Debe enviarse al menos un filtro.
+        // `ttl_cambio_ms` es el más liviano: responde en ~1s aunque no haya
+        // resultados, y un 200 basta para probar que el ticket es válido.
+        const resp = await client.buscar({ ttl_cambio_ms: 3_600_000, tamano_pagina: 10, numero_pagina: 1 });
         return {
           content: [{
             type: 'text' as const,
@@ -54,8 +59,11 @@ export function registerVerificarTicket(server: McpServer, client: CompraAgilCli
               '✅ Ticket válido y operativo.',
               '',
               `Ticket configurado: ${referencia}`,
-              `Respuesta de la API: ${resp.paginacion.total_resultados} resultados disponibles.`,
+              `Consulta de prueba: cambios en la última hora → ${resp.paginacion.total_resultados} resultado(s).`,
               `Cuota consumida en esta sesión: ${client.getRateLimitStats().requestsToday} request(s).`,
+              '',
+              'Nota: un total de 0 es normal si no hubo movimientos en la última hora;',
+              'lo relevante es que la API respondió correctamente con este ticket.',
             ].join('\n'),
           }],
         };

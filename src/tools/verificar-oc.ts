@@ -18,9 +18,9 @@ import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'verificar_orden_compra';
 
-const TOOL_DESCRIPTION = `Verifica si una Compra Ágil específica ya tiene una Orden de Compra (OC) emitida.
-IMPORTANTE: El estado "oc_emitida" de la API NO funciona en la práctica. Esta herramienta resuelve esa limitación
-consultando el detalle del proceso y cruzando con la API de Órdenes de Compra de Mercado Público si existe un id_orden_compra.`;
+const TOOL_DESCRIPTION = `Verifica si una Compra Ágil específica ya tiene una Orden de Compra (OC) emitida, leyendo id_orden_compra del detalle y cruzándolo con la API de Órdenes de Compra.
+⚠ LIMITACIÓN VERIFICADA EMPÍRICAMENTE (julio 2026): en 45 procesos inspeccionados, NINGUNO traía id_orden_compra (siempre null), y el filtro de estado "proveedor_seleccionado" devuelve 0 resultados. En la práctica, la API de Compra Ágil no está publicando adjudicaciones ni órdenes de compra, por lo que esta herramienta reportará "sin OC" en la mayoría o totalidad de los casos.
+Un resultado "sin OC" NO significa necesariamente que la OC no exista: puede significar que la API no la expone. Para confirmarlo, consulta la ficha pública del proceso en https://buscador.mercadopublico.cl/ficha?code={codigo}`;
 
 const inputSchema = {
   codigo: z.string().describe(
@@ -78,7 +78,7 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
             detalle_orden: detalleOCInfo,
             nota: tieneOC
               ? `La OC fue emitida. Código: ${detalleOCInfo?.codigo_oc ?? 'Desconocido'}. Usa la herramienta obtener_detalle_orden_compra para profundizar.`
-              : 'No se ha emitido una Orden de Compra para esta Compra Ágil aún.',
+              : `La API no reporta Orden de Compra para este proceso (id_orden_compra = null). ⚠ Ojo: esto NO prueba que la OC no exista. Se verificó que la API de Compra Ágil no está publicando adjudicaciones (45 procesos inspeccionados, 0 con id_orden_compra). Para confirmarlo consulta la ficha pública: https://buscador.mercadopublico.cl/ficha?code=${detalle.codigo}`,
           },
           proveedor_seleccionado: detalle.proveedores_cotizando
             .filter(esGanador)
