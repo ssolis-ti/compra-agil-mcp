@@ -68,11 +68,11 @@ export function registerDetalleOC(server: McpServer, client: CompraAgilClient): 
             nombre: oc.Proveedor.Nombre,
             rut: oc.Proveedor.Rut,
           },
-          items: oc.Items.Listado.map((item) => ({
+          items: (oc.Items?.Listado ?? []).map((item) => ({
             producto: item.Producto,
             cantidad: item.Cantidad,
             precio_neto: item.PrecioNeto,
-            total_neto: item.TotalLnea,
+            total_neto: item.TotalLnea ?? item.TotalLinea ?? null,
           })),
         };
 

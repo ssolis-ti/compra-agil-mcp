@@ -1,38 +1,10 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { PDFParse } from 'pdf-parse';
+import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const packageDocsDir = path.resolve(__dirname, '../../docs');
-const cwdDocsDir = path.resolve(process.cwd(), 'docs');
-
-let DOCS_DIR = cwdDocsDir;
-if (fs.existsSync(packageDocsDir) && fs.readdirSync(packageDocsDir).some(f => f.toLowerCase().endsWith('.pdf'))) {
-  DOCS_DIR = packageDocsDir;
-}
-
-/**
- * Obtiene de forma recursiva todos los archivos dentro de un directorio,
- * retornando sus rutas relativas formateadas con barras diagonales (/).
- */
-function getRelativeFilesRecursively(dir: string, baseDir: string = dir): string[] {
-  let results: string[] = [];
-  if (!fs.existsSync(dir)) return [];
-  const list = fs.readdirSync(dir);
-  for (const file of list) {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    if (stat && stat.isDirectory()) {
-      results = results.concat(getRelativeFilesRecursively(filePath, baseDir));
-    } else {
-      const relativePath = path.relative(baseDir, filePath).replace(/\\/g, '/');
-      results.push(relativePath);
-    }
-  }
-  return results;
-}
+const DOCS_DIR = resolveDocsDir();
 
 /**
  * Registra el recurso dinámico para consultar manuales y guías locales (PDF/TXT/MD).
@@ -46,11 +18,7 @@ export function registerDocumentacionResource(server: McpServer): void {
           fs.mkdirSync(DOCS_DIR, { recursive: true });
         }
 
-        const files = getRelativeFilesRecursively(DOCS_DIR).filter(file => {
-          const ext = path.extname(file).toLowerCase();
-          const name = path.basename(file).toLowerCase();
-          return (ext === '.pdf' || ext === '.txt' || ext === '.md') && name !== 'readme.md';
-        });
+        const files = listSupportedDocs(DOCS_DIR);
 
         return {
           resources: files.map(file => ({

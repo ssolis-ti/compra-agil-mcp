@@ -2,44 +2,10 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { PDFParse } from 'pdf-parse';
+import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const packageDocsDir = path.resolve(__dirname, '../../docs');
-const cwdDocsDir = path.resolve(process.cwd(), 'docs');
-
-/**
- * Obtiene de forma recursiva todos los archivos dentro de un directorio,
- * retornando sus rutas relativas formateadas con barras diagonales (/).
- */
-function getRelativeFilesRecursively(dir: string, baseDir: string = dir): string[] {
-  let results: string[] = [];
-  if (!fs.existsSync(dir)) return [];
-  const list = fs.readdirSync(dir);
-  for (const file of list) {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    if (stat && stat.isDirectory()) {
-      results = results.concat(getRelativeFilesRecursively(filePath, baseDir));
-    } else {
-      const relativePath = path.relative(baseDir, filePath).replace(/\\/g, '/');
-      results.push(relativePath);
-    }
-  }
-  return results;
-}
-
-let DOCS_DIR = cwdDocsDir;
-if (fs.existsSync(packageDocsDir)) {
-  const hasLocalDocs = getRelativeFilesRecursively(packageDocsDir).some(file => {
-    const ext = path.extname(file).toLowerCase();
-    return ext === '.pdf' || ext === '.txt' || ext === '.md';
-  });
-  if (hasLocalDocs) {
-    DOCS_DIR = packageDocsDir;
-  }
-}
+const DOCS_DIR = resolveDocsDir();
 
 /**
  * Registra las herramientas relacionadas con documentos y especificaciones en el servidor MCP.
@@ -211,11 +177,7 @@ export function registerDocumentosTools(server: McpServer): void {
           fs.mkdirSync(DOCS_DIR, { recursive: true });
         }
 
-        const files = getRelativeFilesRecursively(DOCS_DIR).filter(file => {
-          const ext = path.extname(file).toLowerCase();
-          const name = path.basename(file).toLowerCase();
-          return (ext === '.pdf' || ext === '.txt' || ext === '.md') && name !== 'readme.md';
-        });
+        const files = listSupportedDocs(DOCS_DIR);
 
         if (files.length === 0) {
           return {

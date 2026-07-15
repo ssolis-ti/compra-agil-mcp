@@ -28,6 +28,32 @@ const KEYWORDS_RAW = process.env.MONITOR_KEYWORDS || 'software, desarrollo, lice
 const KEYWORDS = KEYWORDS_RAW.split(',').map(kw => kw.trim().toLowerCase()).filter(Boolean);
 
 const ALERTS_LOG_PATH = path.resolve(process.cwd(), 'alerts.log');
+const STATE_PATH = path.resolve(process.cwd(), '.monitor-state.json');
+
+// ─── Deduplicación de alertas ──────────────────────────────────────────
+// Evita re-alertar el mismo proceso en ciclos consecutivos. Se persiste en disco
+// para sobrevivir reinicios del daemon.
+function loadAlertedCodes(): Set<string> {
+  try {
+    if (fs.existsSync(STATE_PATH)) {
+      const raw = JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
+      if (Array.isArray(raw.alerted)) return new Set(raw.alerted);
+    }
+  } catch (e) {
+    console.error(`[ADVERTENCIA] No se pudo leer el estado de deduplicación (${STATE_PATH}): ${String(e)}`);
+  }
+  return new Set();
+}
+
+const alertedCodes: Set<string> = loadAlertedCodes();
+
+function persistAlertedCodes(): void {
+  try {
+    fs.writeFileSync(STATE_PATH, JSON.stringify({ alerted: [...alertedCodes] }, null, 2), 'utf8');
+  } catch (e) {
+    console.error(`[ADVERTENCIA] No se pudo guardar el estado de deduplicación: ${String(e)}`);
+  }
+}
 
 console.log('========================================================');
 console.log('  INICIANDO DEMONIO DE MONITOREO DE COMPRA ÁGIL v2');
@@ -75,18 +101,24 @@ async function runCheck() {
       const matchedKeyword = KEYWORDS.find(kw => nameLower.includes(kw));
 
       if (matchedKeyword) {
+        // Deduplicación: no re-alertar un proceso ya notificado en ciclos previos
+        if (alertedCodes.has(item.codigo)) continue;
+        alertedCodes.add(item.codigo);
+
         alertCount++;
         const alertMsg = `[${new Date().toISOString()}] [ALERTA] Código: ${item.codigo} | Presupuesto: $${item.montos.monto_disponible_clp.toLocaleString('es-CL')} CLP | Cierre: ${item.fechas.fecha_cierre} | Institución: ${item.institucion.organismo_comprador} | Coincidencia: "${matchedKeyword}" | Nombre: ${item.nombre.trim()}\n`;
-        
+
         // Escribir en alerts.log
         fs.appendFileSync(ALERTS_LOG_PATH, alertMsg, 'utf8');
-        
+
         // Mostrar alerta en consola
         console.log(`\x1b[33m${alertMsg.trim()}\x1b[0m`);
       }
     }
 
-    console.log(`[${timestamp}] Ciclo completado. Alertas generadas en este ciclo: ${alertCount}\n`);
+    if (alertCount > 0) persistAlertedCodes();
+
+    console.log(`[${timestamp}] Ciclo completado. Alertas nuevas en este ciclo: ${alertCount}\n`);
 
   } catch (error: any) {
     const errorMsg = error?.actionableMessage || String(error);
