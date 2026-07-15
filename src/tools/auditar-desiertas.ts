@@ -4,6 +4,7 @@ import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { esGanador, extraerMontoNeto } from '../utils/quotation.js';
+import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'auditar_compras_desiertas';
 
@@ -135,7 +136,7 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
                 });
               }
             } catch (detailError) {
-              logger.warn(`auditar_compras_desiertas: Error al consultar detalle de exitoso ${item.codigo}: ${String(detailError)}`);
+              logger.warn(`auditar_compras_desiertas: Error al consultar detalle de exitoso ${item.codigo}: ${safeError(detailError)}`);
             }
           }
         }
@@ -269,7 +270,7 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
-          : `Error inesperado al auditar compra desierta: ${String(error)}`;
+          : `Error inesperado al auditar compra desierta: ${safeError(error)}`;
         return {
           content: [{ type: 'text' as const, text: message }],
           isError: true,

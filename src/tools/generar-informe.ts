@@ -19,6 +19,7 @@ import { renderRadarInforme } from '../reports/templates/radar-oportunidades.js'
 import { escribirInforme, slug, stamp, defaultOutputDir } from '../reports/export.js';
 import { clp } from '../reports/format.js';
 import { PAPEL, FORMATO_POR_DEFECTO } from '../reports/theme.js';
+import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'generar_informe';
 
@@ -118,7 +119,7 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
-          : `Error inesperado al generar el informe: ${String(error)}`;
+          : `Error inesperado al generar el informe: ${safeError(error)}`;
         return {
           content: [{ type: 'text' as const, text: message }],
           isError: true,

@@ -9,12 +9,16 @@ import fs from 'fs';
 import path from 'path';
 import { loadEnvManual } from '../utils/env-loader.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { safeError, registrarSecreto } from '../utils/redact.js';
 
 // Inicializar entorno
 loadEnvManual();
 
 const TICKET = process.env.COMPRA_AGIL_TICKET;
 const BASE_URL = process.env.COMPRA_AGIL_BASE_URL || 'https://api2.mercadopublico.cl';
+
+// El daemon es un proceso independiente: debe registrar el secreto por su cuenta.
+registrarSecreto(TICKET);
 
 if (!TICKET) {
   console.error('[ERROR] Variable de entorno COMPRA_AGIL_TICKET no definida en .env');
@@ -40,7 +44,7 @@ function loadAlertedCodes(): Set<string> {
       if (Array.isArray(raw.alerted)) return new Set(raw.alerted);
     }
   } catch (e) {
-    console.error(`[ADVERTENCIA] No se pudo leer el estado de deduplicación (${STATE_PATH}): ${String(e)}`);
+    console.error(`[ADVERTENCIA] No se pudo leer el estado de deduplicación (${STATE_PATH}): ${safeError(e)}`);
   }
   return new Set();
 }
@@ -51,7 +55,7 @@ function persistAlertedCodes(): void {
   try {
     fs.writeFileSync(STATE_PATH, JSON.stringify({ alerted: [...alertedCodes] }, null, 2), 'utf8');
   } catch (e) {
-    console.error(`[ADVERTENCIA] No se pudo guardar el estado de deduplicación: ${String(e)}`);
+    console.error(`[ADVERTENCIA] No se pudo guardar el estado de deduplicación: ${safeError(e)}`);
   }
 }
 
@@ -121,7 +125,7 @@ async function runCheck() {
     console.log(`[${timestamp}] Ciclo completado. Alertas nuevas en este ciclo: ${alertCount}\n`);
 
   } catch (error: any) {
-    const errorMsg = error?.actionableMessage || String(error);
+    const errorMsg = error?.actionableMessage || safeError(error);
     console.error(`[${timestamp}] [ERROR] Falló el ciclo de monitoreo: ${errorMsg}\n`);
     
     // Si la cuota de la API se agotó, podemos dormir o pausar el demonio

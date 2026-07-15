@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
+import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
 
@@ -71,7 +72,7 @@ export function registerDocumentacionResource(server: McpServer): void {
           }],
         };
       } catch (error: any) {
-        throw new Error(`Error al leer el manual local: ${error.message || String(error)}`);
+        throw new Error(`Error al leer el manual local: ${safeError(error)}`);
       }
     }
   );

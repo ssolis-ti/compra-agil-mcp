@@ -14,6 +14,7 @@ import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { esGanador } from '../utils/quotation.js';
+import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'verificar_orden_compra';
 
@@ -59,7 +60,7 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
               };
             }
           } catch (e) {
-            logger.warn(`No se pudo obtener el detalle de la OC ${idOrdenCompra} desde la API: ${String(e)}`);
+            logger.warn(`No se pudo obtener el detalle de la OC ${idOrdenCompra} desde la API: ${safeError(e)}`);
           }
         }
 
@@ -98,7 +99,7 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
-          : `Error inesperado: ${String(error)}`;
+          : `Error inesperado: ${safeError(error)}`;
         return {
           content: [{ type: 'text' as const, text: message }],
           isError: true,

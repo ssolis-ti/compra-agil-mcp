@@ -4,6 +4,7 @@ import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { esGanador, extraerPrecioUnitario, extraerMontoNeto } from '../utils/quotation.js';
+import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'recomendar_precio_ganador';
 
@@ -119,7 +120,7 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
               });
             }
           } catch (detailError) {
-            logger.warn(`recomendar_precio_ganador: Error al consultar detalle de ${item.codigo}: ${String(detailError)}`);
+            logger.warn(`recomendar_precio_ganador: Error al consultar detalle de ${item.codigo}: ${safeError(detailError)}`);
           }
         }
 
@@ -171,7 +172,7 @@ export function registerRecomendarPrecio(server: McpServer, client: CompraAgilCl
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
-          : `Error inesperado al recomendar precio: ${String(error)}`;
+          : `Error inesperado al recomendar precio: ${safeError(error)}`;
         return {
           content: [{ type: 'text' as const, text: message }],
           isError: true,
