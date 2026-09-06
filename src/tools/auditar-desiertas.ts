@@ -16,7 +16,7 @@ También reporta el motivo oficial de deserción y las cotizaciones declaradas i
 const inputSchema = {
   codigo_compra: z.string().optional().describe('Código de la Compra Ágil desierta para auditar (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
   q: z.string().optional().describe('Término de búsqueda de producto/servicio para encontrar y auditar un proceso desierto reciente (ej: "resmas papel"). Opcional.'),
-  limite_analisis: z.number().min(1).max(8).default(5).optional().describe('Cantidad de procesos históricos exitosos con los que comparar (1-8, default 5) para no agotar la cuota de la API.'),
+  limite_analisis: z.number().min(1).max(8).default(3).optional().describe('Cantidad de procesos históricos exitosos con los que comparar (1-8, default 3) para no agotar la cuota de la API.'),
 };
 
 export function registerAuditarDesiertas(server: McpServer, client: CompraAgilClient): void {
@@ -96,7 +96,7 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
         //    expone (desierta 5/8 procesos con precios; cerrada 0/8).
         //    `proveedor_seleccionado` devuelve 0 resultados.
         logger.info(`auditar_compras_desiertas: Buscando procesos comparables para "${keyword}"`);
-        const limit = args.limite_analisis || 5;
+        const limit = args.limite_analisis || 3;
         const searchResponse = await client.buscar({
           q: keyword,
           estado: 'desierta',

@@ -9,7 +9,9 @@
 
 import { logger } from '../utils/logger.js';
 import { handleApiResponse, CompraAgilApiError } from '../utils/error-handler.js';
-import { RateLimiter } from '../utils/rate-limiter.js';
+import { RateLimiter, RUTA_ESTADO_POR_DEFECTO } from '../utils/rate-limiter.js';
+import { ResponseCache } from '../utils/cache.js';
+import path from 'path';
 import { registrarSecreto } from '../utils/redact.js';
 
 // ─── Tipos ──────────────────────────────────────────────────────────
@@ -232,15 +234,33 @@ export interface CompraAgilDetalle {
 
 // ─── Cliente ────────────────────────────────────────────────────────
 
+/** Archivo donde se reutilizan respuestas entre reinicios del servidor. */
+export const RUTA_CACHE_POR_DEFECTO = path.resolve(process.cwd(), '.api-cache.json');
+
+/**
+ * Vigencia por tipo de consulta, en segundos.
+ *
+ * El detalle vive más que la búsqueda porque es lo que más se repite: las
+ * herramientas de análisis piden el detalle de los mismos procesos históricos
+ * una y otra vez, y un proceso ya cerrado o desierto no cambia. La búsqueda
+ * caduca antes porque sí aparecen procesos nuevos durante el día.
+ */
+const TTL_DETALLE_SEG = 15 * 60;
+const TTL_BUSQUEDA_SEG = 5 * 60;
+
 export class CompraAgilClient {
   private readonly baseUrl: string;
   private readonly ticket: string;
   private readonly rateLimiter: RateLimiter;
+  private readonly cache: ResponseCache;
 
   constructor(ticket: string, baseUrl?: string) {
     this.ticket = ticket;
     this.baseUrl = baseUrl || 'https://api2.mercadopublico.cl';
-    this.rateLimiter = new RateLimiter();
+    // Con persistencia: la cuota es del ticket y del día, no del proceso, así
+    // que reiniciar el servidor no debe borrar la memoria de un 429.
+    this.rateLimiter = new RateLimiter(15, RUTA_ESTADO_POR_DEFECTO);
+    this.cache = new ResponseCache({ rutaEstado: RUTA_CACHE_POR_DEFECTO });
     // El cliente se auto-protege: cualquier consumidor (servidor MCP, daemon,
     // scripts, tests) queda cubierto sin tener que acordarse de registrarlo.
     registrarSecreto(ticket);
@@ -250,6 +270,16 @@ export class CompraAgilClient {
    * Realiza un GET autenticado a la API.
    */
   private async request<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
+    // Una respuesta vigente en caché ahorra la consulta entera: ni cuota, ni
+    // espera, ni riesgo de 429. Se comprueba antes que el rate limit, para que
+    // un ticket temporalmente limitado igual pueda servir lo ya conocido.
+    const claveCache = ResponseCache.clave(path, params);
+    const enCache = this.cache.obtener<T>(claveCache);
+    if (enCache !== undefined) {
+      logger.debug(`Caché: acierto para ${claveCache}`);
+      return enCache;
+    }
+
     // Verificar rate limit diario antes de enviar
     const limitCheck = this.rateLimiter.checkLimit();
     if (limitCheck.limited) {
@@ -291,13 +321,31 @@ export class CompraAgilClient {
     });
 
     if (response.status === 429) {
-      this.rateLimiter.markLimited();
+      // La guía (§7) indica esperar lo que diga Retry-After; si no viene, el
+      // limitador aplica su propia espera progresiva.
+      const retryAfter = Number(response.headers?.get?.('retry-after'));
+      this.rateLimiter.markLimited(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined);
     } else {
       this.rateLimiter.recordRequest();
     }
 
     const payload = await handleApiResponse(response);
+
+    // Solo se guardan respuestas exitosas: un error no debe quedar congelado.
+    const ttl = path.includes('/compra-agil/') ? TTL_DETALLE_SEG : TTL_BUSQUEDA_SEG;
+    this.cache.guardar(claveCache, payload, ttl);
+
     return payload as T;
+  }
+
+  /** Estadísticas de reutilización de respuestas (cuánta cuota se ahorró). */
+  getCacheStats() {
+    return this.cache.estadisticas();
+  }
+
+  /** Descarta las respuestas guardadas y fuerza consultas frescas. */
+  limpiarCache(): void {
+    this.cache.limpiar();
   }
 
   /**

@@ -1,10 +1,119 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { CompraAgilClient, CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
-import { esAdmisible, extraerPrecioUnitario, percentil } from '../utils/quotation.js';
+import { extraerPrecioUnitario, percentil } from '../utils/quotation.js';
 import { safeError } from '../utils/redact.js';
+
+/** Precio de relleno cuando no se pudo estimar nada. Hay que advertirlo. */
+export const PRECIO_PLACEHOLDER = 1000;
+
+export interface EstimacionPrecio {
+  precio: number;
+  fuente: string;
+  /** `false` ⇒ es el placeholder y el borrador debe advertirlo. */
+  sugerido: boolean;
+}
+
+/** Presupuesto del comprador, mirando también el estimado. */
+function presupuestoDelComprador(detalle: CompraAgilDetalle): number {
+  const p = detalle.presupuesto;
+  return p?.monto_disponible_clp || p?.monto_disponible || p?.presupuesto_estimado || 0;
+}
+
+/**
+ * Decide el precio unitario del borrador, en orden de preferencia:
+ *   1. el que ingresó el usuario,
+ *   2. el percentil 25 de lo que cotizó el mercado en procesos similares,
+ *   3. el presupuesto del comprador menos 10%,
+ *   4. un placeholder de $1.000, que se advierte explícitamente.
+ *
+ * ⚠ POR QUÉ EL PASO 3 VIVE FUERA DEL try: antes, la consulta de precios de
+ *   mercado y el respaldo por presupuesto estaban dentro del mismo bloque, así
+ *   que CUALQUIER fallo de la API durante la consulta —un 429 por cuota
+ *   agotada, típicamente— saltaba también el respaldo y el borrador salía con
+ *   $1.000, pese a que el presupuesto ya estaba en la mano desde el detalle y
+ *   no requería ninguna llamada adicional. Detectado en auditoría: un llamado
+ *   de $4.800.000 generó un borrador de $1.000 por este camino.
+ */
+export async function estimarPrecioUnitario(
+  client: Pick<CompraAgilClient, 'buscar' | 'detalle'>,
+  detalle: CompraAgilDetalle,
+  precioPersonalizado?: number
+): Promise<EstimacionPrecio> {
+  if (precioPersonalizado !== undefined && precioPersonalizado > 0) {
+    return {
+      precio: precioPersonalizado,
+      fuente: 'Precio neto ingresado por el usuario',
+      sugerido: true,
+    };
+  }
+
+  const keyword = detalle.productos_solicitados?.[0]?.nombre || detalle.nombre || '';
+  const precios: number[] = [];
+
+  if (keyword) {
+    try {
+      logger.info(`generar_borrador_cotizacion: Consultando precios cotizados por el mercado para "${keyword}"`);
+      // Solo `desierta`: medido contra la API real, es el único estado que
+      // publica cotizaciones (desierta 5/8 procesos con precios; cerrada 0/8).
+      // `proveedor_seleccionado` devuelve 0 resultados.
+      const busqueda = await client.buscar({
+        q: keyword,
+        estado: 'desierta',
+        tamano_pagina: 50,
+        numero_pagina: 1,
+      });
+
+      for (const item of (busqueda.items || []).slice(0, 5)) {
+        try {
+          const det = await client.detalle(item.codigo);
+          // Se toman TODAS las cotizaciones, incluidas las inadmisibles: en los
+          // procesos desiertos casi todas lo son (por eso quedaron desiertos), y
+          // el precio ofertado sigue siendo señal de mercado. Filtrarlas dejaba
+          // la muestra vacía. La API nunca marca un ganador, así que la
+          // referencia es lo que ofertó la competencia.
+          for (const prov of det.proveedores_cotizando ?? []) {
+            const unitario = extraerPrecioUnitario(prov, keyword);
+            if (unitario !== null) precios.push(unitario);
+          }
+        } catch {
+          // Un histórico que falla no invalida el resto de la muestra.
+        }
+      }
+    } catch (err) {
+      logger.warn(`generar_borrador_cotizacion: No se pudo consultar precios de mercado: ${safeError(err)}`);
+    }
+  }
+
+  if (precios.length > 0) {
+    precios.sort((a, b) => a - b);
+    // Percentil 25 de lo cotizado: ubica la oferta en el cuarto más económico
+    // sin regalar margen, y resiste valores atípicos mejor que un promedio.
+    return {
+      precio: percentil(precios, 25),
+      fuente: `Sugerencia automática: percentil 25 de ${precios.length} precio(s) cotizado(s) por el mercado en procesos similares (NO son precios adjudicados: la API no los expone)`,
+      sugerido: true,
+    };
+  }
+
+  const presupuesto = presupuestoDelComprador(detalle);
+  if (presupuesto > 0) {
+    const cantidadTotal = detalle.productos_solicitados?.reduce((acc, p) => acc + p.cantidad, 0) || 1;
+    return {
+      precio: Math.round((presupuesto * 0.9) / cantidadTotal),
+      fuente: 'Sugerencia automática: presupuesto del comprador descontado 10% (no hubo cotizaciones de mercado comparables)',
+      sugerido: true,
+    };
+  }
+
+  return {
+    precio: PRECIO_PLACEHOLDER,
+    fuente: `Valor por defecto (placeholder de $${PRECIO_PLACEHOLDER.toLocaleString('es-CL')})`,
+    sugerido: false,
+  };
+}
 
 const TOOL_NAME = 'generar_borrador_cotizacion';
 
@@ -38,88 +147,19 @@ export function registerGenerarBorrador(server: McpServer, client: CompraAgilCli
         const razonSocial = args.razon_social || 'Proveedor Demo SpA';
         if (!args.rut_proveedor) advertencias.push('rut_proveedor es un valor PLACEHOLDER; reemplázalo por el RUT real del proveedor antes de presentar.');
         if (!args.razon_social) advertencias.push('razon_social es un valor PLACEHOLDER; reemplázalo por la razón social real.');
-        const customPrice = args.precio_unitario_personalizado;
-        
         let plazoEntrega = args.plazo_entrega_dias;
         if (plazoEntrega === undefined) {
           plazoEntrega = targetDetail.entrega?.plazo_entrega_dias || 5;
         }
 
-        // Estimar o adoptar precio unitario
-        let suggestedPrice = 1000;
-        let isPriceSuggested = false;
-        let priceSource = 'Valor por defecto (placeholder de $1.000)';
-
-        if (customPrice !== undefined && customPrice > 0) {
-          suggestedPrice = customPrice;
-          priceSource = 'Precio neto ingresado por el usuario';
-          isPriceSuggested = true;
-        } else {
-          // Intentar obtener palabras clave del primer producto solicitado
-          let keyword = '';
-          if (targetDetail.productos_solicitados && targetDetail.productos_solicitados.length > 0) {
-            keyword = targetDetail.productos_solicitados[0].nombre;
-          } else {
-            keyword = targetDetail.nombre;
-          }
-
-          if (keyword) {
-            try {
-              logger.info(`generar_borrador_cotizacion: Consultando precios cotizados por el mercado para "${keyword}"`);
-              // Solo `desierta`: medido contra la API real, es el único estado que
-              // publica cotizaciones (desierta 5/8 procesos con precios; cerrada 0/8).
-              // `proveedor_seleccionado` devuelve 0 resultados.
-              const searchResponse = await client.buscar({
-                q: keyword,
-                estado: 'desierta',
-                tamano_pagina: 50, // mínimo de la API: 10
-                numero_pagina: 1,
-              });
-
-              const prices: number[] = [];
-              const itemsToProcess = (searchResponse.items || []).slice(0, 5);
-              if (itemsToProcess.length > 0) {
-                for (const item of itemsToProcess) {
-                  try {
-                    const detail = await client.detalle(item.codigo);
-                    // Se toman TODAS las cotizaciones, incluidas las inadmisibles: en los
-                    // procesos desiertos casi todas lo son (por eso quedaron desiertos), y
-                    // el precio ofertado sigue siendo señal de mercado. Filtrarlas dejaba
-                    // la muestra vacía. La API nunca marca un ganador, así que la
-                    // referencia es lo que ofertó la competencia.
-                    for (const prov of detail.proveedores_cotizando ?? []) {
-                      const unitPrice = extraerPrecioUnitario(prov, keyword);
-                      if (unitPrice !== null) prices.push(unitPrice);
-                    }
-                  } catch (e) {
-                    // ignore errors for individual historical lookups
-                  }
-                }
-              }
-
-              if (prices.length > 0) {
-                prices.sort((a, b) => a - b);
-                // Percentil 25 de lo cotizado: ubica la oferta en el cuarto más
-                // económico sin regalar margen, y resiste valores atípicos mejor
-                // que un promedio.
-                suggestedPrice = percentil(prices, 25);
-                priceSource = `Sugerencia automática: percentil 25 de ${prices.length} precio(s) cotizado(s) por el mercado en procesos similares (NO son precios adjudicados: la API no los expone)`;
-                isPriceSuggested = true;
-              } else {
-                // Fallback: usar presupuesto estimado del comprador si existe
-                const totalCantidad = targetDetail.productos_solicitados?.reduce((acc, p) => acc + p.cantidad, 0) || 1;
-                const budget = targetDetail.presupuesto?.monto_disponible_clp || targetDetail.presupuesto?.monto_disponible || 0;
-                if (budget > 0) {
-                  suggestedPrice = Math.round((budget * 0.9) / totalCantidad);
-                  priceSource = 'Sugerencia automática: Presupuesto estimado del comprador (descontado 10%)';
-                  isPriceSuggested = true;
-                }
-              }
-            } catch (err) {
-              logger.warn(`generar_borrador_cotizacion: No se pudo estimar precio sugerido: ${safeError(err)}`);
-            }
-          }
-        }
+        const estimacion = await estimarPrecioUnitario(
+          client,
+          targetDetail,
+          args.precio_unitario_personalizado
+        );
+        const suggestedPrice = estimacion.precio;
+        const isPriceSuggested = estimacion.sugerido;
+        const priceSource = estimacion.fuente;
 
         // Construir productos cotizados
         const productosCotizados = (targetDetail.productos_solicitados || []).map(prod => {

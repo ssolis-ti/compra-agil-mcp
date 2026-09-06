@@ -22,6 +22,8 @@ alerts.log
 
 # Daemon state (deduplicación de alertas)
 .monitor-state.json
+.rate-limit-state.json
+.api-cache.json
 
 # IDEs and Editors
 .idea/
