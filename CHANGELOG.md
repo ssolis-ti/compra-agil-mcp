@@ -26,8 +26,20 @@ Auditoría de las 15 herramientas contra la API de producción, desde la óptica
 * **Defaults más económicos:** `analizar_precios_mercado.limite_analisis` 8 → 5 y `auditar_compras_desiertas.limite_analisis` 5 → 3.
 * **`obtener_estadisticas_uso` ya no promete lo que no sabe.** Declara que es un conteo local de esta instalación y que no haber recibido un 429 no garantiza que quede cuota, porque la API no publica el saldo del ticket.
 
-### Verificado sin cambios
-* Funcionan correctamente contra la API real: `buscar_compras_agiles`, `obtener_detalle_compra`, `monitorear_cambios_recientes` (ambos modos), `radar_oportunidades_calientes`, `auditar_compras_desiertas`, `verificar_orden_compra`, `obtener_detalle_orden_compra`, `generar_informe` y `verificar_ticket`.
+### Cobertura de la auditoría
+Todo lo siguiente se ejercitó por el camino real —protocolo MCP sobre stdio contra la API de producción—, no con mocks:
+
+* **15/15 herramientas.** Además de los arreglos de arriba, se verificaron en vivo `buscar_compras_agiles` (incluidos los filtros locales `palabras_clave_requeridas`/`palabras_clave_excluidas`, con casos que sí discriminan: excluir "impresora" 4→3, exigir "cesfam" 4→1, exigir un término ausente 4→0), `obtener_detalle_compra`, `monitorear_cambios_recientes` en sus dos modos, `radar_oportunidades_calientes`, `analizar_precios_mercado` y `auditar_compras_desiertas` en sus dos ramas (`q` y `codigo_compra`), `generar_informe` en los tres formatos de papel (carta, oficio y A4) y `verificar_ticket`.
+* **13/13 recursos + la plantilla `compra-agil://compras/{codigo}`**, leídos con `resources/read`: los tres catálogos JSON y los diez documentos, con extracción de texto correcta desde los PDF.
+* **2/2 prompts**, obtenidos con `prompts/get`.
+* **Demonio de monitoreo** (`services/monitor.ts`), el modo de operación que nunca se había probado: detectó 59 procesos en una ventana de 24 h, aplicó sus cuatro filtros, emitió una alerta real ($6.900.000, sin oferentes), la escribió en `alerts.log`, persistió el estado y en una segunda corrida emitió 0 alertas nuevas — la deduplicación funciona.
+
+### Sin verificar (la API no expone los datos)
+Tres caminos de éxito siguen sin poder probarse. De ellos solo se sabe que **fallan correctamente**; en la práctica son herramientas que un proveedor no podrá usar mientras ChileCompra no publique esa información:
+
+* **`obtener_detalle_orden_compra`** — no hay forma de obtener un código de OC válido desde esta API. Solo se probó la degradación ante un código inexistente.
+* **`verificar_orden_compra`, rama de cruce con la API de Órdenes de Compra** — ningún proceso trae `id_orden_compra`, así que ese código nunca llega a ejecutarse.
+* **`descargar_y_leer_documento`, descarga y parseo del PDF** — todos los adjuntos responden 404 (ver arriba).
 
 ---
 
