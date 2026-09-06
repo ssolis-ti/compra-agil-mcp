@@ -42,7 +42,7 @@ const inputSchema = {
   codigo_compra: z.string().optional().describe('Código de una Compra Ágil para extraer sus palabras clave automáticamente (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
   q: z.string().optional().describe('Término de búsqueda del producto/servicio a cotizar (ej: "resmas papel", "reactivos"). Opcional si se especifica "codigo_compra".'),
   region: z.string().optional().describe('Código de región para acotar el análisis (1-16). Ej: "13" para Metropolitana.'),
-  limite_analisis: z.number().min(1).max(15).default(8).optional().describe('Cuántos procesos históricos auditar (1-15, default 8). Cada uno consume una consulta de cuota y la API es lenta (~1-5s por consulta).'),
+  limite_analisis: z.number().min(1).max(15).default(5).optional().describe('Cuántos procesos históricos auditar (1-15, default 5). Cada uno consume una consulta de cuota y la API es lenta (~1-5s por consulta).'),
 };
 
 export function registerAnalizarPreciosMercado(server: McpServer, client: CompraAgilClient): void {
@@ -103,7 +103,7 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
         }
 
         // 3. Recolectar cotizaciones de los detalles
-        const limite = args.limite_analisis || 8;
+        const limite = args.limite_analisis || 5;
         const preciosUnitarios: number[] = [];
         const montosNetos: number[] = [];
         const cotizaciones: any[] = [];

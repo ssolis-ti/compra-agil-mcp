@@ -4,6 +4,33 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [2.2.0] - 2026-09-06
+
+Auditoría de las 15 herramientas contra la API de producción, desde la óptica de un proveedor PyME buscando venderle al Estado. Cuatro estaban rotas en la práctica y una limitación de diseño dejaba el servidor inutilizable por horas.
+
+### Añadido
+* **Caché de respuestas con vencimiento y persistencia** (`utils/cache.ts`). Las tres herramientas de análisis repiten exactamente la misma pareja de llamadas —`buscar({q, estado:'desierta'})` y luego `detalle()` de los primeros resultados— y no existía ninguna reutilización: el mismo histórico se descargaba hasta tres veces en minutos. Vigencia de 15 min para el detalle (un proceso desierto es inmutable) y 5 min para las búsquedas. El ticket queda excluido de la clave y nunca se escribe en disco. **Medido: repetir `generar_borrador_cotizacion` pasó de 6 consultas y 11.254 ms a 0 consultas y 41 ms; `analizar_precios_mercado` de 48.696 ms a 5 ms.**
+* **`getCacheStats()` y `limpiarCache()`** en el cliente.
+* **26 tests nuevos** (171 en total) sobre caché, búsqueda documental, estimación de precio y política de reintento.
+
+### Corregido
+* **`consultar_documentos_locales` no encontraba nada ante una pregunta normal.** Comparaba la consulta completa como subcadena literal, así que "¿qué multas me pueden aplicar?" devolvía "no se encontraron coincidencias en ninguno de los 10 documentos" —existiendo un PDF entero sobre multas y sanciones—. El falso negativo era además confiado: el modelo repetía al usuario que no había información. Ahora la consulta se descompone en términos, se ignoran acentos y palabras vacías, y se puntúa cada línea por cuántos términos concentra. Cuando de verdad no hay nada, se informa qué términos se buscaron.
+* **`generar_borrador_cotizacion` caía al placeholder de $1.000 teniendo el presupuesto a mano.** La consulta de precios de mercado y el respaldo por presupuesto vivían en el mismo `try`, así que cualquier fallo de la API saltaba también el respaldo. Observado: un llamado de $4.800.000 generó un borrador de $1.000. La estimación se extrajo a `estimarPrecioUnitario()` con la cascada correcta, el respaldo fuera del `try`, y ahora también considera `presupuesto_estimado`.
+* **Un solo 429 inutilizaba el servidor durante horas.** `markLimited()` fijaba el reset en las 00:01 UTC del día siguiente y `checkLimit()` rechazaba localmente TODA consulta posterior, sin siquiera intentar llegar a la API — lo que se reportaba como "cuota diaria agotada" era un bloqueo autoimpuesto, no un veredicto de ChileCompra. **Medido: tras un 429, la API volvió a responder con normalidad 13 minutos después.** La guía oficial se contradice (su §4 habla de día calendario, pero su §7 manda esperar `Retry-After` y el glosario define la cuota como un *token bucket* que "se recarga automáticamente"); se implementó lo segundo, que es lo que hace el servicio real. Ahora se honra `Retry-After` y, si no viene, se aplica una espera creciente (15 → 30 → 60 → 120 min) que la primera consulta exitosa reinicia.
+* **El contador de cuota olvidaba todo al reiniciar.** Vivía solo en memoria, y como el servidor MCP se reinicia con cada reinicio del cliente, `obtener_estadisticas_uso` informaba `isLimited: false` segundos después de un 429 real. Ahora persiste en `.rate-limit-state.json`, acotado al día UTC.
+* **`descargar_y_leer_documento` fallaba con 404 en adjuntos reales.** El endpoint heredado `RetornaDocumento.aspx` ya no sirve los adjuntos de Compra Ágil: verificado con dos documentos de procesos distintos (IDs 1855508 y 1854909), ambos 404. El error se trataba como fallo inesperado en vez de situación conocida. Ahora orienta a la ficha pública, que sí funciona. Importa porque las especificaciones para cotizar suelen estar solo en el adjunto.
+* **`obtener_enlace_documento` prometía una descarga que no funciona.** Afirmaba que los IDs numéricos "se pueden descargar directamente" y entregaba esa URL muerta. Ahora la ficha va primero y el enlace heredado se ofrece advirtiendo que probablemente falle.
+
+### Cambiado
+* **Throttle bajado de 40 a 15 consultas/minuto.** La ráfaga de las herramientas de análisis era lo que vaciaba el balde de tokens y provocaba el 429.
+* **Defaults más económicos:** `analizar_precios_mercado.limite_analisis` 8 → 5 y `auditar_compras_desiertas.limite_analisis` 5 → 3.
+* **`obtener_estadisticas_uso` ya no promete lo que no sabe.** Declara que es un conteo local de esta instalación y que no haber recibido un 429 no garantiza que quede cuota, porque la API no publica el saldo del ticket.
+
+### Verificado sin cambios
+* Funcionan correctamente contra la API real: `buscar_compras_agiles`, `obtener_detalle_compra`, `monitorear_cambios_recientes` (ambos modos), `radar_oportunidades_calientes`, `auditar_compras_desiertas`, `verificar_orden_compra`, `obtener_detalle_orden_compra`, `generar_informe` y `verificar_ticket`.
+
+---
+
 ## [2.1.0] - 2026-09-06
 
 Cotejo de la Guía oficial v3.0 (mayo 2026) contra la implementación, con re-verificación en vivo de los hallazgos de v2.0.0.

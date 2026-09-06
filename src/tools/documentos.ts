@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
+import { buscarEnTexto } from '../utils/doc-search.js';
 import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
@@ -35,11 +36,15 @@ export function registerDocumentosTools(server: McpServer): void {
           }],
         };
       } else {
+        // Verificado en septiembre 2026: este endpoint heredado responde 404
+        // para los adjuntos de Compra Ágil, aun con IDs numéricos válidos
+        // entregados por la API. Se sigue ofreciendo por si el portal lo
+        // restablece, pero la ficha va primero y sin prometer que funcionará.
         const directUrl = `https://www.mercadopublico.cl/FichaLicitacion/RetornaDocumento.aspx?id=${args.id_documento}`;
         return {
           content: [{
             type: 'text' as const,
-            text: `Este documento es de tipo tradicional (ID numérico) y se puede descargar directamente.\n\nEnlace de descarga directa:\n${directUrl}\n\nEnlace alternativo a la ficha pública del proceso:\n${fichaUrl}`,
+            text: `Para acceder al adjunto ${args.id_documento}, abre la ficha pública del proceso (no requiere iniciar sesión):\n${fichaUrl}\n\nExiste además un enlace heredado de descarga directa, pero se comprobó que hoy responde 404 para los adjuntos de Compra Ágil, así que probablemente no funcione:\n${directUrl}`,
           }],
         };
       }
@@ -72,20 +77,29 @@ export function registerDocumentosTools(server: McpServer): void {
           }
         });
  
-        if (response.status === 403 || response.status === 401) {
+        // ⚠ 404 se trata igual que 401/403 y no como un fallo inesperado:
+        //   verificado contra el servicio real (septiembre 2026) que el endpoint
+        //   heredado RetornaDocumento.aspx responde 404 para los adjuntos de
+        //   Compra Ágil, incluso con IDs numéricos entregados por la propia API
+        //   (probados 1855508 y 1854909, de procesos distintos). Para el usuario
+        //   la situación práctica es la misma que un bloqueo: hay que ir a la
+        //   ficha. Devolver un "Error HTTP 404" pelado hacía que el modelo
+        //   informara una falla técnica en vez de la vía alternativa que sí sirve.
+        if (!response.ok) {
           const fichaMsg = args.codigo_compra
-            ? `\n\nPor favor, descarga el archivo de forma pública e independiente desde la ficha del proceso en el buscador de Mercado Público:\nhttps://buscador.mercadopublico.cl/ficha?code=${args.codigo_compra}`
-            : '\n\nPor favor, descarga el archivo manualmente buscando el código de la compra en el buscador público de Mercado Público.';
+            ? `\n\nDescarga el archivo desde la ficha pública del proceso (se abre en el navegador, sin iniciar sesión):\nhttps://buscador.mercadopublico.cl/ficha?code=${args.codigo_compra}`
+            : '\n\nBusca el código de la compra en https://buscador.mercadopublico.cl para descargar el archivo desde su ficha.';
+
+          const causa = response.status === 404
+            ? `el portal ya no expone este adjunto por descarga directa (HTTP 404). Es el comportamiento observado para los adjuntos de Compra Ágil, no un error de tu consulta`
+            : `el servidor de Mercado Público requiere autenticación (Clave Única) o bloquea las solicitudes programáticas (HTTP ${response.status})`;
+
           return {
             content: [{
               type: 'text' as const,
-              text: `No es posible descargar ni procesar este archivo de forma automática porque el servidor de Mercado Público requiere autenticación (Clave Única) o bloquea las solicitudes programáticas (HTTP ${response.status}).${fichaMsg}`,
+              text: `No fue posible descargar el documento ${args.id_documento} automáticamente: ${causa}.${fichaMsg}\n\nSi necesitas las especificaciones técnicas para cotizar, ábrelo desde ese enlace: suelen estar solo en el adjunto.`,
             }],
           };
-        }
-
-        if (!response.ok) {
-          throw new Error(`Error HTTP al intentar descargar el documento: ${response.status} ${response.statusText}`);
         }
         
         const arrayBuffer = await response.arrayBuffer();
@@ -168,7 +182,7 @@ export function registerDocumentosTools(server: McpServer): void {
     {
       description: 'Busca y lee información dentro de los manuales, normativas o guías de Compra Ágil almacenados localmente en la carpeta docs/ (soporta formatos .pdf, .txt, .md).',
       inputSchema: {
-        query: z.string().optional().describe('Término de búsqueda para filtrar fragmentos del documento (ej: "monto", "criterios"). Si se omite, lista los documentos disponibles.'),
+        query: z.string().optional().describe('Qué buscar. Admite tanto un término suelto ("multas", "garantía") como una pregunta en lenguaje natural ("¿qué multas me pueden aplicar?"): la consulta se descompone en términos y se ignoran acentos y palabras vacías. Si se omite, lista los documentos disponibles.'),
         max_caracteres: z.number().min(500).max(15000).default(3000).optional().describe('Cantidad máxima de texto a retornar de cada coincidencia.'),
       },
     },
@@ -204,8 +218,11 @@ export function registerDocumentosTools(server: McpServer): void {
           };
         }
 
-        const searchTerm = args.query.toLowerCase();
         const results: string[] = [];
+        // Términos que sí aparecieron en algún documento, para poder explicar
+        // un resultado vacío en vez de afirmar que no existe información.
+        const terminosEncontrados = new Set<string>();
+        let terminosConsulta: string[] = [];
 
         for (const file of files) {
           const filePath = path.join(DOCS_DIR, file);
@@ -222,28 +239,18 @@ export function registerDocumentosTools(server: McpServer): void {
               fileText = fs.readFileSync(filePath, 'utf8');
             }
 
-            if (fileText.toLowerCase().includes(searchTerm)) {
-              // Buscar fragmentos relevantes
-              const lines = fileText.split('\n');
-              const fileMatches: string[] = [];
-              
-              for (let i = 0; i < lines.length; i++) {
-                const line = lines[i]?.trim();
-                if (line && line.toLowerCase().includes(searchTerm)) {
-                  const context = [];
-                  if (i > 0 && lines[i-1]?.trim()) context.push(`[Anterior] ${lines[i-1]?.trim()}`);
-                  context.push(`[COINCIDENCIA] ${line}`);
-                  if (i < lines.length - 1 && lines[i+1]?.trim()) context.push(`[Siguiente] ${lines[i+1]?.trim()}`);
-                  fileMatches.push(context.join('\n'));
-                }
-              }
+            const hallazgo = buscarEnTexto(fileText, args.query);
+            terminosConsulta = hallazgo.terminos;
+            for (const f of hallazgo.fragmentos) {
+              for (const t of f.terminos) terminosEncontrados.add(t);
+            }
 
-              if (fileMatches.length > 0) {
-                const limit = args.max_caracteres || 3000;
-                const matchesText = fileMatches.join('\n\n---\n\n');
-                const truncated = matchesText.length > limit ? `${matchesText.substring(0, limit)}... [TRUNCADO]` : matchesText;
-                results.push(`### Archivo: ${file}\n\n${truncated}`);
-              }
+            if (hallazgo.fragmentos.length > 0) {
+              const limit = args.max_caracteres || 3000;
+              const matchesText = hallazgo.fragmentos.map((f) => f.texto).join('\n\n---\n\n');
+              const truncated = matchesText.length > limit ? `${matchesText.substring(0, limit)}... [TRUNCADO]` : matchesText;
+              const cubiertos = [...new Set(hallazgo.fragmentos.flatMap((f) => f.terminos))];
+              results.push(`### Archivo: ${file}\n(términos encontrados aquí: ${cubiertos.join(', ')})\n\n${truncated}`);
             }
           } catch (e: any) {
             results.push(`### Archivo: ${file}\nError al leer o parsear: ${safeError(e)}`);
@@ -251,10 +258,13 @@ export function registerDocumentosTools(server: McpServer): void {
         }
 
         if (results.length === 0) {
+          const detalle = terminosConsulta.length > 0
+            ? `\n\nLa consulta se buscó como los términos: ${terminosConsulta.join(', ')}. Ninguno aparece en los documentos. Prueba con sinónimos o con un término más general.`
+            : '';
           return {
             content: [{
               type: 'text' as const,
-              text: `No se encontraron coincidencias para "${args.query}" en ninguno de los ${files.length} documentos locales en "docs/".`,
+              text: `No se encontraron coincidencias para "${args.query}" en ninguno de los ${files.length} documentos locales en "docs/".${detalle}`,
             }],
           };
         }
