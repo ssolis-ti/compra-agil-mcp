@@ -254,13 +254,29 @@ export class CompraAgilClient {
   private readonly rateLimiter: RateLimiter;
   private readonly cache: ResponseCache;
 
-  constructor(ticket: string, baseUrl?: string) {
+  /**
+   * @param opciones.persistir Rutas en disco para la cuota y la caché.
+   *
+   * ⚠ La persistencia es OPT-IN y por defecto está apagada: quien decide
+   *   escribir en disco es el punto de entrada (`index.ts`, `monitor.ts`), no
+   *   la librería. Si el cliente persistiera siempre, los tests compartirían
+   *   el archivo real del proyecto y dejarían de ser herméticos —una entrada
+   *   en caché de una corrida anterior hacía que `fetch` no se llamara y el
+   *   test que vigila que el ticket viaje por header fallaba sin que hubiera
+   *   nada roto—.
+   */
+  constructor(
+    ticket: string,
+    baseUrl?: string,
+    opciones: { persistir?: boolean } = {}
+  ) {
     this.ticket = ticket;
     this.baseUrl = baseUrl || 'https://api2.mercadopublico.cl';
+    const persistir = opciones.persistir === true;
     // Con persistencia: la cuota es del ticket y del día, no del proceso, así
     // que reiniciar el servidor no debe borrar la memoria de un 429.
-    this.rateLimiter = new RateLimiter(15, RUTA_ESTADO_POR_DEFECTO);
-    this.cache = new ResponseCache({ rutaEstado: RUTA_CACHE_POR_DEFECTO });
+    this.rateLimiter = new RateLimiter(15, persistir ? RUTA_ESTADO_POR_DEFECTO : null);
+    this.cache = new ResponseCache({ rutaEstado: persistir ? RUTA_CACHE_POR_DEFECTO : null });
     // El cliente se auto-protege: cualquier consumidor (servidor MCP, daemon,
     // scripts, tests) queda cubierto sin tener que acordarse de registrarlo.
     registrarSecreto(ticket);
@@ -336,6 +352,19 @@ export class CompraAgilClient {
     this.cache.guardar(claveCache, payload, ttl);
 
     return payload as T;
+  }
+
+  /**
+   * Devuelve el detalle SOLO si ya está en caché; nunca sale a la red.
+   *
+   * Permite que una herramienta enriquezca su respuesta cuando el dato ya se
+   * pagó, sin gastar cuota si no lo está. Lo usa `verificar_orden_compra`,
+   * que de otro modo consumiría una consulta para responder algo que la API
+   * estructuralmente no publica.
+   */
+  detalleEnCache(codigo: string): CompraAgilDetalle | undefined {
+    const clave = ResponseCache.clave(`/v2/compra-agil/${encodeURIComponent(codigo)}`);
+    return this.cache.obtener<CompraAgilDetalle>(clave);
   }
 
   /** Estadísticas de reutilización de respuestas (cuánta cuota se ahorró). */

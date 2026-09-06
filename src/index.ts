@@ -78,7 +78,7 @@ async function main() {
   logger.info('Iniciando servidor MCP Compra Ágil v2...');
 
   // 1. Crear cliente HTTP para la API de Mercado Público
-  const client = new CompraAgilClient(VALID_TICKET, BASE_URL);
+  const client = new CompraAgilClient(VALID_TICKET, BASE_URL, { persistir: true });
   logger.info(`Cliente API configurado → ${BASE_URL}`);
 
   // 2. Crear servidor MCP

@@ -4,6 +4,21 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [2.3.0] - 2026-09-06
+
+Tres herramientas prometían cosas que la API no puede cumplir. Ninguna se elimina —no hay cambios incompatibles—, pero dejan de gastar cuota y de anunciar lo que no entregan.
+
+### Cambiado
+* **`descargar_y_leer_documento` ya no intenta descargas condenadas.** Para los IDs numéricos —los únicos que entrega esta API— responde de inmediato con el enlace a la ficha, sin gastar la petición ni esperar su timeout. Los UUID **sí** se siguen intentando: usan otro endpoint (`adjunto.mercadopublico.cl`) que nunca se pudo ejercitar, y no se da por muerto sin prueba. La descripción advierte por adelantado la limitación, para que el modelo no la llame esperando el texto del PDF.
+* **`verificar_orden_compra` dejó de consultar la API por su cuenta.** Gastaba una consulta de cuota para responder siempre lo mismo: que no puede saberlo. Ahora reutiliza el detalle si ya está en caché —el flujo natural es pedir `obtener_detalle_compra` y después preguntar por la OC, y en ese caso la respuesta va completa y gratis— y si no lo está, responde igual explicando por qué no consultó y cómo confirmarlo en la ficha. **Medido: la secuencia completa pasó de 3 consultas a 1.**
+* **`obtener_detalle_orden_compra` advierte de dónde sacar el código.** Su descripción prometía el detalle de una OC sin decir que el código hay que traerlo de otra fuente: consulta la API legada de Órdenes de Compra, y la de Compra Ágil no entrega códigos de OC (`id_orden_compra` viene null en el 100% de los procesos). Sirve cuando ya tienes el código —la OC que te emitieron, un correo de Mercado Público, la ficha pública—, no para descubrirlo.
+
+### Añadido
+* **`CompraAgilClient.detalleEnCache()`** — lee el detalle solo si ya está en caché, sin salir nunca a la red. Es lo que permite que `verificar_orden_compra` siga siendo útil a costo cero.
+* 3 tests más (174 en total).
+
+---
+
 ## [2.2.0] - 2026-09-06
 
 Auditoría de las 15 herramientas contra la API de producción, desde la óptica de un proveedor PyME buscando venderle al Estado. Cuatro estaban rotas en la práctica y una limitación de diseño dejaba el servidor inutilizable por horas.

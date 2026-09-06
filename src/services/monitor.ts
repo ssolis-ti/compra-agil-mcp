@@ -68,7 +68,7 @@ console.log(`Palabras clave a buscar: ${KEYWORDS.join(', ')}`);
 console.log(`Destino de alertas     : ${ALERTS_LOG_PATH}`);
 console.log('========================================================');
 
-const client = new CompraAgilClient(TICKET, BASE_URL);
+const client = new CompraAgilClient(TICKET, BASE_URL, { persistir: true });
 
 async function runCheck() {
   const timestamp = new Date().toISOString();
