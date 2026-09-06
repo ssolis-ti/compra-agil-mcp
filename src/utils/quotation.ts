@@ -2,7 +2,8 @@
  * Utilidades de cotización: análisis de precios y detección de adjudicación.
  *
  * ⚠ REALIDAD DE LA API (verificado empíricamente contra el servicio real,
- *   julio 2026 — 45 procesos inspeccionados, 52 cotizaciones):
+ *   julio 2026 — 45 procesos inspeccionados, 52 cotizaciones — y re-confirmado
+ *   en septiembre 2026 con resultados idénticos):
  *
  *   • `proveedor_seleccionado` SÍ existe, pero su valor fue **0 en el 100%**
  *     de las cotizaciones observadas. Nunca se observó un 1.
@@ -14,6 +15,9 @@
  *
  *   CONCLUSIÓN: la API no expone procesos adjudicados. Cualquier análisis
  *   basado en "el precio que ganó" está condenado a no encontrar datos.
+ *   El Ejemplo 8.6 de la Guía oficial v3.0 (detectar OCs emitidas recorriendo
+ *   `estado=proveedor_seleccionado`) es irrealizable por la misma razón:
+ *   su primer paso devuelve una lista vacía.
  *
  *   Lo que SÍ hay: cotizaciones reales con `precio_unitario` y `valor_neto`
  *   (17 de 45 procesos las traían). Por eso el análisis se basa en precios

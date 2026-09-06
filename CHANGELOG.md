@@ -4,6 +4,27 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [2.1.0] - 2026-09-06
+
+Cotejo de la Guía oficial v3.0 (mayo 2026) contra la implementación, con re-verificación en vivo de los hallazgos de v2.0.0.
+
+### Añadido
+* **Ventana de cambios por rango de fechas en `monitorear_cambios_recientes`.** La API documenta dos formas excluyentes de acotar los cambios (§5.1, Grupo 1): `ttl_cambio_ms` (opción A) y el par `cambio_desde`/`cambio_hasta` (opción B, con su propio Ejemplo 8.2). La opción B estaba tipada en `BuscarParams` pero **ninguna herramienta la exponía**: la sincronización incremental de un período arbitrario era inalcanzable desde el MCP y el único modo disponible tenía techo de 24 horas. Ahora ambos modos están disponibles y son mutuamente excluyentes.
+* **Validación local de la ventana** (`resolverVentanaCambios`): rechaza combinar ambos modos, `cambio_hasta` sin `cambio_desde`, fechas no ISO-8601, fechas sin zona horaria y rangos invertidos. Falla antes de salir a la red para no gastar cuota.
+* **`scripts/debug-ventana-cambios.ts`**: comprueba la opción B contra la API real. Verificado — rango cerrado (2.165 resultados con `fecha_ultimo_cambio` dentro del rango pedido), rango abierto (892 resultados), y **combinar ambas opciones devuelve HTTP 400**, que es lo que la validación local anticipa.
+* **12 tests de regresión** sobre la resolución de ventana (124 en total).
+
+### Verificado (sin cambios en la API)
+Los hallazgos de v2.0.0 se re-comprobaron contra el servicio real casi dos meses después, con resultado idéntico:
+* `estado=proveedor_seleccionado` **sigue devolviendo 0 resultados**; `estado=oc_emitida` sigue devolviendo HTTP 400.
+* En una muestra sin filtrar de 24 h solo aparecen `publicada`, `cerrada` y `cancelada`: no existen procesos adjudicados en la naturaleza.
+* **El Ejemplo 8.6 de la guía oficial es irrealizable.** Propone detectar OCs emitidas recorriendo `estado=proveedor_seleccionado` y revisando `id_orden_compra` en el detalle, pero su primer paso devuelve una lista vacía. Anotado en el recurso `compra-agil://estados` y en `utils/quotation.ts` para que nadie vuelva a intentarlo.
+
+### Cambiado
+* `minutos` pasa de tener default declarado (`60`) a ser opcional: el default se aplica en el handler solo cuando no se indica un rango. El comportamiento para quien no pasa parámetros es idéntico.
+
+---
+
 ## [2.0.0] - 2026-07-15
 
 Primera versión validada **contra la API real de Mercado Público**. Las pruebas revelaron que la documentación oficial difiere de la realidad en puntos que invalidaban tres herramientas, y que se corrigen aquí.

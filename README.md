@@ -338,7 +338,7 @@ const resources = await client.listResources();
 | :--- | :--- |
 | `buscar_compras_agiles` | Busca procesos utilizando palabras clave (con filtros inteligentes locales), región (1-16), estado y ventana temporal. Parámetros `q` e `id` son excluyentes. |
 | `obtener_detalle_compra` | Detalle exhaustivo de una cotización: descripción, ítems y cotizaciones recibidas (confidenciales hasta el estado *Cerrada*). |
-| `monitorear_cambios_recientes` | Sincronización reactiva e incremental en los últimos N minutos (ventana máxima de 1440 min / 24 horas), con soporte para paginación. |
+| `monitorear_cambios_recientes` | Sincronización reactiva e incremental por ventana de cambios, con soporte para paginación. Dos modos excluyentes: **relativo** (`minutos`, máx 1440 / 24 h) o **absoluto** (`cambio_desde`/`cambio_hasta` en ISO-8601, sin techo de 24 h) para resincronizar un período arbitrario. |
 | `verificar_orden_compra` | Comprueba si un proceso tiene OC emitida leyendo `id_orden_compra` y cruzándolo con la API de OC. ⚠ En la práctica reportará "sin OC" casi siempre: la API no publica adjudicaciones — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
 | `obtener_detalle_orden_compra` | Consulta detallada del desglose de productos y facturación de una OC utilizando su código alfanumérico o ID numérico. |
 | `obtener_estadisticas_uso` | Retorna las estadísticas del limitador de solicitudes local (`requestsToday`, `isLimited`) para optimizar el consumo de la cuota del ticket. |
