@@ -41,6 +41,14 @@ Tres caminos de éxito siguen sin poder probarse. De ellos solo se sabe que **fa
 * **`verificar_orden_compra`, rama de cruce con la API de Órdenes de Compra** — ningún proceso trae `id_orden_compra`, así que ese código nunca llega a ejecutarse.
 * **`descargar_y_leer_documento`, descarga y parseo del PDF** — todos los adjuntos responden 404 (ver arriba).
 
+### Sobre los adjuntos: por qué no tiene arreglo programático
+Se investigó abriendo la ficha pública en un navegador real, y el hallazgo explica de raíz el 404:
+
+* **Las cotizaciones NO exponen adjuntos.** El array `documentos[]` existe solo a nivel del proceso (§6.1 y §6.3 de la guía); dentro de `proveedores_cotizando[]` no hay ningún campo de archivos. Los documentos que un proveedor sube con su oferta no son accesibles por la API. No hay nada que reparar: nunca estuvieron.
+* **La ficha pública sí funciona**, y es la vía correcta: renderiza el proceso completo con su sección "Adjuntos". Es lo que devuelven ahora `obtener_enlace_documento` y `descargar_y_leer_documento`.
+* **Pero el enlace del adjunto no tiene URL.** En la ficha es un `<a>` con `href` vacío: la descarga la dispara JavaScript desde la SPA. No existe una dirección estática que un programa pueda pedir, y una petición programática a la propia ficha devuelve 403 (protección anti-bot). Por eso mandar a la persona al navegador no es una salida perezosa, sino la única disponible hoy.
+* **Los IDs de documento son numéricos, no UUID.** La guía los documenta como `string (UUID)` en §6.1, pero la API real devuelve enteros (observados 1855508 y 1854909). Una discrepancia más entre la documentación y el servicio.
+
 ---
 
 ## [2.1.0] - 2026-09-06
