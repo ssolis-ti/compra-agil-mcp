@@ -55,7 +55,8 @@ export function registerDocumentosTools(server: McpServer): void {
   server.registerTool(
     'descargar_y_leer_documento',
     {
-      description: 'Descarga un documento adjunto de Mercado Público (bases técnicas/administrativas) en formato PDF usando su ID, extrae su texto y lo retorna al LLM. Útil para auditar requisitos técnicos de una oferta.',
+      description: `Intenta descargar un adjunto de Compra Ágil (bases técnicas/administrativas) y extraer su texto.
+⚠ IMPORTANTE: para los IDs numéricos —que son los que entrega esta API— el portal ya NO sirve el archivo, así que la herramienta responde de inmediato con el enlace a la ficha pública en vez de intentar una descarga que se sabe fallida. Si necesitas las especificaciones para cotizar, tendrás que abrir esa ficha en un navegador: el enlace del adjunto lo genera JavaScript y no existe una URL que un programa pueda pedir.`,
       inputSchema: {
         id_documento: z.string().describe('ID único del documento. Ej: "123456" o un UUID.'),
         codigo_compra: z.string().optional().describe('Código de la Compra Ágil asociada (Ej: "2494-141-COT26"). Permite guiar al usuario a la ficha pública en caso de fallar la descarga.'),
@@ -66,10 +67,33 @@ export function registerDocumentosTools(server: McpServer): void {
     async (args) => {
       try {
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(args.id_documento);
-        const url = isUuid
-          ? `https://adjunto.mercadopublico.cl/adjunto-compra-agil/descargar/${args.id_documento}`
-          : `https://www.mercadopublico.cl/FichaLicitacion/RetornaDocumento.aspx?id=${args.id_documento}`;
-        
+
+        // ⚠ NO se intenta la descarga de IDs numéricos: se comprobó que el
+        //   endpoint heredado responde 404 para todos los adjuntos de Compra
+        //   Ágil (IDs 1855508 y 1854909, de procesos distintos), y la causa es
+        //   estructural — en la ficha el enlace es un <a> con href vacío, la
+        //   descarga la dispara JavaScript y no hay URL estática que pedir.
+        //   Gastar una petición y esperar su timeout para confirmar un fallo
+        //   conocido solo retrasa la única respuesta útil, que es el enlace.
+        //
+        //   Los UUID SÍ se intentan: usan otro endpoint (adjunto.mercadopublico.cl)
+        //   que nunca se pudo ejercitar, así que no se da por muerto sin prueba.
+        //   Si algún día vuelven a servirse los numéricos, `scripts/debug-*.ts`
+        //   y esta guarda son el punto por donde revertirlo.
+        if (!isUuid) {
+          const ficha = args.codigo_compra
+            ? `\n\nÁbrelo desde la ficha pública del proceso (en un navegador, sin iniciar sesión):\nhttps://buscador.mercadopublico.cl/ficha?code=${args.codigo_compra}`
+            : '\n\nBusca el código de la compra en https://buscador.mercadopublico.cl y abre su ficha para ver el adjunto.';
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `El adjunto ${args.id_documento} no se puede descargar por programa: Mercado Público dejó de servir los adjuntos de Compra Ágil por enlace directo, y en la ficha el archivo se descarga mediante JavaScript, sin una URL que se pueda pedir.${ficha}\n\nSi necesitas las especificaciones técnicas para cotizar, suelen estar solo en ese adjunto, así que conviene abrirlo ahí.`,
+            }],
+          };
+        }
+
+        const url = `https://adjunto.mercadopublico.cl/adjunto-compra-agil/descargar/${args.id_documento}`;
+
         // Descargar PDF
         const response = await fetch(url, {
           headers: {

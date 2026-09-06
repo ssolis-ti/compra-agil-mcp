@@ -18,9 +18,9 @@ import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'verificar_orden_compra';
 
-const TOOL_DESCRIPTION = `Verifica si una Compra Ágil específica ya tiene una Orden de Compra (OC) emitida, leyendo id_orden_compra del detalle y cruzándolo con la API de Órdenes de Compra.
-⚠ LIMITACIÓN VERIFICADA EMPÍRICAMENTE (julio 2026): en 45 procesos inspeccionados, NINGUNO traía id_orden_compra (siempre null), y el filtro de estado "proveedor_seleccionado" devuelve 0 resultados. En la práctica, la API de Compra Ágil no está publicando adjudicaciones ni órdenes de compra, por lo que esta herramienta reportará "sin OC" en la mayoría o totalidad de los casos.
-Un resultado "sin OC" NO significa necesariamente que la OC no exista: puede significar que la API no la expone. Para confirmarlo, consulta la ficha pública del proceso en https://buscador.mercadopublico.cl/ficha?code={codigo}`;
+const TOOL_DESCRIPTION = `Informa si una Compra Ágil tiene Orden de Compra emitida, leyendo id_orden_compra del detalle.
+⚠ LIMITACIÓN VERIFICADA (julio 2026, re-confirmada en septiembre): en 45 procesos inspeccionados NINGUNO traía id_orden_compra, y el filtro "proveedor_seleccionado" devuelve 0 resultados. La API de Compra Ágil no publica adjudicaciones. Por eso esta herramienta NO consulta la API por su cuenta —sería gastar cuota para responder "no puedo saberlo"—: reutiliza el detalle si ya se pidió con "obtener_detalle_compra", y en cualquier caso indica cómo confirmarlo en la ficha pública.
+Un "sin OC" NO prueba que la OC no exista: significa que la API no la expone.`;
 
 const inputSchema = {
   codigo: z.string().describe(
@@ -37,7 +37,34 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
     },
     async (args) => {
       try {
-        const detalle = await client.detalle(args.codigo);
+        // ⚠ NO se consulta la API si el detalle no está ya en caché.
+        //   Esta herramienta gastaba una consulta de cuota para responder algo
+        //   que la API estructuralmente no publica: en 45 procesos inspeccionados
+        //   más las verificaciones de septiembre 2026, NINGUNO trajo
+        //   id_orden_compra. Pagar cuota por un "no puedo saberlo" garantizado
+        //   es el peor negocio posible cuando el balde de tokens es escaso.
+        //
+        //   Si el detalle ya se pagó antes (flujo natural: obtener_detalle_compra
+        //   y luego preguntar por la OC), se aprovecha y la respuesta va completa
+        //   sin costo. Si no, se responde igual con la explicación y la ficha.
+        const detalle = client.detalleEnCache(args.codigo);
+
+        if (!detalle) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({
+                codigo: args.codigo,
+                verificacion_oc: {
+                  tiene_orden_compra: null,
+                  motivo: 'No se consultó la API a propósito, para no gastar cuota en una respuesta que se conoce de antemano: la API de Compra Ágil no publica adjudicaciones ni órdenes de compra (0 de 45 procesos inspeccionados traían id_orden_compra, re-verificado en septiembre de 2026).',
+                  como_confirmarlo: `Abre la ficha pública del proceso, que sí muestra el estado real: https://buscador.mercadopublico.cl/ficha?code=${args.codigo}`,
+                  si_quieres_los_datos_del_proceso: 'Llama primero a "obtener_detalle_compra"; después esta herramienta reutiliza ese detalle sin costo adicional y te informa lo que la API sí trae.',
+                },
+              }, null, 2),
+            }],
+          };
+        }
 
         const idOrdenCompra = detalle.id_orden_compra ?? detalle.orden_compra?.id_orden_compra ?? null;
         const idOc = detalle.orden_compra?.id_oc ?? null;

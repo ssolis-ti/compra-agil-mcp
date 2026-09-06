@@ -13,9 +13,8 @@ import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'obtener_detalle_orden_compra';
 
-const TOOL_DESCRIPTION = `Obtiene el detalle completo de una Orden de Compra (OC) emitida en Mercado Público de Chile.
-Admite tanto el ID numérico (id_orden_compra) como el código alfanumérico externo.
-Retorna información sobre montos (neto, impuestos, total), comprador, proveedor adjudicado y el listado de productos/servicios adquiridos.`;
+const TOOL_DESCRIPTION = `Obtiene el detalle completo de una Orden de Compra (OC) emitida en Mercado Público de Chile: montos (neto, impuestos, total), comprador, proveedor adjudicado y listado de productos adquiridos. Admite el ID numérico o el código alfanumérico externo.
+⚠ EL CÓDIGO DEBE VENIR DE OTRA FUENTE. Consulta la API legada de Órdenes de Compra, que es independiente de la de Compra Ágil — y esta última NO entrega códigos de OC (verificado: id_orden_compra viene null en el 100% de los procesos). Úsala cuando ya tengas el código por otra vía: la OC que te emitieron como proveedor, un correo de Mercado Público o la ficha pública del proceso. No esperes obtenerlo con las demás herramientas de este servidor.`;
 
 const inputSchema = {
   codigo_oc: z.string().describe(

@@ -127,3 +127,25 @@ describe('ResponseCache — persistencia entre reinicios', () => {
     expect(new ResponseCache({ rutaEstado: tmp }).obtener('k')).toBeUndefined();
   });
 });
+
+/**
+ * `verificar_orden_compra` dejó de consultar la API por su cuenta: gastaba
+ * cuota para responder algo que la API estructuralmente no publica. Se apoya
+ * en esta lectura de caché, que nunca debe salir a la red.
+ */
+describe('ResponseCache.clave — la usa detalleEnCache()', () => {
+  it('la clave de un detalle sin parámetros es el path a secas', () => {
+    expect(ResponseCache.clave('/v2/compra-agil/5519-136-COT26')).toBe('/v2/compra-agil/5519-136-COT26');
+  });
+
+  it('un detalle guardado se recupera con la misma clave que construye el cliente', () => {
+    const c = new ResponseCache();
+    const clave = ResponseCache.clave('/v2/compra-agil/5519-136-COT26');
+    c.guardar(clave, { codigo: '5519-136-COT26' }, 900);
+    expect(c.obtener(clave)).toEqual({ codigo: '5519-136-COT26' });
+  });
+
+  it('un detalle nunca pedido no está en caché (la herramienta responderá sin datos)', () => {
+    expect(new ResponseCache().obtener(ResponseCache.clave('/v2/compra-agil/JAMAS-PEDIDO'))).toBeUndefined();
+  });
+});
