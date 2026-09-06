@@ -1,0 +1,3 @@
+# Andamiaje del propio graphify: sus archivos de skill no son parte del proyecto
+# y se cuelan como una comunidad entera en el grafo.
+.claude/

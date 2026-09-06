@@ -9,7 +9,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 /**
  * Catálogo de estados con el comportamiento REAL medido contra la API
- * (julio 2026). La documentación oficial difiere en dos puntos importantes,
+ * (julio 2026, re-verificado en septiembre 2026 con idéntico resultado).
+ * La documentación oficial difiere en dos puntos importantes,
  * verificados empíricamente y anotados abajo.
  */
 const ESTADOS = [
@@ -41,7 +42,7 @@ const ESTADOS = [
     codigo: 'proveedor_seleccionado',
     descripcion: 'Documentado como "se seleccionó al proveedor ganador".',
     funciona: false,
-    nota: '⚠ LIMITACIÓN VERIFICADA: la API acepta este filtro pero devuelve SIEMPRE 0 resultados. Además, en 45 procesos inspeccionados con 52 cotizaciones, el campo proveedor_seleccionado valió 0 en el 100% de los casos y ningún proceso traía id_orden_compra. CONCLUSIÓN: la API no expone procesos adjudicados. No bases análisis en este estado. Para precios de mercado usa "analizar_precios_mercado", que se apoya en cotizaciones reales.',
+    nota: '⚠ LIMITACIÓN VERIFICADA (julio 2026, re-confirmada en septiembre 2026): la API acepta este filtro pero devuelve SIEMPRE 0 resultados. Además, en 45 procesos inspeccionados con 52 cotizaciones, el campo proveedor_seleccionado valió 0 en el 100% de los casos y ningún proceso traía id_orden_compra. CONCLUSIÓN: la API no expone procesos adjudicados. No bases análisis en este estado. Para precios de mercado usa "analizar_precios_mercado", que se apoya en cotizaciones reales. Nota sobre la guía oficial: el Ejemplo 8.6 de la Guía v3.0 propone detectar OCs emitidas recorriendo este estado — es irrealizable, porque el primer paso devuelve una lista vacía.',
   },
   {
     codigo: 'oc_emitida',
@@ -52,7 +53,7 @@ const ESTADOS = [
 ];
 
 /** Advertencia general que acompaña al catálogo. */
-const ADVERTENCIA = 'Estados verificados contra la API real en julio de 2026. Solo publicada, cerrada, desierta y cancelada devuelven datos. proveedor_seleccionado devuelve 0 resultados y oc_emitida da error 400, pese a estar ambos documentados oficialmente.';
+const ADVERTENCIA = 'Estados verificados contra la API real en julio de 2026 y re-confirmados en septiembre de 2026 (sin cambios). Solo publicada, cerrada, desierta y cancelada devuelven datos. proveedor_seleccionado devuelve 0 resultados y oc_emitida da error 400, pese a estar ambos documentados oficialmente.';
 
 export function registerEstadosResource(server: McpServer): void {
   server.registerResource(
