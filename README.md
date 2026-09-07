@@ -69,7 +69,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 ## ⚡ Características Clave
 * **Modernizado para SDK v1.12+:** Carga declarativa y robusta de herramientas, recursos y prompts bajo los nuevos estándares del protocolo.
 * **Carga de Entorno Autónoma:** El servidor detecta y carga de forma automática y manual el archivo `.env` del directorio de trabajo al iniciarse, facilitando la conexión en clientes MCP de escritorio sin necesidad de configurar variables de sistema globales.
-* **Lector de Documentación Integrado (Recursos):** Exposición nativa de guías, normativas y manuales en PDF (dentro de la carpeta `docs/`) como recursos del protocolo MCP (`compra-agil://documentacion/{filename}`). El servidor extrae el texto del PDF de manera local y lo inyecta en el LLM bajo demanda.
+* **Lector de Documentación Integrado (Recursos):** Exposición nativa de guías, normativas y manuales en PDF (dentro de la carpeta `docs/`) como recursos del protocolo MCP (`compra-agil://documentacion/{filename}`). El servidor extrae el texto del PDF de manera local y lo inyecta en el LLM bajo demanda. ⚠ **Solo si clonas este repositorio** — ver [nota sobre la instalación por npm](#-la-documentación-no-viaja-en-el-paquete-de-npm).
 * **Filtrado Inteligente Anti-Ruido:** Filtros locales en la herramienta `buscar_compras_agiles` (`palabras_clave_requeridas` y `palabras_clave_excluidas`) para afinar búsquedas amplias de la API y remover ofertas irrelevantes.
 * **Paginación Inteligente y Monitoreo Completo:** La herramienta de cambios recientes admite navegación de páginas (`numero_pagina`), y el demonio de monitoreo periódico procesa de forma recursiva todas las páginas de resultados (`client.buscarTodo()`) para evitar pérdidas de alertas.
 * **Integración del Detalle de OC:** Resuelve de forma dinámica el código alfanumérico o ID numérico de las Órdenes de Compra utilizando la API legada de Mercado Público.
@@ -346,7 +346,7 @@ const resources = await client.listResources();
 | `verificar_ticket` | Comprueba que el ticket configurado funcione contra la API real **sin revelar su valor** (solo muestra `••••1234`). Primer diagnóstico recomendado. |
 | `obtener_enlace_documento` | Entrega el enlace a la **ficha pública** del proceso, que es donde el adjunto sí es accesible (en un navegador). El enlace heredado de descarga directa se ofrece advirtiendo que hoy responde 404. |
 | `descargar_y_leer_documento` | ⚠ **Hoy no puede descargar los adjuntos de Compra Ágil**: el portal dejó de servirlos por enlace directo (404 verificado) y en la ficha el archivo lo genera JavaScript, sin URL que pedir. Para IDs numéricos responde de inmediato con el enlace a la ficha, sin gastar el intento. Los UUID sí se intentan. |
-| `consultar_documentos_locales` | Busca dentro de los PDF/TXT/MD de `docs/`. Admite **preguntas en lenguaje natural** ("¿qué multas me pueden aplicar?"), no solo palabras sueltas: descompone la consulta en términos, ignora acentos y palabras vacías, y ordena por densidad de coincidencias. |
+| `consultar_documentos_locales` | Busca dentro de los PDF/TXT/MD de `docs/`. Admite **preguntas en lenguaje natural** ("¿qué multas me pueden aplicar?"), no solo palabras sueltas: descompone la consulta en términos, ignora acentos y palabras vacías, y ordena por densidad de coincidencias. ⚠ Requiere una carpeta `docs/` con contenido: **no viene en el paquete de npm** (ver [nota](#-la-documentación-no-viaja-en-el-paquete-de-npm)). |
 | `analizar_precios_mercado` | Analiza la distribución de precios **cotizados** por la competencia en procesos similares (mín/p25/mediana/promedio/máx) y sugiere un precio competitivo. Advierte cuando la muestra es demasiado dispersa. ⚠ Analiza precios cotizados, **no adjudicados** — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
 | `auditar_compras_desiertas` | Analiza por qué una convocatoria quedó desierta, cruzando su presupuesto y plazo contra los precios que el mercado cotizó en procesos del mismo rubro. Reporta el motivo oficial de deserción. |
 | `generar_borrador_cotizacion` | Auto-completa propuestas JSON de cotización bajo el esquema oficial, calculando impuestos (19% IVA) y redactando la carta de presentación. Marca explícitamente los campos placeholder. |
@@ -361,7 +361,21 @@ const resources = await client.listResources();
 | `compra-agil://estados` | `application/json` | Estados de la API con su comportamiento **real verificado**: marca cuáles funcionan (`publicada`, `cerrada`, `desierta`, `cancelada`) y cuáles no (`proveedor_seleccionado` devuelve 0; `oc_emitida` da HTTP 400), pese a estar ambos documentados oficialmente. |
 | `compra-agil://glosario` | `application/json` | Glosario de acrónimos del dominio de ChileCompra para contextualización semántica de la IA. |
 | `compra-agil://compras/{codigo}` | `application/json` | Recurso dinámico que resuelve el objeto JSON puro devuelto por la API v2 de una Compra Ágil usando su código único. |
-| `compra-agil://documentacion/{filename}` | `text/plain` | Recurso dinámico que lee y extrae todo el contenido de texto de un PDF/TXT/MD local en la carpeta `docs/` en tiempo real. |
+| `compra-agil://documentacion/{filename}` | `text/plain` | Recurso dinámico que lee y extrae todo el contenido de texto de un PDF/TXT/MD local en la carpeta `docs/` en tiempo real. ⚠ Requiere clonar el repositorio — ver la nota siguiente. |
+
+#### ⚠️ La documentación no viaja en el paquete de npm
+
+El paquete publicado incluye únicamente `dist/` (declarado en `files` de `package.json`), porque las guías en PDF de ChileCompra pesan **12 MB** frente a los ~110 KB del servidor. En consecuencia, **si lo instalas con `npx` o `npm install` en lugar de clonar el repositorio**:
+
+* Verás **3 recursos en vez de 13**: `regiones`, `estados` y `glosario`, que están definidos en código. Los diez de `compra-agil://documentacion/…` no existirán.
+* `consultar_documentos_locales` informará que la carpeta `docs/` está vacía, apuntando a tu directorio de trabajo.
+
+Ninguna de las 15 herramientas que consultan la API se ve afectada: la limitación alcanza solo a la documentación local.
+
+**Si quieres esa documentación**, tienes dos caminos:
+
+1. **Clonar el repositorio** en lugar de instalar desde npm — la carpeta `docs/` viene incluida.
+2. **Poner tus propios documentos**: crea una carpeta `docs/` en el directorio donde corres el servidor y guarda ahí los PDF, TXT o MD que te interesen. Se expondrán igual como recursos y `consultar_documentos_locales` los buscará. Sirve para tus propias bases técnicas, normativa interna o cualquier material de referencia.
 
 ### Prompts Disponibles
 
