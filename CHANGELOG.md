@@ -15,7 +15,7 @@ Tres herramientas prometían cosas que la API no puede cumplir. Ninguna se elimi
 
 ### Añadido
 * **`CompraAgilClient.detalleEnCache()`** — lee el detalle solo si ya está en caché, sin salir nunca a la red. Es lo que permite que `verificar_orden_compra` siga siendo útil a costo cero.
-* 3 tests más (174 en total).
+* 12 tests más (183 en total), incluidos 9 que blindan `detalleEnCache()`: que nunca genera tráfico, que construye la misma clave que `detalle()`, que no confunde un proceso con otro ni una búsqueda con un detalle, y que sin persistencia cada instancia arranca limpia. Se validaron por mutación —al alterar a propósito la construcción de la clave, fallan 4 de los 9—, de modo que no pasan por casualidad.
 
 ---
 
