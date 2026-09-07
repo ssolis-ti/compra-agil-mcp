@@ -341,16 +341,16 @@ const resources = await client.listResources();
 | `obtener_detalle_compra` | Detalle exhaustivo de una cotización: descripción, ítems y cotizaciones recibidas (confidenciales hasta el estado *Cerrada*). |
 | `monitorear_cambios_recientes` | Sincronización reactiva e incremental por ventana de cambios, con soporte para paginación. Dos modos excluyentes: **relativo** (`minutos`, máx 1440 / 24 h) o **absoluto** (`cambio_desde`/`cambio_hasta` en ISO-8601, sin techo de 24 h) para resincronizar un período arbitrario. |
 | `verificar_orden_compra` | Informa si un proceso tiene OC emitida. **No consulta la API por su cuenta** (gastaba cuota para responder siempre "no puedo saberlo"): reutiliza el detalle si ya está en caché e indica cómo confirmarlo en la ficha pública — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
-| `obtener_detalle_orden_compra` | Consulta detallada del desglose de productos y facturación de una OC utilizando su código alfanumérico o ID numérico. |
-| `obtener_estadisticas_uso` | Retorna las estadísticas del limitador de solicitudes local (`requestsToday`, `isLimited`) para optimizar el consumo de la cuota del ticket. |
+| `obtener_detalle_orden_compra` | Desglose de productos y facturación de una OC. ⚠ **El código debe venir de otra fuente** (la OC que te emitieron, un correo, la ficha pública): consulta la API legada de Órdenes de Compra, y la de Compra Ágil no entrega códigos de OC. |
+| `obtener_estadisticas_uso` | Cuántas consultas lleva esta instalación en el día UTC y si ya recibió un 429. ⚠ Es un **conteo local**, no el saldo del ticket: la API no publica cuánta cuota queda. Persiste entre reinicios. |
 | `verificar_ticket` | Comprueba que el ticket configurado funcione contra la API real **sin revelar su valor** (solo muestra `••••1234`). Primer diagnóstico recomendado. |
-| `obtener_enlace_documento` | Genera el link público y oficial de descarga de un archivo adjunto del proceso de Mercado Público. |
-| `descargar_y_leer_documento` | Descarga y extrae el texto plano de un documento adjunto en PDF del proceso de compra de forma remota, permitiendo realizar búsquedas de palabras clave. |
-| `consultar_documentos_locales` | Busca y extrae fragmentos coincidentes dentro de los archivos PDF/TXT/MD de ayuda de Compra Ágil guardados en la carpeta local `docs/`. |
+| `obtener_enlace_documento` | Entrega el enlace a la **ficha pública** del proceso, que es donde el adjunto sí es accesible (en un navegador). El enlace heredado de descarga directa se ofrece advirtiendo que hoy responde 404. |
+| `descargar_y_leer_documento` | ⚠ **Hoy no puede descargar los adjuntos de Compra Ágil**: el portal dejó de servirlos por enlace directo (404 verificado) y en la ficha el archivo lo genera JavaScript, sin URL que pedir. Para IDs numéricos responde de inmediato con el enlace a la ficha, sin gastar el intento. Los UUID sí se intentan. |
+| `consultar_documentos_locales` | Busca dentro de los PDF/TXT/MD de `docs/`. Admite **preguntas en lenguaje natural** ("¿qué multas me pueden aplicar?"), no solo palabras sueltas: descompone la consulta en términos, ignora acentos y palabras vacías, y ordena por densidad de coincidencias. |
 | `analizar_precios_mercado` | Analiza la distribución de precios **cotizados** por la competencia en procesos similares (mín/p25/mediana/promedio/máx) y sugiere un precio competitivo. Advierte cuando la muestra es demasiado dispersa. ⚠ Analiza precios cotizados, **no adjudicados** — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
 | `auditar_compras_desiertas` | Analiza por qué una convocatoria quedó desierta, cruzando su presupuesto y plazo contra los precios que el mercado cotizó en procesos del mismo rubro. Reporta el motivo oficial de deserción. |
 | `generar_borrador_cotizacion` | Auto-completa propuestas JSON de cotización bajo el esquema oficial, calculando impuestos (19% IVA) y redactando la carta de presentación. Marca explícitamente los campos placeholder. |
-| `radar_oportunidades_calientes` | Califica y ordena convocatorias publicadas según un score ponderado (Hot Score) de competencia (sin oferentes), urgencia, presupuesto y simplicidad. Auto-pagina. |
+| `radar_oportunidades_calientes` | Califica y ordena convocatorias publicadas con un score ponderado (Hot Score, máx 115) de competencia, urgencia de cierre, presupuesto, simplicidad y **segundo llamado**. Cada resultado trae el desglose de factores y el campo `llamado`. Auto-pagina. |
 | `generar_informe` | Genera un **informe profesional imprimible** (HTML autocontenido, diseño A4/Carta/Oficio) y devuelve la ruta del archivo. Ver [Informes](#-informes-imprimibles). |
 
 ### Recursos Disponibles (Resources)
@@ -372,7 +372,7 @@ const resources = await client.listResources();
 
 ## ⚠️ Limitaciones conocidas de la API
 
-Estos hallazgos fueron **verificados empíricamente** contra el servicio real de Mercado Público (julio 2026, 45 procesos y 52 cotizaciones inspeccionados). La [Guía oficial API Compra Ágil v2](docs/api/) documenta un comportamiento distinto en cada uno de estos puntos.
+Estos hallazgos fueron **verificados empíricamente** contra el servicio real de Mercado Público (julio 2026, 45 procesos y 52 cotizaciones inspeccionados; **re-confirmados en septiembre de 2026** junto a una auditoría de las 15 herramientas). La [Guía oficial API Compra Ágil v2](docs/api/) documenta un comportamiento distinto en cada uno de estos puntos.
 
 ### 🔴 La API no publica adjudicaciones
 
@@ -386,7 +386,7 @@ Estos hallazgos fueron **verificados empíricamente** contra el servicio real de
 
 En la muestra, `proveedor_seleccionado` valió `0` en el **100 %** de las cotizaciones y **ningún** proceso traía `id_orden_compra`.
 
-**Consecuencia práctica:** no es posible saber qué oferta ganó ni obtener precios adjudicados. `analizar_precios_mercado` se apoya en precios **cotizados**, que sí son señal de mercado real. `verificar_orden_compra` reportará "sin OC" casi siempre — lo que **no prueba** que la OC no exista, solo que la API no la publica.
+**Consecuencia práctica:** no es posible saber qué oferta ganó ni obtener precios adjudicados. `analizar_precios_mercado` se apoya en precios **cotizados**, que sí son señal de mercado real. `verificar_orden_compra` **ya no consulta la API por su cuenta**: gastaba cuota para responder siempre "no puedo saberlo". Reutiliza el detalle si ya está en caché y, en cualquier caso, indica cómo confirmarlo en la ficha pública. Un "sin OC" **no prueba** que la OC no exista, solo que la API no la publica.
 
 ### 📊 Dónde viven los precios
 
@@ -394,11 +394,30 @@ Solo los procesos **`desierta`** publican sus cotizaciones (medido: `desierta` 5
 
 Casi todas esas cotizaciones están declaradas *inadmisibles* — es justamente lo que dejó desierto al proceso. **Se incluyen igualmente** en las estadísticas: un precio ofertado es señal de mercado aunque le hayan rechazado el papeleo, y los motivos reales observados son mayoritariamente formales (*"no cumple con garantía"*, *"no cuenta con giro acorde"*), no de precio. La herramienta reporta los motivos para que puedas ponderarlos.
 
+### 📎 Los adjuntos no se pueden descargar por programa
+
+| La documentación dice | La realidad medida (septiembre 2026) |
+| :--- | :--- |
+| `documentos[].id` es un `string (UUID)` | La API devuelve **enteros** (observados `1855508`, `1854909`) |
+| Los adjuntos se descargan por su ID | El endpoint heredado responde **404** para todos los adjuntos de Compra Ágil |
+| — | En la ficha pública el enlace es un `<a>` con `href` vacío: la descarga la dispara **JavaScript**, sin URL que un programa pueda pedir |
+
+Las **cotizaciones nunca expusieron adjuntos**: el array `documentos[]` existe solo a nivel del proceso, no dentro de `proveedores_cotizando[]`.
+
+**Consecuencia práctica:** si un llamado dice *"ver características en adjunto"*, esas especificaciones solo se pueden leer abriendo la ficha en un navegador. Las herramientas de documentos llevan ahí directamente en vez de fallar.
+
+### ⏱️ El 429 no es una cuota diaria: es un balde que se recarga
+
+La guía se contradice a sí misma. Su §4 dice esperar *"hasta el inicio del siguiente día calendario"*, pero su §7 manda esperar el header **`Retry-After`** y el glosario define la cuota como un **token bucket** que *"se recarga automáticamente"*. **La medición respalda lo segundo: tras un 429, la API volvió a responder con normalidad 13 minutos después.**
+
+Por eso este servidor **no bloquea hasta el día siguiente**: honra `Retry-After` y, si no viene, aplica una espera creciente (15 → 30 → 60 → 120 min) que la primera consulta exitosa reinicia. Si recibes un 429, reintenta en unos minutos antes de suponer que agotaste el día.
+
 ### 🐌 Otras restricciones medidas
 
 * **Las consultas sin filtros devuelven HTTP 500.** Hay que enviar al menos un filtro.
 * **`tamano_pagina` mínimo es 10** (valores `1` y `5` devuelven HTTP 400).
-* **La API es lenta:** entre 1 y 14 segundos por consulta según el tamaño de página.
+* **La API es lenta:** entre 1 y 14 segundos por consulta según el tamaño de página. La caché de respuestas mitiga esto en las herramientas de análisis, que reconsultan los mismos históricos.
+* **El segundo llamado es poco frecuente:** 6% de los procesos cerrados/desiertos y 0,5% de los activos.
 
 ---
 
