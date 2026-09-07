@@ -58,11 +58,15 @@ const GLOSARIO = [
   },
   {
     termino: '429 Too Many Requests',
-    definicion: 'Código HTTP que indica que se superó el límite de solicitudes permitidas por día. La cuota se restablece al inicio del siguiente día calendario UTC.',
+    definicion: 'Código HTTP que indica que se agotaron temporalmente los tokens de cuota. NO implica esperar al día siguiente: verificado contra la API real (septiembre 2026), el servicio volvió a responder con normalidad 13 minutos después de un 429. La §4 de la guía oficial dice que el límite es por día calendario, pero su §7 y su glosario describen un token bucket que se recarga solo — y es esto último lo que hace el servicio. Reintenta en unos minutos antes de suponer que agotaste el día.',
+  },
+  {
+    termino: 'Token Bucket',
+    definicion: 'Algoritmo de control de tasa: un "balde" de fichas se consume con cada solicitud y se recarga automáticamente con el tiempo. Es el modelo que sigue la cuota de esta API, por eso un 429 se supera esperando minutos y no horas. Las ráfagas son lo que lo vacía: las herramientas de análisis, que hacen varias consultas seguidas, son las que más lo agotan.',
   },
   {
     termino: 'Retry-After',
-    definicion: 'Header HTTP que indica cuántos segundos esperar antes de volver a intentar una solicitud rechazada por exceso de cuota.',
+    definicion: 'Header HTTP que indica cuántos segundos esperar antes de volver a intentar una solicitud rechazada por exceso de cuota. Este servidor lo honra cuando la API lo envía; si no viene, aplica una espera creciente (15 → 30 → 60 → 120 min) que se reinicia con la primera consulta exitosa.',
   },
 ];
 

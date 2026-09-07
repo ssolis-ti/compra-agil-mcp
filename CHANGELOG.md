@@ -18,6 +18,11 @@ Verificado sobre el proceso `1057491-1711-COT26`: se marca como `llamado: 2` y o
 ### Frecuencia observada
 El segundo llamado es poco común: 9 de 150 procesos en estados cerrada/desierta (6%), y solo 1 de 200 entre los activos (0,5%). El factor aportará de forma esporádica, no en cada escaneo.
 
+### Documentación puesta al día
+El README seguía prometiendo lo que las herramientas ya habían dejado de prometer — decía que `obtener_enlace_documento` "genera el link público y oficial de descarga" y que `descargar_y_leer_documento` "descarga y extrae el texto plano", justo lo que se corrigió en 2.3.0 por imposible. Se reescribieron seis filas del catálogo y se añadieron a *Limitaciones conocidas* dos secciones nuevas: los adjuntos inaccesibles (con la razón estructural) y el 429 como token bucket que se recarga.
+
+* **El recurso `compra-agil://glosario` enseñaba el modelo de cuota equivocado.** Definía el 429 como un límite diario que "se restablece al inicio del siguiente día calendario UTC". Como es un recurso que el modelo lee para razonar, propagaba la creencia que este servidor acababa de corregir en el código. Ahora explica el token bucket, cita los 13 minutos medidos y describe la espera creciente. Se añadió además la entrada *Token Bucket*, que no existía.
+
 ---
 
 ## [2.3.0] - 2026-09-06
