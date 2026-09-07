@@ -41,7 +41,7 @@ export interface RadarInformeData {
   formato?: FormatoPapel;
 }
 
-/** Clasifica el hot score en un tono semántico. Máximo teórico: 105 pts. */
+/** Clasifica el hot score en un tono semántico. Máximo teórico: 115 pts. */
 export function tonoScore(score: number): { tono: TonoBadge; glosa: string } {
   if (score >= 80) return { tono: 'critico', glosa: 'Muy caliente' };
   if (score >= 55) return { tono: 'alerta', glosa: 'Caliente' };
@@ -200,7 +200,7 @@ ${ops.length > 0 ? `<h2>Listado completo</h2>${tablaOps}` : ''}
 
 ${callout(
   'Cómo se calcula la puntuación',
-  `<p style="margin:0">Fórmula ponderada sobre 105 puntos: baja competencia (hasta 50 pts) + urgencia de cierre (hasta 30 pts) + tamaño de presupuesto (hasta 20 pts) + ausencia de bases adjuntas (5 pts). Una puntuación alta indica un proceso con pocos oferentes, cierre próximo y monto atractivo.</p>`
+  `<p style="margin:0">Fórmula ponderada sobre 115 puntos: baja competencia (hasta 50 pts) + urgencia de cierre (hasta 30 pts) + tamaño de presupuesto (hasta 20 pts) + ausencia de bases adjuntas (5 pts) + segundo llamado (10 pts). Una puntuación alta indica un proceso con pocos oferentes, cierre próximo y monto atractivo. El segundo llamado suma porque el comprador vuelve con urgencia tras no lograr adjudicar, pero no implica menos competencia: esa la mide el primer factor.</p>`
 )}
 
 ${pieDoc(`Informe generado automáticamente por mcp-compra-agil el ${fecha(data.generadoEn.toISOString())} a partir de datos públicos de la API Compra Ágil v2 de Mercado Público (ChileCompra). Los datos reflejan el estado al momento de la consulta y pueden variar. · Formato de impresión: ${PAPEL[formato].glosa}`)}

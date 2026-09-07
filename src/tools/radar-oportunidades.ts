@@ -8,7 +8,8 @@ import { safeError } from '../utils/redact.js';
 const TOOL_NAME = 'radar_oportunidades_calientes';
 
 const TOOL_DESCRIPTION = `Escanea, califica y clasifica de forma priorizada los procesos de Compra Ágil activos (publicados).
-Utiliza una fórmula ponderada (Hot Score) basada en la falta de oferentes, el presupuesto disponible y las horas restantes de cierre para destacar los llamados más convenientes y fáciles de ganar.`;
+Utiliza una fórmula ponderada (Hot Score) basada en la falta de oferentes, el presupuesto disponible, las horas restantes de cierre y si el proceso va en segundo llamado, para destacar los llamados más convenientes y fáciles de ganar.
+Cada resultado incluye "llamado" (1 = primero, 2 = segundo) y el desglose de factores que explican su puntuación.`;
 
 const inputSchema = {
   region: z.string().optional().describe('Código de la región para filtrar (1-16). Ej: "13" para Metropolitana.'),
@@ -27,6 +28,8 @@ export interface OportunidadRadar {
   ofertas_recibidas: number;
   horas_restantes: number;
   fecha_cierre: string;
+  /** 1 = primer llamado · 2 = segundo llamado (el primero no recibió ofertas válidas). */
+  llamado: number;
   puntuacion_caliente: number;
   factores_calificacion: string[];
 }
@@ -34,7 +37,8 @@ export interface OportunidadRadar {
 /**
  * Calcula el "Hot Score" de una oportunidad de forma pura (sin efectos secundarios).
  * Retorna null si el proceso debe omitirse (ya cerrado o bajo el presupuesto mínimo).
- * Ponderación: baja competencia (máx 50) + urgencia (máx 30) + presupuesto (máx 20) + facilidad (máx 5).
+ * Ponderación: baja competencia (máx 50) + urgencia (máx 30) + presupuesto (máx 20)
+ * + facilidad (máx 5) + segundo llamado (máx 10). Máximo teórico: 115 pts.
  */
 export function evaluarOportunidad(
   item: CompraAgilItem,
@@ -101,6 +105,26 @@ export function evaluarOportunidad(
     factors.push('Sin documentos adjuntos (postulación rápida sin leer bases) (+5 pts)');
   }
 
+  // Factor 5: Segundo Llamado — Máx 10 pts
+  //
+  // Un segundo llamado significa que el primero no logró adjudicar. Vale
+  // señalarlo por dos razones: el comprador vuelve con más urgencia, y existe
+  // un motivo de fracaso concreto que conviene averiguar —si sabes cumplir lo
+  // que otros no pudieron, es tu ventaja; si el presupuesto era corto, es una
+  // pérdida de tiempo—.
+  //
+  // ⚠ Lo que NO implica es menos competencia, aunque suene intuitivo. Medido
+  //   contra la API real: de 200 procesos activos, el único en segundo llamado
+  //   tenía 11 ofertas. Un primer llamado puede caerse porque todas las ofertas
+  //   fueron inadmisibles por papeleo, y entonces el segundo atrae a los mismos
+  //   interesados y más. Por eso el factor puntúa moderado y la competencia
+  //   real la sigue reportando el Factor 1, que es quien la mide de verdad.
+  const llamado = item.convocatoria?.estado_convocatoria ?? 1;
+  if (llamado === 2) {
+    score += 10;
+    factors.push('Segundo llamado: el primero no logró adjudicar, así que el comprador vuelve con urgencia — averigua por qué falló antes de cotizar, ahí está la ventaja o la trampa (+10 pts)');
+  }
+
   return {
     codigo: item.codigo,
     nombre: item.nombre,
@@ -110,6 +134,7 @@ export function evaluarOportunidad(
     ofertas_recibidas: bids,
     horas_restantes: Math.round(hoursLeft * 10) / 10,
     fecha_cierre: item.fechas?.fecha_cierre,
+    llamado,
     puntuacion_caliente: score,
     factores_calificacion: factors,
   };

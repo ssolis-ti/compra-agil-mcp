@@ -66,3 +66,58 @@ describe('evaluarOportunidad', () => {
     expect(r.factores_calificacion.some((f) => f.includes('oferentes'))).toBe(true);
   });
 });
+
+/**
+ * El segundo llamado era el único campo que la API entrega en cada respuesta y
+ * que ninguna herramienta usaba. Importa porque cambia el significado del resto
+ * de la señal: "0 oferentes" en un primer llamado puede ser sólo que se publicó
+ * hace horas; en un segundo llamado significa que el mercado ya lo dejó pasar.
+ */
+describe('evaluarOportunidad — segundo llamado', () => {
+  it('un primer llamado no suma puntos por este factor', () => {
+    const r = evaluarOportunidad(item({
+      convocatoria: { estado_convocatoria: 1, descripcion: 'Primer llamado' },
+    }), NOW)!;
+    expect(r.llamado).toBe(1);
+    expect(r.factores_calificacion.join(' ')).not.toMatch(/Segundo llamado/);
+  });
+
+  it('un segundo llamado suma 15 puntos sobre el mismo proceso', () => {
+    const primero = evaluarOportunidad(item({
+      convocatoria: { estado_convocatoria: 1, descripcion: 'Primer llamado' },
+    }), NOW)!;
+    const segundo = evaluarOportunidad(item({
+      convocatoria: { estado_convocatoria: 2, descripcion: 'Segundo llamado' },
+    }), NOW)!;
+
+    expect(segundo.puntuacion_caliente - primero.puntuacion_caliente).toBe(10);
+    expect(segundo.llamado).toBe(2);
+  });
+
+  it('el factor advierte que conviene revisar por qué falló el primero', () => {
+    const r = evaluarOportunidad(item({
+      convocatoria: { estado_convocatoria: 2, descripcion: 'Segundo llamado' },
+    }), NOW)!;
+    const texto = r.factores_calificacion.find((f) => f.includes('Segundo llamado'))!;
+    expect(texto).toMatch(/no logró adjudicar/i);
+    expect(texto).toMatch(/averigua por qué falló/i);
+  });
+
+  it('si la convocatoria no viene, se asume primer llamado y no puntúa', () => {
+    const r = evaluarOportunidad(item({ convocatoria: undefined as any }), NOW)!;
+    expect(r.llamado).toBe(1);
+    expect(r.factores_calificacion.join(' ')).not.toMatch(/Segundo llamado/);
+  });
+
+  it('un segundo llamado sin ofertas supera a un primero idéntico en el ranking', () => {
+    const base = { resumen: { total_ofertas_recibidas: 0 } };
+    const primero = evaluarOportunidad(item({
+      ...base, convocatoria: { estado_convocatoria: 1, descripcion: 'Primer llamado' },
+    }), NOW)!;
+    const segundo = evaluarOportunidad(item({
+      ...base, convocatoria: { estado_convocatoria: 2, descripcion: 'Segundo llamado' },
+    }), NOW)!;
+
+    expect(segundo.puntuacion_caliente).toBeGreaterThan(primero.puntuacion_caliente);
+  });
+});
