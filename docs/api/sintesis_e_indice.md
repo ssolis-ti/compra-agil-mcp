@@ -24,7 +24,7 @@ Este documento contiene la síntesis detallada página por página y el índice 
 
 ### 3. Control de Tráfico y Límites (Rate Limiting)
 *   **3.1. Algoritmo Token Bucket y Cuotas** `[Pág. 4]`
-    *   Límites basados en día calendario (reseteo automático a medianoche UTC).
+    *   Límites basados en día calendario (reseteo automático a medianoche UTC). ⚠ Verificado contra la API real (septiembre 2026): en la práctica se comporta como un *token bucket* que se recarga solo — tras un 429, el servicio respondió con normalidad 13 minutos después. No esperes al día siguiente; reintenta en minutos.
 *   **3.2. Gestión del Error 429 (Too Many Requests)** `[Pág. 5]`
     *   Estructura del payload de error.
     *   Algoritmo para calcular el tiempo de espera dinámico y evitar el bloqueo del ticket.
@@ -90,7 +90,7 @@ Este documento contiene la síntesis detallada página por página y el índice 
 
 ### **Página 04**
 *   **Sección:** Autenticación y Control de Cuotas.
-*   **Lógica:** Detalla el uso obligatorio de la cabecera `ticket` y cómo funciona el límite de solicitudes por día calendario (resetea al cambiar de día, no a las 24h).
+*   **Lógica:** Detalla el uso obligatorio de la cabecera `ticket` y cómo funciona el límite de solicitudes por día calendario (resetea al cambiar de día, no a las 24h). ⚠ La propia guía se contradice: su §7 manda esperar el header Retry-After y su glosario define la cuota como un token bucket que se recarga automáticamente. La medición respalda esto último.
 
 ### **Página 05**
 *   **Sección:** Límite Excedido (Error 429) y Mitigación.

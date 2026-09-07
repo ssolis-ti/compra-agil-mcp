@@ -2,6 +2,8 @@
 
 Este manual describe en detalle la arquitectura, el funcionamiento, la modularidad y el catálogo de herramientas (tools), recursos (resources) y prompts de la integración de **Compra Ágil v2** de Mercado Público (Chile) bajo el estándar **Model Context Protocol (MCP)**.
 
+> ⚠️ **La fuente autoritativa es el propio servidor.** Este manual es un documento estático y puede quedar atrás: ya ocurrió una vez, describiendo durante meses una herramienta (`recomendar_precio_ganador`) eliminada en la v2.0.0 y omitiendo las que la reemplazaron. Como se expone como recurso MCP, un modelo podía leerlo e intentar llamar algo inexistente. Ante cualquier duda sobre qué herramientas existen y qué hacen, consulta el listado vivo del servidor (`tools/list`), cuyas descripciones se generan desde el código.
+
 ---
 
 ## 1. Introducción y Conceptos de MCP
@@ -111,17 +113,24 @@ Las herramientas son funciones semánticas ejecutables por la IA para resolver r
 ### 9. `consultar_documentos_locales`
 * **Descripción:** Busca y lee información dentro de los manuales, normativas o guías de Compra Ágil almacenados localmente en la carpeta `docs/` (soporta formatos .pdf, .txt, .md).
 
-### 10. `recomendar_precio_ganador`
-* **Descripción:** Analiza procesos históricos similares de Compra Ágil que ya fueron adjudicados para sugerir un precio unitario o total óptimo y competitivo para postular.
+### 10. `analizar_precios_mercado`
+* **Descripción:** Analiza la distribución de precios **cotizados** por la competencia en procesos similares (mín / p25 / mediana / promedio / máx) y sugiere un precio competitivo, advirtiendo cuando la muestra es demasiado dispersa.
+* **Nota:** Reemplaza a `recomendar_precio_ganador`, eliminada en la v2.0.0. Aquella buscaba precios *adjudicados*, y se verificó contra la API real que las adjudicaciones no se publican: era incapaz de encontrar datos. El análisis se apoya en cotizaciones, que sí son señal de mercado.
 
 ### 11. `auditar_compras_desiertas`
-* **Descripción:** Analiza y audita las causas de por qué un proceso quedó desierto (sin ofertas), comparándolo contra históricos exitosos similares (presupuesto, plazos, etc.).
+* **Descripción:** Analiza y audita las causas de por qué un proceso quedó desierto (sin ofertas), comparándolo contra procesos comparables del mismo rubro (presupuesto, plazos, precios cotizados).
 
 ### 12. `generar_borrador_cotizacion`
 * **Descripción:** Genera automáticamente un borrador estructurado en formato JSON con la propuesta de cotización de un proveedor, calculando sumas e IVA e incorporando una carta formal de presentación.
 
 ### 13. `radar_oportunidades_calientes`
-* **Descripción:** Escanea, califica y clasifica de forma priorizada los procesos de Compra Ágil activos (publicados) mediante un score ponderado (Hot Score) de competencia y conveniencia.
+* **Descripción:** Escanea, califica y clasifica de forma priorizada los procesos de Compra Ágil activos (publicados) mediante un score ponderado (Hot Score, máx 115) de competencia, urgencia de cierre, presupuesto, simplicidad y segundo llamado.
+
+### 14. `generar_informe`
+* **Descripción:** Genera un informe profesional imprimible (HTML autocontenido con diseño de impresión real) en formatos Carta, Oficio y A4, y devuelve la ruta del archivo.
+
+### 15. `verificar_ticket`
+* **Descripción:** Comprueba que el ticket configurado funcione contra la API real **sin revelar su valor** (muestra solo `••••1234`). Es el primer diagnóstico recomendado ante cualquier fallo.
 
 ---
 
