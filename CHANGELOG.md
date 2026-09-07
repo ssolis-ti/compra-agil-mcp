@@ -4,6 +4,22 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [2.4.0] - 2026-09-07
+
+### Añadido
+* **El radar considera el segundo llamado.** `convocatoria.estado_convocatoria` era el único campo que la API entrega en cada respuesta y que **ninguna herramienta usaba**. Un segundo llamado significa que el primero no logró adjudicar: el comprador vuelve con urgencia y existe un motivo de fracaso concreto que conviene averiguar antes de cotizar —si sabes cumplir lo que otros no pudieron es tu ventaja; si el presupuesto era corto, es una pérdida de tiempo—. Suma 10 pts al Hot Score (máximo teórico: 115) y cada oportunidad expone ahora el campo `llamado`.
+* 5 tests de regresión (188 en total).
+
+### Sobre la calibración
+El factor se diseñó primero con 15 pts asumiendo que un segundo llamado implicaba **menos competencia**. La medición contra la API real corrigió el supuesto: de 200 procesos activos, el único en segundo llamado tenía **11 ofertas** — máxima competencia. Un primer llamado puede caerse porque todas las ofertas fueron inadmisibles por papeleo, y entonces el segundo atrae a los mismos interesados y más. Se bajó a 10 pts y se reescribió el texto del factor para no prometer una ventaja competitiva que no existe; la competencia real la sigue midiendo el Factor 1.
+
+Verificado sobre el proceso `1057491-1711-COT26`: se marca como `llamado: 2` y obtiene 35 pts —0 por competencia, 10 por cierre próximo, 15 por presupuesto, 10 por segundo llamado—, es decir, se señala la circunstancia sin inflarlo a "caliente".
+
+### Frecuencia observada
+El segundo llamado es poco común: 9 de 150 procesos en estados cerrada/desierta (6%), y solo 1 de 200 entre los activos (0,5%). El factor aportará de forma esporádica, no en cada escaneo.
+
+---
+
 ## [2.3.0] - 2026-09-06
 
 Tres herramientas prometían cosas que la API no puede cumplir. Ninguna se elimina —no hay cambios incompatibles—, pero dejan de gastar cuota y de anunciar lo que no entregan.
