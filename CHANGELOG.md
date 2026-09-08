@@ -4,6 +4,22 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [2.4.1] - 2026-09-08
+
+QA de calidad de salida —no de "¿responde?" sino de "¿sirve lo que devuelve?"— sobre las herramientas de análisis. Las tres podían fallar por completo, y el motivo estaba en su propio código.
+
+### Corregido
+* **Las tres herramientas de análisis pedían 50 resultados y usaban 3 a 5.** `analizar_precios_mercado`, `auditar_compras_desiertas` y `generar_borrador_cotizacion` fijaban `tamano_pagina: 50` "para maximizar el material", pero solo examinan los primeros `limite_analisis` con un `slice()`. El resto era desperdicio — y desperdicio caro: medido en producción, `estado=desierta` con búsqueda de texto y `tamano_pagina=50` devuelve **HTTP 504 sistemáticamente** (la pasarela corta a los ~30 s), mientras que con 15 la misma consulta respondió en **9,9 s**. Ahora piden lo que van a usar, con el mínimo de 10 que exige la API.
+* **Los detalles se consultaban en serie.** Son independientes entre sí, pero se pedían uno tras otro. Con la API tardando 20-30 s por consulta, una tanda de 4 tomaba **105,6 s** — más de lo que espera cualquier cliente MCP. En paralelo la misma tanda tardó **29,5 s: 3,6 veces más rápido**. Cada consulta conserva su propio manejo de error, así que un histórico que falla sigue sin invalidar la muestra.
+* **HTTP 502 y 504 caían en "Error inesperado".** No están en la tabla de errores de la guía oficial, pero la API los devuelve — el 504 de arriba es un caso real y reproducible. El usuario recibía un mensaje que hacía parecer un fallo de sus parámetros lo que es una lentitud del servicio. Ahora se explican como corte de la pasarela y se sugiere reducir el trabajo por consulta.
+
+**Efecto combinado:** la consulta que devolvía 504 dos veces seguidas, y que tras el primer arreglo aún excedía los 120 s, ahora completa en **52,7 s**.
+
+### Observado, sin corregir
+* **La API está más lenta que lo que documentan las herramientas.** Sus descripciones dicen "~1-5s por consulta"; lo medido el 8 de septiembre fue **15 a 30 s**, con 504 intermitentes. La viabilidad de las herramientas de análisis depende hoy más de la salud del servicio que del código. Pendiente: actualizar esas descripciones y evaluar un límite de concurrencia adaptativo.
+
+---
+
 ## [2.4.0] - 2026-09-07
 
 ### Añadido

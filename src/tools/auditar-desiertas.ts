@@ -100,7 +100,11 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
         const searchResponse = await client.buscar({
           q: keyword,
           estado: 'desierta',
-          tamano_pagina: 50, // el mínimo de la API es 10; 50 maximiza el material por consulta
+          // Solo se examinan los primeros `limit` resultados, así que pedir 50
+          // era desperdicio — y provocaba HTTP 504: medido en producción, esta
+          // misma consulta con tamano_pagina=50 agota los ~30 s de la pasarela,
+          // y con 15 responde en 9,9 s.
+          tamano_pagina: Math.max(10, Math.min(limit, 50)),
           numero_pagina: 1,
         });
 
@@ -111,9 +115,25 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
 
         if (itemsToProcess.length > 0) {
           logger.info(`auditar_compras_desiertas: Analizando detalles de ${itemsToProcess.length} procesos comparables`);
-          for (const item of itemsToProcess) {
-            try {
-              const detail = await client.detalle(item.codigo);
+
+          // En paralelo: los detalles son independientes y la API tarda 20-30 s
+          // por consulta (medido en septiembre 2026), así que en serie el total
+          // superaba el timeout de cualquier cliente MCP.
+          const detallados = await Promise.all(
+            itemsToProcess.map(async (item) => {
+              try {
+                return { item, detail: await client.detalle(item.codigo) };
+              } catch (detailError) {
+                logger.warn(`auditar_compras_desiertas: Error al consultar detalle de ${item.codigo}: ${safeError(detailError)}`);
+                return null;
+              }
+            })
+          );
+
+          for (const entrada of detallados) {
+            if (!entrada) continue;
+            {
+              const { item, detail } = entrada;
 
               // Se recolectan TODAS las cotizaciones del proceso, incluidas las
               // declaradas inadmisibles: en los procesos desiertos casi todas lo son
@@ -155,8 +175,6 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
                 fecha_cierre: item.fechas?.fecha_cierre,
                 motivo_desierta: detail.motivos?.motivo_desierta ?? null,
               });
-            } catch (detailError) {
-              logger.warn(`auditar_compras_desiertas: Error al consultar detalle de ${item.codigo}: ${safeError(detailError)}`);
             }
           }
         }
