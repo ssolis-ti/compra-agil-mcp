@@ -39,6 +39,7 @@ import { registerGenerarBorrador } from './tools/generar-borrador.js';
 import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
 import { registerGenerarInforme } from './tools/generar-informe.js';
 import { registerVerificarTicket } from './tools/verificar-ticket.js';
+import { registerVerificarHora } from './tools/verificar-hora.js';
 
 // Resources
 import { registerRegionesResource } from './resources/regiones.js';
@@ -115,12 +116,20 @@ async function main() {
   registerRadarOportunidades(server, client);
   registerGenerarInforme(server, client);
   registerVerificarTicket(server, client);
+  registerVerificarHora(server);
+
+  // ⚠ Lista mantenida a mano, y por eso frágil: al agregar
+  //   `verificar_hora_oficial` esto seguía diciendo 15. Es solo un log —la
+  //   fuente autoritativa es `tools/list` del propio servidor— pero si vuelve a
+  //   desincronizarse, lo correcto es derivarla del servidor y no volver a
+  //   parcharla.
   const TOOL_NAMES = [
     'buscar_compras_agiles', 'obtener_detalle_compra', 'monitorear_cambios_recientes',
     'verificar_orden_compra', 'obtener_estadisticas_uso', 'obtener_detalle_orden_compra',
     'obtener_enlace_documento', 'descargar_y_leer_documento', 'consultar_documentos_locales',
     'analizar_precios_mercado', 'auditar_compras_desiertas', 'generar_borrador_cotizacion',
     'radar_oportunidades_calientes', 'generar_informe', 'verificar_ticket',
+    'verificar_hora_oficial',
   ];
   logger.info(`${TOOL_NAMES.length} herramientas registradas: ${TOOL_NAMES.join(', ')}`);
 
