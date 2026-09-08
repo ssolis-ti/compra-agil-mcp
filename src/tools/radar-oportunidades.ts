@@ -4,6 +4,7 @@ import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { safeError } from '../utils/redact.js';
+import { parsearFechaApi, enHoraDeChile, NOTA_ZONA_HORARIA } from '../utils/fechas.js';
 
 const TOOL_NAME = 'radar_oportunidades_calientes';
 
@@ -28,6 +29,11 @@ export interface OportunidadRadar {
   ofertas_recibidas: number;
   horas_restantes: number;
   fecha_cierre: string;
+  /**
+   * El mismo cierre convertido a hora de Chile, para que nadie tenga que
+   * hacer la resta. `null` si la fecha no se pudo interpretar.
+   */
+  fecha_cierre_hora_chile: string | null;
   /** 1 = primer llamado · 2 = segundo llamado (el primero no recibió ofertas válidas). */
   llamado: number;
   puntuacion_caliente: number;
@@ -48,10 +54,16 @@ export function evaluarOportunidad(
   const budget = item.montos?.monto_disponible_clp || item.montos?.monto_disponible || 0;
   if (budget < minBudget) return null;
 
+  // ⚠ La fecha se interpreta con `parsearFechaApi`, NO con `new Date()`. La API
+  //   entrega "2026-09-11 12:00" sin zona horaria, y V8 lo leería en la del
+  //   servidor: medido, el mismo dato daba 15:00Z desplegado en Chile y 12:00Z
+  //   en UTC. Es decir, `horas_restantes` —y con ella hasta 30 puntos de
+  //   urgencia— cambiaban según dónde corriera el proceso. Ahora el resultado
+  //   es el mismo en cualquier parte.
   let hoursLeft = 0;
-  if (item.fechas?.fecha_cierre) {
-    const cierreTime = new Date(item.fechas.fecha_cierre).getTime();
-    hoursLeft = (cierreTime - now) / (1000 * 60 * 60);
+  const cierre = parsearFechaApi(item.fechas?.fecha_cierre);
+  if (cierre) {
+    hoursLeft = (cierre.getTime() - now) / (1000 * 60 * 60);
   }
   if (hoursLeft <= 0) return null;
 
@@ -134,6 +146,7 @@ export function evaluarOportunidad(
     ofertas_recibidas: bids,
     horas_restantes: Math.round(hoursLeft * 10) / 10,
     fecha_cierre: item.fechas?.fecha_cierre,
+    fecha_cierre_hora_chile: enHoraDeChile(item.fechas?.fecha_cierre),
     llamado,
     puntuacion_caliente: score,
     factores_calificacion: factors,
@@ -224,6 +237,10 @@ export function registerRadarOportunidades(server: McpServer, client: CompraAgil
         }
 
         const result = {
+          // Va primero y en la salida —no en los logs— porque quien decide si
+          // alcanza a cotizar necesita leerlo. `horas_restantes` se calcula
+          // sobre esta misma interpretación.
+          _nota_horaria: NOTA_ZONA_HORARIA,
           total_oportunidades_analizadas: datos.totalAnalizadas,
           radar_limite_resultados: datos.limite,
           oportunidades_calientes: datos.oportunidades,
