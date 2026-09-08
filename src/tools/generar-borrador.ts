@@ -62,24 +62,38 @@ export async function estimarPrecioUnitario(
       const busqueda = await client.buscar({
         q: keyword,
         estado: 'desierta',
-        tamano_pagina: 50,
+        // Solo se examinan los primeros 5 resultados (ver el slice más abajo),
+        // así que pedir 50 era desperdicio — y provocaba HTTP 504: medido en
+        // producción, esta consulta con tamano_pagina=50 agota los ~30 s de la
+        // pasarela. Se pide el mínimo que exige la API.
+        tamano_pagina: 10,
         numero_pagina: 1,
       });
 
-      for (const item of (busqueda.items || []).slice(0, 5)) {
-        try {
-          const det = await client.detalle(item.codigo);
-          // Se toman TODAS las cotizaciones, incluidas las inadmisibles: en los
-          // procesos desiertos casi todas lo son (por eso quedaron desiertos), y
-          // el precio ofertado sigue siendo señal de mercado. Filtrarlas dejaba
-          // la muestra vacía. La API nunca marca un ganador, así que la
-          // referencia es lo que ofertó la competencia.
-          for (const prov of det.proveedores_cotizando ?? []) {
-            const unitario = extraerPrecioUnitario(prov, keyword);
-            if (unitario !== null) precios.push(unitario);
+      // En paralelo: la API tarda 20-30 s por detalle (medido en septiembre
+      // 2026), así que en serie estas cinco consultas bastaban para pasarse
+      // del timeout de un cliente MCP.
+      const detallados = await Promise.all(
+        (busqueda.items || []).slice(0, 5).map(async (item) => {
+          try {
+            return await client.detalle(item.codigo);
+          } catch {
+            // Un histórico que falla no invalida el resto de la muestra.
+            return null;
           }
-        } catch {
-          // Un histórico que falla no invalida el resto de la muestra.
+        })
+      );
+
+      for (const det of detallados) {
+        if (!det) continue;
+        // Se toman TODAS las cotizaciones, incluidas las inadmisibles: en los
+        // procesos desiertos casi todas lo son (por eso quedaron desiertos), y
+        // el precio ofertado sigue siendo señal de mercado. Filtrarlas dejaba
+        // la muestra vacía. La API nunca marca un ganador, así que la
+        // referencia es lo que ofertó la competencia.
+        for (const prov of det.proveedores_cotizando ?? []) {
+          const unitario = extraerPrecioUnitario(prov, keyword);
+          if (unitario !== null) precios.push(unitario);
         }
       }
     } catch (err) {

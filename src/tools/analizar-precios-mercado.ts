@@ -87,12 +87,21 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
         //    Los procesos `cerrada` de primer llamado no publican sus cotizaciones,
         //    así que incluirlos solo gasta cuota y tiempo (la API tarda 1-5s por consulta).
         //    `proveedor_seleccionado` queda descartado: devuelve 0 resultados.
+        const limite = args.limite_analisis || 5;
+
         logger.info(`analizar_precios_mercado: buscando históricos de "${keyword}" región "${region || 'todas'}"`);
         const busqueda = await client.buscar({
           q: keyword,
           estado: 'desierta',
           region: region || undefined,
-          tamano_pagina: 50, // mínimo de la API es 10; 50 maximiza el material por consulta
+          // Solo se examinan los primeros `limite` resultados (ver más abajo),
+          // así que pedir más es desperdicio — y desperdicio caro: medido en
+          // producción (septiembre 2026), `estado=desierta` con búsqueda de
+          // texto y tamano_pagina=50 devuelve HTTP 504 sistemáticamente porque
+          // la pasarela corta a los ~30 s. Con 15 la misma consulta respondió
+          // en 9,9 s. Se pide lo que se va a usar, con el mínimo de 10 que
+          // exige la API.
+          tamano_pagina: Math.max(10, Math.min(limite, 50)),
           numero_pagina: 1,
         });
 
@@ -103,7 +112,6 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
         }
 
         // 3. Recolectar cotizaciones de los detalles
-        const limite = args.limite_analisis || 5;
         const preciosUnitarios: number[] = [];
         const montosNetos: number[] = [];
         const cotizaciones: any[] = [];
@@ -111,9 +119,28 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
         let procesosConDatos = 0;
         let adjudicacionesDetectadas = 0;
 
-        for (const item of busqueda.items.slice(0, limite)) {
-          try {
-            const det = await client.detalle(item.codigo);
+        // Los detalles se piden EN PARALELO. Son independientes entre sí y la
+        // API tarda mucho por consulta —medido en producción (septiembre 2026):
+        // 20 a 30 s cada detalle—, así que en serie el total superaba los 105 s
+        // y ningún cliente MCP espera tanto. En paralelo la misma tanda tardó
+        // 29,5 s: 3,6 veces más rápido. El throttle del rate limiter (15/min)
+        // deja pasar sin espera una tanda de este tamaño.
+        const detallados = await Promise.all(
+          busqueda.items.slice(0, limite).map(async (item) => {
+            try {
+              return { item, det: await client.detalle(item.codigo) };
+            } catch (e) {
+              // Un histórico que falla no invalida la muestra: se descarta.
+              logger.warn(`analizar_precios_mercado: falló el detalle de ${item.codigo}: ${safeError(e)}`);
+              return null;
+            }
+          })
+        );
+
+        for (const entrada of detallados) {
+          if (!entrada) continue;
+          {
+            const { item, det } = entrada;
             const provs = det.proveedores_cotizando ?? [];
             if (provs.length === 0) continue;
             procesosConDatos++;
@@ -151,8 +178,6 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
               cotizaciones.push(registro);
               if (!admisible) inadmisibles.push(registro);
             }
-          } catch (e) {
-            logger.warn(`analizar_precios_mercado: falló el detalle de ${item.codigo}: ${safeError(e)}`);
           }
         }
 

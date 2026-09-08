@@ -57,6 +57,14 @@ function getActionableMessage(httpStatus: number, apiErrors: ApiError[]): string
       return `Error interno del servidor de Mercado Público (api2.mercadopublico.cl). Esto no es un problema de tu consulta. Reintenta en unos minutos.${detail}`;
     case 503:
       return `El servicio de Mercado Público está temporalmente no disponible (posible mantenimiento). Reintenta más tarde.${detail}`;
+    // 502 y 504 no están en la tabla de errores de la guía oficial, pero la API
+    // los devuelve: se observó un 504 sistemático (septiembre 2026) al pedir
+    // tamano_pagina=50 sobre `estado=desierta` con búsqueda de texto — la
+    // pasarela corta a los ~30 s. Sin este caso caían en "Error inesperado", que
+    // hacía parecer un fallo del cliente lo que es una lentitud del servicio.
+    case 502:
+    case 504:
+      return `La pasarela de Mercado Público cortó la conexión antes de que la API respondiera (HTTP ${httpStatus}): la consulta tardó demasiado, no es un error de tus parámetros. Reintenta, y si se repite reduce el trabajo por consulta — un 'tamano_pagina' más chico, menos 'limite_analisis' o un filtro más específico. Las búsquedas por texto sobre 'estado=desierta' son las más lentas.${detail}`;
     default:
       return `Error inesperado HTTP ${httpStatus} de la API de Compra Ágil.${detail}`;
   }
