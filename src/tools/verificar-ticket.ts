@@ -22,7 +22,7 @@ NUNCA revela el valor del ticket: solo informa si funciona y muestra los último
 export function registerVerificarTicket(server: McpServer, client: CompraAgilClient): void {
   server.registerTool(
     TOOL_NAME,
-    { description: TOOL_DESCRIPTION },
+    { title: "Verificar el ticket de acceso", description: TOOL_DESCRIPTION, annotations: { readOnlyHint: true, openWorldHint: true } },
     async () => {
       const referencia = pista(process.env.COMPRA_AGIL_TICKET);
 

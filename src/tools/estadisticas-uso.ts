@@ -16,7 +16,9 @@ export function registerEstadisticasUso(server: McpServer, client: CompraAgilCli
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Estado de la cuota de la API",
       description: TOOL_DESCRIPTION,
+      annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async () => {
       const stats = client.getRateLimitStats();

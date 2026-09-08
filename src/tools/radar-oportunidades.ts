@@ -203,7 +203,11 @@ export function registerRadarOportunidades(server: McpServer, client: CompraAgil
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Radar de oportunidades",
+
       description: TOOL_DESCRIPTION,
+
+      annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: inputSchema,
     },
     async (args) => {

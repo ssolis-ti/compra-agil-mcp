@@ -1,0 +1,114 @@
+{
+  "_procedencia": "Captura real de la API de Compra Ágil el 8 de septiembre de 2026. Proceso 1057491-1711-COT26 (COMPRA DE INSUMOS PARA CRIOABLACION, Hospital Luis Calvo Mackenna), segundo llamado. Datos públicos: aparecen en la ficha del proceso en buscador.mercadopublico.cl.",
+  "codigo_proceso": "1057491-1711-COT26",
+  "proveedores_cotizando": [
+    {
+      "rut_proveedor": "77.009.405-4",
+      "razon_social": "BOSTON SCIENTIFIC CHILE SPA",
+      "es_emt": 0,
+      "valor_neto": 3400000,
+      "monto_total": 4046000,
+      "justificacion_inadmisibilidad": null,
+      "productos_cotizados": [
+        {
+          "codigo_producto": 42201839,
+          "nombre_producto": "Bandejas de procedimiento para sistemas médicos de imagen",
+          "descripcion": "704-0174 - EXAMENES (CONVENIO) \n(H7493961435330 ICEROD CX 90 DEGREE NEEDLE/VL)",
+          "cantidad": 1,
+          "precio_unitario": 3400000,
+          "monto_total_producto": 3400000
+        }
+      ]
+    },
+    {
+      "rut_proveedor": "78.037.793-3",
+      "razon_social": "DISTRIBUIDORA NACIONAL LIMITADA",
+      "es_emt": 1,
+      "valor_neto": 3473977,
+      "monto_total": 4134033,
+      "justificacion_inadmisibilidad": null,
+      "productos_cotizados": [
+        {
+          "codigo_producto": 42201839,
+          "nombre_producto": "Bandejas de procedimiento para sistemas médicos de imagen",
+          "descripcion": "704-0174 - EXAMENES (CONVENIO) \n(H7493961435330 ICEROD CX 90 DEGREE NEEDLE/VL)",
+          "cantidad": 1,
+          "precio_unitario": 3473977,
+          "monto_total_producto": 3473977
+        }
+      ]
+    },
+    {
+      "rut_proveedor": "78.151.009-2",
+      "razon_social": "INVERSIONES SAPUNAR GONZALEZ SPA",
+      "es_emt": 1,
+      "valor_neto": 4206806,
+      "monto_total": 5006099,
+      "justificacion_inadmisibilidad": null,
+      "productos_cotizados": [
+        {
+          "codigo_producto": 42201839,
+          "nombre_producto": "Bandejas de procedimiento para sistemas médicos de imagen",
+          "descripcion": "704-0174 - EXAMENES (CONVENIO) \n(H7493961435330 ICEROD CX 90 DEGREE NEEDLE/VL)",
+          "cantidad": 1,
+          "precio_unitario": 4206806,
+          "monto_total_producto": 4206806
+        }
+      ]
+    },
+    {
+      "rut_proveedor": "78.158.096-1",
+      "razon_social": "IS INVERSIONES SPA",
+      "es_emt": 1,
+      "valor_neto": 4906218,
+      "monto_total": 5838399,
+      "justificacion_inadmisibilidad": null,
+      "productos_cotizados": [
+        {
+          "codigo_producto": 42201839,
+          "nombre_producto": "Bandejas de procedimiento para sistemas médicos de imagen",
+          "descripcion": "704-0174 - EXAMENES (CONVENIO) \n(H7493961435330 ICEROD CX 90 DEGREE NEEDLE/VL)",
+          "cantidad": 1,
+          "precio_unitario": 4906218,
+          "monto_total_producto": 4906218
+        }
+      ]
+    },
+    {
+      "rut_proveedor": "78.494.305-4",
+      "razon_social": "COMERCIALIZADORA RG SPA",
+      "es_emt": 1,
+      "valor_neto": 4968235,
+      "monto_total": 5912200,
+      "justificacion_inadmisibilidad": null,
+      "productos_cotizados": [
+        {
+          "codigo_producto": 42201839,
+          "nombre_producto": "Bandejas de procedimiento para sistemas médicos de imagen",
+          "descripcion": "704-0174 - EXAMENES (CONVENIO) \n(H7493961435330 ICEROD CX 90 DEGREE NEEDLE/VL)",
+          "cantidad": 1,
+          "precio_unitario": 4968235,
+          "monto_total_producto": 4968235
+        }
+      ]
+    },
+    {
+      "rut_proveedor": "78.333.599-9",
+      "razon_social": "BJI INVERSIONES SPA",
+      "es_emt": 1,
+      "valor_neto": 5023361,
+      "monto_total": 5977800,
+      "justificacion_inadmisibilidad": null,
+      "productos_cotizados": [
+        {
+          "codigo_producto": 42201839,
+          "nombre_producto": "Bandejas de procedimiento para sistemas médicos de imagen",
+          "descripcion": "704-0174 - EXAMENES (CONVENIO) \n(H7493961435330 ICEROD CX 90 DEGREE NEEDLE/VL)",
+          "cantidad": 1,
+          "precio_unitario": 5023361,
+          "monto_total_producto": 5023361
+        }
+      ]
+    }
+  ]
+}

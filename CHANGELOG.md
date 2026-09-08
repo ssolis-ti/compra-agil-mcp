@@ -4,7 +4,7 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
-## [2.4.1] - 2026-09-08
+## [2.5.0] - 2026-09-08
 
 QA de calidad de salida —no de "¿responde?" sino de "¿sirve lo que devuelve?"— sobre las herramientas de análisis. Las tres podían fallar por completo, y el motivo estaba en su propio código.
 
@@ -34,6 +34,26 @@ El README anunciaba como característica los *"Logs Nativos en el Protocolo"*, p
 * El `catch` silencioso ahora avisa **una vez** por stderr si los envíos fallan. Callarse del todo fue lo que ocultó el defecto durante meses.
 * **Verificación de seguridad:** ahora que los logs sí llegan al contexto del modelo, la redacción dejó de ser teórica. Se comprobó en el caso de riesgo real —el endpoint legado de Órdenes de Compra, que lleva el ticket en el query string— y se emite como `ticket=[REDACTED]`. El ticket no aparece ni en las notificaciones ni en stderr.
 * 6 tests nuevos (217 en total) que blindan la redacción de lo que se envía al cliente. Validados por mutación: quitar la redacción rompe 2.
+
+### Añadido — anotaciones y títulos en las 15 herramientas
+Cada herramienta declara ahora un `title` legible y sus `annotations` de comportamiento. No cambian la ejecución: sirven para que el cliente MCP decida cómo tratarlas. El beneficio concreto es que **un cliente puede auto-aprobar las de solo lectura** en vez de pedir confirmación en cada llamada — con 15 herramientas y flujos de varios pasos, eso evita fatiga de aprobaciones.
+
+* **14 son `readOnlyHint: true`**: consultan la API o leen archivos locales, sin efecto sobre nada.
+* **`generar_informe` es la única con efecto**: crea un archivo HTML. Se declara `readOnlyHint: false` con `destructiveHint: false` (solo agrega, no borra) e `idempotentHint: false` (cada llamada genera un archivo nuevo con su timestamp).
+* **`openWorldHint: false`** en las cuatro que no salen a la red: `verificar_orden_compra` (desde la 2.3.0 solo lee caché), `obtener_estadisticas_uso`, `obtener_enlace_documento` (solo construye una URL) y `consultar_documentos_locales`.
+
+### Verificado — la estadística de precios, ahora sobre datos REALES
+Quedaba pendiente de la 2.4.1: los tests cubrían la aritmética con una muestra sintética porque la API devolvía 504. Se logró capturar una muestra real —costó tres intentos— del proceso `1057491-1711-COT26` (insumos para crioablación, Hospital Luis Calvo Mackenna), con **6 cotizaciones**. Los seis estadísticos coinciden exactamente con el cálculo hecho a mano:
+
+| | valor |
+| :--- | ---: |
+| mediana | 4.556.512 |
+| promedio | 4.329.766 |
+| percentil 25 | 3.657.184 |
+
+La muestra queda como fixture (`test/fixtures/cotizaciones-reales.json`) y 8 tests nuevos la ejercitan, incluido que `monto_total` sea el neto más 19% de IVA. **El cálculo de precios está verificado contra la realidad, no solo contra sí mismo.**
+
+Un matiz que la muestra real corrigió: en este proceso **ninguna** cotización es inadmisible, al revés de lo que ocurre en los `desierta` —donde casi todas lo son, y es lo que los deja desiertos—. La nota metodológica de `analizar_precios_mercado` se refiere a esas últimas, no a todos los procesos.
 
 ### Observado, sin corregir
 * **La API está más lenta que lo que documentan las herramientas.** Sus descripciones dicen "~1-5s por consulta"; lo medido el 8 de septiembre fue **15 a 30 s**, con 504 intermitentes. La viabilidad de las herramientas de análisis depende hoy más de la salud del servicio que del código. Pendiente: actualizar esas descripciones y evaluar un límite de concurrencia adaptativo.

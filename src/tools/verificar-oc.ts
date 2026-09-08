@@ -32,7 +32,11 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Verificar Orden de Compra",
+
       description: TOOL_DESCRIPTION,
+
+      annotations: { readOnlyHint: true, openWorldHint: false },
       inputSchema: inputSchema,
     },
     async (args) => {
