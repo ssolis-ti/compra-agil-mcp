@@ -18,6 +18,8 @@ export function registerDocumentosTools(server: McpServer): void {
   server.registerTool(
     'obtener_enlace_documento',
     {
+      title: "Enlace a un adjunto del proceso",
+      annotations: { readOnlyHint: true, openWorldHint: false },
       description: 'Genera el enlace oficial en Mercado Público para acceder a un adjunto de forma pública y sin requerir inicio de sesión.',
       inputSchema: {
         id_documento: z.string().describe('ID único del documento. Ej: "123456" o un UUID como "5f47e991-c525-40a0-b36c-44d53e538ae5".'),
@@ -55,6 +57,8 @@ export function registerDocumentosTools(server: McpServer): void {
   server.registerTool(
     'descargar_y_leer_documento',
     {
+      title: "Leer un adjunto del proceso",
+      annotations: { readOnlyHint: true, openWorldHint: true },
       description: `Intenta descargar un adjunto de Compra Ágil (bases técnicas/administrativas) y extraer su texto.
 ⚠ IMPORTANTE: para los IDs numéricos —que son los que entrega esta API— el portal ya NO sirve el archivo, así que la herramienta responde de inmediato con el enlace a la ficha pública en vez de intentar una descarga que se sabe fallida. Si necesitas las especificaciones para cotizar, tendrás que abrir esa ficha en un navegador: el enlace del adjunto lo genera JavaScript y no existe una URL que un programa pueda pedir.`,
       inputSchema: {
@@ -204,6 +208,8 @@ export function registerDocumentosTools(server: McpServer): void {
   server.registerTool(
     'consultar_documentos_locales',
     {
+      title: "Consultar las guías locales",
+      annotations: { readOnlyHint: true, openWorldHint: false },
       description: 'Busca y lee información dentro de los manuales, normativas o guías de Compra Ágil almacenados localmente en la carpeta docs/ (soporta formatos .pdf, .txt, .md).',
       inputSchema: {
         query: z.string().optional().describe('Qué buscar. Admite tanto un término suelto ("multas", "garantía") como una pregunta en lenguaje natural ("¿qué multas me pueden aplicar?"): la consulta se descompone en términos y se ignoran acentos y palabras vacías. Si se omite, lista los documentos disponibles.'),

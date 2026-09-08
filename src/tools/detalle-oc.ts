@@ -26,7 +26,11 @@ export function registerDetalleOC(server: McpServer, client: CompraAgilClient): 
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Detalle de una Orden de Compra",
+
       description: TOOL_DESCRIPTION,
+
+      annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: inputSchema,
     },
     async (args) => {

@@ -47,7 +47,15 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Generar informe imprimible",
+
       description: TOOL_DESCRIPTION,
+
+      // Único tool con efecto en disco: crea un archivo HTML nuevo por llamada.
+
+      // No destruye nada (solo agrega) y no es idempotente (cada informe lleva su timestamp).
+
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
       inputSchema: inputSchema,
     },
     async (args) => {

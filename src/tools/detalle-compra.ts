@@ -29,7 +29,11 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Detalle de una Compra Ágil",
+
       description: TOOL_DESCRIPTION,
+
+      annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: inputSchema,
     },
     async (args) => {

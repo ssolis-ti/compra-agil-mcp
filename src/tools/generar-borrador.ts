@@ -158,7 +158,11 @@ export function registerGenerarBorrador(server: McpServer, client: CompraAgilCli
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Generar borrador de cotización",
+
       description: TOOL_DESCRIPTION,
+
+      annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: inputSchema,
     },
     async (args) => {

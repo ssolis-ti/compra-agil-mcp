@@ -23,7 +23,11 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Auditar una compra desierta",
+
       description: TOOL_DESCRIPTION,
+
+      annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: inputSchema,
     },
     async (args) => {

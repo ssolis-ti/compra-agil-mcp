@@ -48,7 +48,7 @@ const inputSchema = {
 export function registerAnalizarPreciosMercado(server: McpServer, client: CompraAgilClient): void {
   server.registerTool(
     TOOL_NAME,
-    { description: TOOL_DESCRIPTION, inputSchema },
+    { title: "Analizar precios de mercado", description: TOOL_DESCRIPTION, inputSchema, annotations: { readOnlyHint: true, openWorldHint: true } },
     async (args) => {
       try {
         let keyword = args.q || '';

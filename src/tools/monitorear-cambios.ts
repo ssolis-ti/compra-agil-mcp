@@ -125,7 +125,11 @@ export function registerMonitorearCambios(server: McpServer, client: CompraAgilC
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Monitorear cambios recientes",
+
       description: TOOL_DESCRIPTION,
+
+      annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: inputSchema,
     },
     async (args) => {
