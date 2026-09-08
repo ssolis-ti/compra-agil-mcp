@@ -25,7 +25,7 @@ Es el mismo defecto que la búsqueda documental de la 2.2.0: convertir un fallo 
 
 ### Añadido
 * **23 tests de exactitud estadística** (211 en total) sobre una muestra fija: mediana frente a promedio, percentil 25 por interpolación, comportamiento con n par e impar, resistencia a valores atípicos, y que el orden de entrada no altere el resultado ni mute el arreglo recibido. Validados por mutación: alterar el índice de la mediana rompe 2 tests, y calcular el p25 como p75 rompe otros 2.
-  ⚠ La muestra es **sintética**. Se intentó capturar cotizaciones reales el 8 de septiembre, pero las seis consultas devolvieron 504. Reproduce fielmente la *forma* de la API (precio unitario dentro de `productos_cotizados[]`, `valor_neto` en la raíz, nulos frecuentes, casi todas inadmisibles), así que verifica la aritmética —que es determinista— pero no que la muestra real se parezca a esta. Eso sigue pendiente.
+  Esta muestra es **sintética**, con valores elegidos para cubrir casos límite que rara vez coinciden en datos reales (n par e impar, muestra de un elemento, atípicos, precios nulos o negativos). La verificación sobre datos reales se logró después y está más abajo.
 
 ### Corregido — los logs del protocolo nunca habían funcionado
 El README anunciaba como característica los *"Logs Nativos en el Protocolo"*, pero el servidor **no declaraba la capacidad `logging`**. Sin ella el SDK rechaza cada `sendLoggingMessage()`, y el `.catch()` mudo del logger se tragaba el rechazo: nadie podía enterarse. Verificado en auditoría — el servidor anunciaba solo `tools, resources, prompts`, `logging/setLevel` respondía *"Method not found"* y llegaban **0 notificaciones** pese a `LOG_LEVEL=debug`.
@@ -43,7 +43,7 @@ Cada herramienta declara ahora un `title` legible y sus `annotations` de comport
 * **`openWorldHint: false`** en las cuatro que no salen a la red: `verificar_orden_compra` (desde la 2.3.0 solo lee caché), `obtener_estadisticas_uso`, `obtener_enlace_documento` (solo construye una URL) y `consultar_documentos_locales`.
 
 ### Verificado — la estadística de precios, ahora sobre datos REALES
-Quedaba pendiente de la 2.4.1: los tests cubrían la aritmética con una muestra sintética porque la API devolvía 504. Se logró capturar una muestra real —costó tres intentos— del proceso `1057491-1711-COT26` (insumos para crioablación, Hospital Luis Calvo Mackenna), con **6 cotizaciones**. Los seis estadísticos coinciden exactamente con el cálculo hecho a mano:
+Quedaba pendiente: los tests cubrían la aritmética con una muestra sintética porque la API devolvía 504. Se logró capturar una muestra real —costó tres intentos— del proceso `1057491-1711-COT26` (insumos para crioablación, Hospital Luis Calvo Mackenna), con **6 cotizaciones**. Los seis estadísticos coinciden exactamente con el cálculo hecho a mano:
 
 | | valor |
 | :--- | ---: |
