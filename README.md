@@ -430,7 +430,7 @@ Por eso este servidor **no bloquea hasta el día siguiente**: honra `Retry-After
 
 * **Las consultas sin filtros devuelven HTTP 500.** Hay que enviar al menos un filtro.
 * **`tamano_pagina` mínimo es 10** (valores `1` y `5` devuelven HTTP 400).
-* **La API es lenta:** entre 1 y 14 segundos por consulta según el tamaño de página. La caché de respuestas mitiga esto en las herramientas de análisis, que reconsultan los mismos históricos.
+* **La API es lenta, y empeoró.** Medido el 8 de septiembre de 2026 sobre nueve consultas: búsqueda simple **10-12 s**, búsqueda con texto **13-17 s**, y detalle de un proceso **21-25 s**, con **HTTP 504 intermitentes** en el detalle (1 de cada 3 en esa muestra). La pasarela corta a los ~30 s, así que las consultas grandes fallan enteras. Las herramientas de análisis piden sus detalles en paralelo y la caché evita repetirlos, pero conviene mantener `limite_analisis` bajo: cada unidad es una llamada de detalle más, y cada una puede caerse.
 * **El segundo llamado es poco frecuente:** 6% de los procesos cerrados/desiertos y 0,5% de los activos.
 
 ---

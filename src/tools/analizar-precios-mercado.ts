@@ -42,7 +42,7 @@ const inputSchema = {
   codigo_compra: z.string().optional().describe('Código de una Compra Ágil para extraer sus palabras clave automáticamente (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
   q: z.string().optional().describe('Término de búsqueda del producto/servicio a cotizar (ej: "resmas papel", "reactivos"). Opcional si se especifica "codigo_compra".'),
   region: z.string().optional().describe('Código de región para acotar el análisis (1-16). Ej: "13" para Metropolitana.'),
-  limite_analisis: z.number().min(1).max(15).default(5).optional().describe('Cuántos procesos históricos auditar (1-15, default 5). Cada uno consume una consulta de cuota y la API es lenta (~1-5s por consulta).'),
+  limite_analisis: z.number().min(1).max(15).default(5).optional().describe('Cuántos procesos históricos auditar (1-15, default 5). Cada uno consume una consulta de cuota Y una llamada de detalle, que es lo lento: medido en septiembre de 2026, entre 20 y 25 segundos cada una, con HTTP 504 intermitentes. Los detalles se piden en paralelo, así que el total se parece más al más lento que a la suma — pero subir este número aumenta la probabilidad de que alguno falle. Con 5 el análisis completo ronda los 45-55 s.'),
 };
 
 export function registerAnalizarPreciosMercado(server: McpServer, client: CompraAgilClient): void {
@@ -85,7 +85,8 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
         //      • estado=desierta → 5 de 8 procesos con cotizaciones, 20 precios unitarios
         //      • estado=cerrada  → 0 de 8 procesos con cotizaciones, 0 precios
         //    Los procesos `cerrada` de primer llamado no publican sus cotizaciones,
-        //    así que incluirlos solo gasta cuota y tiempo (la API tarda 1-5s por consulta).
+        //    así que incluirlos solo gasta cuota y tiempo (medido en septiembre de 2026:
+        //    10-17 s por búsqueda y 20-25 s por detalle, con 504 intermitentes).
         //    `proveedor_seleccionado` queda descartado: devuelve 0 resultados.
         const limite = args.limite_analisis || 5;
 

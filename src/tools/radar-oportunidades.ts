@@ -16,7 +16,7 @@ const inputSchema = {
   q: z.string().optional().describe('Término de búsqueda opcional para acotar a un rubro o producto específico (ej: "licencias").'),
   presupuesto_minimo: z.number().optional().describe('Filtrar solo procesos con presupuesto disponible mayor o igual a este monto en CLP.'),
   limite_resultados: z.number().min(1).max(20).default(10).optional().describe('Cantidad máxima de oportunidades destacadas a retornar (1-20, default 10).'),
-  max_paginas: z.number().min(1).max(10).default(3).optional().describe('Cuántas páginas de 50 resultados escanear antes de rankear (1-10, default 3 = hasta 150 procesos). Más páginas = más cobertura pero más consumo de cuota.'),
+  max_paginas: z.number().min(1).max(10).default(3).optional().describe('Cuántas páginas de 50 resultados escanear antes de rankear (1-10, default 3 = hasta 150 procesos). Cada página es una consulta secuencial de 10-17 s (medido en septiembre de 2026), así que 3 páginas rondan los 30-50 s. Más páginas dan más cobertura, pero cuestan cuota y tiempo de forma lineal.'),
 };
 
 export interface OportunidadRadar {
