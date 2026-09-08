@@ -27,6 +27,14 @@ Es el mismo defecto que la búsqueda documental de la 2.2.0: convertir un fallo 
 * **23 tests de exactitud estadística** (211 en total) sobre una muestra fija: mediana frente a promedio, percentil 25 por interpolación, comportamiento con n par e impar, resistencia a valores atípicos, y que el orden de entrada no altere el resultado ni mute el arreglo recibido. Validados por mutación: alterar el índice de la mediana rompe 2 tests, y calcular el p25 como p75 rompe otros 2.
   ⚠ La muestra es **sintética**. Se intentó capturar cotizaciones reales el 8 de septiembre, pero las seis consultas devolvieron 504. Reproduce fielmente la *forma* de la API (precio unitario dentro de `productos_cotizados[]`, `valor_neto` en la raíz, nulos frecuentes, casi todas inadmisibles), así que verifica la aritmética —que es determinista— pero no que la muestra real se parezca a esta. Eso sigue pendiente.
 
+### Corregido — los logs del protocolo nunca habían funcionado
+El README anunciaba como característica los *"Logs Nativos en el Protocolo"*, pero el servidor **no declaraba la capacidad `logging`**. Sin ella el SDK rechaza cada `sendLoggingMessage()`, y el `.catch()` mudo del logger se tragaba el rechazo: nadie podía enterarse. Verificado en auditoría — el servidor anunciaba solo `tools, resources, prompts`, `logging/setLevel` respondía *"Method not found"* y llegaban **0 notificaciones** pese a `LOG_LEVEL=debug`.
+
+* Se declara `capabilities: { logging: {} }`. Ahora el servidor anuncia `logging`, acepta `logging/setLevel` y las notificaciones llegan.
+* El `catch` silencioso ahora avisa **una vez** por stderr si los envíos fallan. Callarse del todo fue lo que ocultó el defecto durante meses.
+* **Verificación de seguridad:** ahora que los logs sí llegan al contexto del modelo, la redacción dejó de ser teórica. Se comprobó en el caso de riesgo real —el endpoint legado de Órdenes de Compra, que lleva el ticket en el query string— y se emite como `ticket=[REDACTED]`. El ticket no aparece ni en las notificaciones ni en stderr.
+* 6 tests nuevos (217 en total) que blindan la redacción de lo que se envía al cliente. Validados por mutación: quitar la redacción rompe 2.
+
 ### Observado, sin corregir
 * **La API está más lenta que lo que documentan las herramientas.** Sus descripciones dicen "~1-5s por consulta"; lo medido el 8 de septiembre fue **15 a 30 s**, con 504 intermitentes. La viabilidad de las herramientas de análisis depende hoy más de la salud del servicio que del código. Pendiente: actualizar esas descripciones y evaluar un límite de concurrencia adaptativo.
 

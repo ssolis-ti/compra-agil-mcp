@@ -24,6 +24,8 @@ function formatTimestamp(): string {
 }
 
 let mcpServer: any = null;
+/** Evita repetir el aviso de fallo de envío en cada línea de log. */
+let falloDeEnvioAvisado = false;
 
 export function setMcpServer(server: any): void {
   mcpServer = server;
@@ -48,8 +50,19 @@ function log(level: LogLevel, message: string, data?: unknown): void {
       level,
       logger: 'mcp-compra-agil',
       data: seguro,
-    }).catch(() => {
-      // Ignorar fallos silenciosamente para no interrumpir el flujo principal
+    }).catch((e: unknown) => {
+      // No se interrumpe el flujo principal por un log que no se pudo enviar,
+      // pero tampoco se calla del todo: este `catch` mudo fue lo que ocultó
+      // durante meses que la capacidad `logging` no estaba declarada y que
+      // NINGUNA notificación llegaba al cliente. Se avisa una sola vez, a
+      // stderr, para que el aviso no se convierta en el ruido que denuncia.
+      if (!falloDeEnvioAvisado) {
+        falloDeEnvioAvisado = true;
+        console.error(
+          `[${formatTimestamp()}] [WARN] No se pudieron enviar logs al cliente MCP ` +
+          `(se seguirá escribiendo a stderr). Causa: ${redact(String(e))}`
+        );
+      }
     });
   }
 }
