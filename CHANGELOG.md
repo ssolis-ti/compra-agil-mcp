@@ -55,8 +55,19 @@ La muestra queda como fixture (`test/fixtures/cotizaciones-reales.json`) y 8 tes
 
 Un matiz que la muestra real corrigió: en este proceso **ninguna** cotización es inadmisible, al revés de lo que ocurre en los `desierta` —donde casi todas lo son, y es lo que los deja desiertos—. La nota metodológica de `analizar_precios_mercado` se refiere a esas últimas, no a todos los procesos.
 
+### Corregido — las descripciones mentían sobre los tiempos
+Decían que la API tarda *"~1-5s por consulta"*. Medido el 8 de septiembre sobre nueve consultas, la realidad es otra:
+
+| Tipo de consulta | Éxito | Tiempo |
+| :--- | :---: | ---: |
+| Búsqueda simple | 3/3 | 10,2–12,3 s |
+| Búsqueda con texto | 3/3 | 12,8–17,3 s |
+| Detalle de un proceso | 2/3 | 20,8–25,1 s |
+
+Importa porque el modelo elige  y  leyendo esas descripciones: con "1-5s" en la cabeza, pedir 15 procesos parece barato cuando en realidad son quince llamadas de 20-25 s cada una, varias de las cuales fallarán. Ahora cada parámetro declara su costo real y si las llamadas son paralelas (no multiplican el tiempo, sí la probabilidad de fallo) o secuenciales (lineales en ambas cosas).
+
 ### Observado, sin corregir
-* **La API está más lenta que lo que documentan las herramientas.** Sus descripciones dicen "~1-5s por consulta"; lo medido el 8 de septiembre fue **15 a 30 s**, con 504 intermitentes. La viabilidad de las herramientas de análisis depende hoy más de la salud del servicio que del código. Pendiente: actualizar esas descripciones y evaluar un límite de concurrencia adaptativo.
+* **La lentitud es del servicio, no del cliente.** Los 504 en el endpoint de detalle aparecieron en 1 de cada 3 consultas. La caché y el paralelismo lo mitigan, pero la viabilidad de las herramientas de análisis depende hoy más de la salud de ChileCompra que del código. Pendiente: evaluar un límite de concurrencia adaptativo que baje el paralelismo cuando detecte 504 seguidos.
 
 ---
 

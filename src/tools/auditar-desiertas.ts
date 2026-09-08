@@ -16,7 +16,7 @@ También reporta el motivo oficial de deserción y las cotizaciones declaradas i
 const inputSchema = {
   codigo_compra: z.string().optional().describe('Código de la Compra Ágil desierta para auditar (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
   q: z.string().optional().describe('Término de búsqueda de producto/servicio para encontrar y auditar un proceso desierto reciente (ej: "resmas papel"). Opcional.'),
-  limite_analisis: z.number().min(1).max(8).default(3).optional().describe('Cantidad de procesos históricos exitosos con los que comparar (1-8, default 3) para no agotar la cuota de la API.'),
+  limite_analisis: z.number().min(1).max(8).default(3).optional().describe('Cantidad de procesos comparables con los que contrastar (1-8, default 3). Cada uno es una consulta de cuota y una llamada de detalle — lo lento: medido en septiembre de 2026, 20-25 s cada una, con HTTP 504 intermitentes. Se piden en paralelo, así que subirlo no multiplica el tiempo, pero sí la probabilidad de que alguna falle.'),
 };
 
 export function registerAuditarDesiertas(server: McpServer, client: CompraAgilClient): void {

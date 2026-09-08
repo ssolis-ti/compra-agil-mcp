@@ -39,7 +39,7 @@ const inputSchema = {
   q: z.string().optional().describe('Término de búsqueda para acotar a un rubro o producto (ej: "licencias").'),
   presupuesto_minimo: z.number().optional().describe('Filtrar procesos con presupuesto disponible mayor o igual a este monto en CLP.'),
   limite_resultados: z.number().min(1).max(50).default(20).optional().describe('Cantidad máxima de oportunidades a incluir en el informe (1-50, default 20).'),
-  max_paginas: z.number().min(1).max(10).default(3).optional().describe('Páginas de 50 resultados a escanear (1-10, default 3).'),
+  max_paginas: z.number().min(1).max(10).default(3).optional().describe('Páginas de 50 resultados a escanear (1-10, default 3). Cada página es una consulta de 10-17 s (medido en septiembre de 2026); con 3 el informe tarda unos 30-50 s.'),
   ruta_salida: z.string().optional().describe('Directorio donde guardar el informe. Si se omite, se usa la carpeta "informes/" del directorio de trabajo.'),
 };
 
