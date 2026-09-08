@@ -82,10 +82,24 @@ async function main() {
   logger.info(`Cliente API configurado → ${BASE_URL}`);
 
   // 2. Crear servidor MCP
-  const server = new McpServer({
-    name: 'mcp-compra-agil',
-    version: PKG_VERSION,
-  });
+  const server = new McpServer(
+    {
+      name: 'mcp-compra-agil',
+      version: PKG_VERSION,
+    },
+    {
+      // ⚠ SIN ESTA DECLARACIÓN LOS LOGS NUNCA LLEGAN AL CLIENTE. El servidor
+      //   llamaba a `sendLoggingMessage()` desde utils/logger.ts, pero no
+      //   declaraba la capacidad `logging`, así que el SDK rechazaba cada envío
+      //   y el `.catch()` del logger se lo tragaba en silencio. Verificado en
+      //   auditoría (8 de septiembre de 2026): el servidor anunciaba solo
+      //   `tools, resources, prompts`, `logging/setLevel` respondía "Method not
+      //   found" y llegaban 0 notificaciones pese a LOG_LEVEL=debug. La
+      //   característica que el README anuncia como "Logs Nativos en el
+      //   Protocolo" nunca había funcionado.
+      capabilities: { logging: {} },
+    }
+  );
 
   // 3. Registrar herramientas (Tools)
   registerBuscarCompras(server, client);
