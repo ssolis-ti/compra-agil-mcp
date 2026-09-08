@@ -38,7 +38,7 @@ function presupuestoDelComprador(detalle: CompraAgilDetalle): number {
  *   de $4.800.000 generó un borrador de $1.000 por este camino.
  */
 export async function estimarPrecioUnitario(
-  client: Pick<CompraAgilClient, 'buscar' | 'detalle'>,
+  client: Pick<CompraAgilClient, 'buscar' | 'detalle' | 'detallesEnParalelo'>,
   detalle: CompraAgilDetalle,
   precioPersonalizado?: number
 ): Promise<EstimacionPrecio> {
@@ -72,18 +72,12 @@ export async function estimarPrecioUnitario(
         numero_pagina: 1,
       });
 
-      // En paralelo: la API tarda 20-30 s por detalle (medido en septiembre
-      // 2026), así que en serie estas cinco consultas bastaban para pasarse
-      // del timeout de un cliente MCP.
-      const detallados = await Promise.all(
-        (busqueda.items || []).slice(0, 5).map(async (item) => {
-          try {
-            return await client.detalle(item.codigo);
-          } catch {
-            // Un histórico que falla no invalida el resto de la muestra.
-            return null;
-          }
-        })
+      // En paralelo y con concurrencia adaptativa: la API tarda 20-25 s por
+      // detalle (medido en septiembre 2026), así que en serie estas cinco
+      // consultas bastaban para pasarse del timeout de un cliente MCP. Un
+      // histórico que falla llega como `null` y no invalida el resto.
+      const detallados = await client.detallesEnParalelo(
+        (busqueda.items || []).slice(0, 5).map((item) => item.codigo)
       );
 
       // Se cuentan los fallos: si todas las consultas de detalle se cayeron,

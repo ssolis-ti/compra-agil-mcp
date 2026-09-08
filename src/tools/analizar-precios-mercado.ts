@@ -120,23 +120,18 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
         let procesosConDatos = 0;
         let adjudicacionesDetectadas = 0;
 
-        // Los detalles se piden EN PARALELO. Son independientes entre sí y la
-        // API tarda mucho por consulta —medido en producción (septiembre 2026):
-        // 20 a 30 s cada detalle—, así que en serie el total superaba los 105 s
-        // y ningún cliente MCP espera tanto. En paralelo la misma tanda tardó
-        // 29,5 s: 3,6 veces más rápido. El throttle del rate limiter (15/min)
-        // deja pasar sin espera una tanda de este tamaño.
-        const detallados = await Promise.all(
-          busqueda.items.slice(0, limite).map(async (item) => {
-            try {
-              return { item, det: await client.detalle(item.codigo) };
-            } catch (e) {
-              // Un histórico que falla no invalida la muestra: se descarta,
-              // PERO se cuenta. Ver la nota sobre `consultasFallidas` más abajo.
-              logger.warn(`analizar_precios_mercado: falló el detalle de ${item.codigo}: ${safeError(e)}`);
-              return null;
-            }
-          })
+        // Los detalles se piden EN PARALELO, con concurrencia adaptativa. Son
+        // independientes entre sí y la API tarda mucho por consulta —medido en
+        // producción (septiembre 2026): 20 a 25 s cada detalle—, así que en
+        // serie el total superaba los 105 s y ningún cliente MCP espera tanto.
+        // En paralelo la misma tanda tardó 29,5 s. El limitador del cliente
+        // baja el paralelismo si aparecen 504, para no insistir contra un
+        // servicio saturado; un histórico que falla llega como `null` y se
+        // descarta, PERO se cuenta (ver `consultasFallidas` más abajo).
+        const seleccionados = busqueda.items.slice(0, limite);
+        const detalles = await client.detallesEnParalelo(seleccionados.map((i) => i.codigo));
+        const detallados = seleccionados.map((item, i) =>
+          detalles[i] ? { item, det: detalles[i]! } : null
         );
 
         // ⚠ Cuántas consultas de detalle FALLARON, no cuántas se pretendía hacer.

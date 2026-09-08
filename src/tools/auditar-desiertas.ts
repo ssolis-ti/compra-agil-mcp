@@ -122,18 +122,15 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
         if (itemsToProcess.length > 0) {
           logger.info(`auditar_compras_desiertas: Analizando detalles de ${itemsToProcess.length} procesos comparables`);
 
-          // En paralelo: los detalles son independientes y la API tarda 20-30 s
-          // por consulta (medido en septiembre 2026), así que en serie el total
-          // superaba el timeout de cualquier cliente MCP.
-          const detallados = await Promise.all(
-            itemsToProcess.map(async (item) => {
-              try {
-                return { item, detail: await client.detalle(item.codigo) };
-              } catch (detailError) {
-                logger.warn(`auditar_compras_desiertas: Error al consultar detalle de ${item.codigo}: ${safeError(detailError)}`);
-                return null;
-              }
-            })
+          // En paralelo y con concurrencia adaptativa: los detalles son
+          // independientes y la API tarda 20-25 s por consulta (medido en
+          // septiembre 2026), así que en serie el total superaba el timeout de
+          // cualquier cliente MCP. El limitador vive en el cliente y es
+          // compartido, así que si otra herramienta acaba de chocar con 504,
+          // esta tanda ya sale con menos paralelismo.
+          const detalles = await client.detallesEnParalelo(itemsToProcess.map((i) => i.codigo));
+          const detallados = itemsToProcess.map((item, i) =>
+            detalles[i] ? { item, detail: detalles[i]! } : null
           );
 
           intentosDetalle = detallados.length;
