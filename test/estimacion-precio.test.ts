@@ -50,12 +50,15 @@ const detalleBase = (over: Partial<CompraAgilDetalle> = {}): CompraAgilDetalle =
 const clienteQueFalla = {
   buscar: async () => { throw new Error('429 cuota agotada'); },
   detalle: async () => { throw new Error('429 cuota agotada'); },
+  // Refleja al cliente real: los fallos llegan como null, no como excepción.
+  detallesEnParalelo: async (cods: string[]) => cods.map(() => null),
 } as any;
 
 /** Cliente que responde, pero sin procesos comparables. */
 const clienteSinResultados = {
   buscar: async () => ({ items: [], paginacion: { total_paginas: 0, numero_pagina: 1, tamano_pagina: 50, total_resultados: 0 } }),
   detalle: async () => { throw new Error('no debería llamarse'); },
+  detallesEnParalelo: async () => [],
 } as any;
 
 describe('estimarPrecioUnitario — el precio ingresado manda', () => {
@@ -126,6 +129,13 @@ describe('estimarPrecioUnitario — placeholder solo como último recurso', () =
   });
 });
 
+const detalleConCotizaciones = {
+  proveedores_cotizando: [
+    { productos_cotizados: [{ nombre_producto: 'Procesadores de red', precio_unitario: 100_000, cantidad: 1, codigo_producto: 1, descripcion: null, monto_total_producto: 100_000 }] },
+    { productos_cotizados: [{ nombre_producto: 'Procesadores de red', precio_unitario: 200_000, cantidad: 1, codigo_producto: 1, descripcion: null, monto_total_producto: 200_000 }] },
+  ],
+} as any;
+
 describe('estimarPrecioUnitario — precios de mercado cuando existen', () => {
   it('prefiere el percentil 25 de lo cotizado por sobre el presupuesto', async () => {
     const cliente = {
@@ -133,12 +143,8 @@ describe('estimarPrecioUnitario — precios de mercado cuando existen', () => {
         items: [{ codigo: 'X-1-COT26' }],
         paginacion: { total_paginas: 1, numero_pagina: 1, tamano_pagina: 50, total_resultados: 1 },
       }),
-      detalle: async () => ({
-        proveedores_cotizando: [
-          { productos_cotizados: [{ nombre_producto: 'Procesadores de red', precio_unitario: 100_000, cantidad: 1, codigo_producto: 1, descripcion: null, monto_total_producto: 100_000 }] },
-          { productos_cotizados: [{ nombre_producto: 'Procesadores de red', precio_unitario: 200_000, cantidad: 1, codigo_producto: 1, descripcion: null, monto_total_producto: 200_000 }] },
-        ],
-      }),
+      detalle: async () => detalleConCotizaciones,
+      detallesEnParalelo: async (cods: string[]) => cods.map(() => detalleConCotizaciones),
     } as any;
 
     const e = await estimarPrecioUnitario(cliente, detalleBase());

@@ -11,6 +11,7 @@ import { logger } from '../utils/logger.js';
 import { handleApiResponse, CompraAgilApiError } from '../utils/error-handler.js';
 import { RateLimiter, RUTA_ESTADO_POR_DEFECTO } from '../utils/rate-limiter.js';
 import { ResponseCache } from '../utils/cache.js';
+import { LimitadorConcurrencia } from '../utils/concurrencia.js';
 import path from 'path';
 import { registrarSecreto } from '../utils/redact.js';
 
@@ -253,6 +254,13 @@ export class CompraAgilClient {
   private readonly ticket: string;
   private readonly rateLimiter: RateLimiter;
   private readonly cache: ResponseCache;
+  /**
+   * Compartido por todas las herramientas: lo que una aprende sobre el estado
+   * del servicio le sirve a la siguiente. Si `analizar_precios_mercado` acaba
+   * de chocar con una tanda de 504, `auditar_compras_desiertas` no debería
+   * volver a intentarlo con el paralelismo máximo.
+   */
+  private readonly concurrencia: LimitadorConcurrencia;
 
   /**
    * @param opciones.persistir Rutas en disco para la cuota y la caché.
@@ -277,6 +285,7 @@ export class CompraAgilClient {
     // que reiniciar el servidor no debe borrar la memoria de un 429.
     this.rateLimiter = new RateLimiter(15, persistir ? RUTA_ESTADO_POR_DEFECTO : null);
     this.cache = new ResponseCache({ rutaEstado: persistir ? RUTA_CACHE_POR_DEFECTO : null });
+    this.concurrencia = new LimitadorConcurrencia({ maximo: 5 });
     // El cliente se auto-protege: cualquier consumidor (servidor MCP, daemon,
     // scripts, tests) queda cubierto sin tener que acordarse de registrarlo.
     registrarSecreto(ticket);
@@ -352,6 +361,38 @@ export class CompraAgilClient {
     this.cache.guardar(claveCache, payload, ttl);
 
     return payload as T;
+  }
+
+  /**
+   * Pide varios detalles a la vez, con concurrencia adaptativa.
+   *
+   * Sustituye al `Promise.all(...map(...catch))` que cada herramienta de
+   * análisis tenía por su cuenta. La diferencia no es solo quitar duplicación:
+   * al pasar por un único limitador compartido, la saturación que detecta una
+   * herramienta protege a las siguientes, y el paralelismo baja a mitad de
+   * tanda si los primeros detalles ya vienen con 504.
+   *
+   * Devuelve un arreglo del mismo largo y orden que `codigos`, con `null` donde
+   * la consulta falló — que es como las herramientas ya cuentan sus fallos para
+   * distinguir "la API no respondió" de "no había datos".
+   */
+  async detallesEnParalelo(codigos: string[]): Promise<Array<CompraAgilDetalle | null>> {
+    const resultados = await this.concurrencia.ejecutar(
+      codigos.map((codigo) => () => this.detalle(codigo))
+    );
+    const fallidos = resultados.filter((r) => r === null).length;
+    if (fallidos > 0) {
+      logger.warn(
+        `Detalles en paralelo: ${fallidos} de ${codigos.length} fallaron ` +
+        `(concurrencia actual: ${this.concurrencia.limiteActual}).`
+      );
+    }
+    return resultados;
+  }
+
+  /** Estado del limitador de concurrencia, para diagnóstico. */
+  getConcurrenciaStats() {
+    return this.concurrencia.estadisticas();
   }
 
   /**

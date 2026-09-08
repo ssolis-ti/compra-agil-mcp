@@ -66,8 +66,17 @@ Decían que la API tarda *"~1-5s por consulta"*. Medido el 8 de septiembre sobre
 
 Importa porque el modelo elige `limite_analisis` y `max_paginas` leyendo esas descripciones: con "1-5s" en la cabeza, pedir 15 procesos parece barato cuando en realidad son quince llamadas de 20-25 s cada una, varias de las cuales fallarán. Ahora cada parámetro declara su costo real y si las llamadas son paralelas (no multiplican el tiempo, sí la probabilidad de fallo) o secuenciales (lineales en ambas cosas).
 
+### Añadido — límite de concurrencia adaptativo
+Ninguno de los dos extremos servía: en serie las herramientas de análisis tardaban más de 105 s, y con paralelismo fijo insisten contra un servicio saturado, gastando cuota en llamadas condenadas. Se añade `utils/concurrencia.ts`, que aplica la política de control de congestión de TCP (**AIMD**): baja a la mitad ante la primera señal de saturación y sube de a uno solo tras una tanda completa sin errores.
+
+* **Qué cuenta como saturación:** HTTP 502, 503, 504 y los cortes de red. **Qué no:** 400 y 404, que hablan del ítem pedido y no del servicio, y 429, del que ya se encarga el `RateLimiter` con su `Retry-After`. Reaccionar a esos bajaría el paralelismo por motivos equivocados.
+* **Reacciona a mitad de tanda:** si los primeros detalles ya vienen con 504, los que faltan salen con menos paralelismo en vez de repetir el error en bloque.
+* **El limitador vive en el cliente y es compartido**, así que lo que una herramienta aprende sobre el estado del servicio protege a la siguiente. `detallesEnParalelo()` reemplaza el `Promise.all(...map(...catch))` que las tres herramientas de análisis tenían duplicado.
+* **Verificado en producción** con la API degradada: ante una tanda de 5, el limitador bajó a 2 y el análisis **completó igual** con 42 s y 10 cotizaciones útiles, informando que 4 de 5 consultas habían fallado. Antes esa misma consulta fallaba entera.
+* 19 tests nuevos (244 en total). Validados por mutación: quitar la reducción rompe 6, e ignorar el límite rompe 4.
+
 ### Observado, sin corregir
-* **La lentitud es del servicio, no del cliente.** Los 504 en el endpoint de detalle aparecieron en 1 de cada 3 consultas. La caché y el paralelismo lo mitigan, pero la viabilidad de las herramientas de análisis depende hoy más de la salud de ChileCompra que del código. Pendiente: evaluar un límite de concurrencia adaptativo que baje el paralelismo cuando detecte 504 seguidos.
+* **La lentitud es del servicio, no del cliente.** Los 504 en el endpoint de detalle aparecieron en 1 de cada 3 consultas. La caché, el paralelismo y ahora la concurrencia adaptativa lo mitigan, pero la viabilidad de las herramientas de análisis depende de la salud de ChileCompra más que del código.
 
 ---
 
