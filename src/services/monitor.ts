@@ -10,6 +10,7 @@ import path from 'path';
 import { loadEnvManual } from '../utils/env-loader.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { safeError, registrarSecreto } from '../utils/redact.js';
+import { enHoraDeChile } from '../utils/fechas.js';
 
 // Inicializar entorno
 loadEnvManual();
@@ -110,7 +111,16 @@ async function runCheck() {
         alertedCodes.add(item.codigo);
 
         alertCount++;
-        const alertMsg = `[${new Date().toISOString()}] [ALERTA] Código: ${item.codigo} | Presupuesto: $${item.montos.monto_disponible_clp.toLocaleString('es-CL')} CLP | Cierre: ${item.fechas.fecha_cierre} | Institución: ${item.institucion.organismo_comprador} | Coincidencia: "${matchedKeyword}" | Nombre: ${item.nombre.trim()}\n`;
+        // El cierre se informa en hora de Chile además del valor crudo: la API
+        // no declara zona horaria en ese campo y se interpreta como UTC, así
+        // que leer el crudo como hora local haría creer que quedan tres horas
+        // más de las reales. En una alerta cuyo propósito es avisar a tiempo,
+        // esa confusión sería justamente el fallo que se quiere evitar.
+        const cierreChile = enHoraDeChile(item.fechas.fecha_cierre);
+        const cierreTexto = cierreChile
+          ? `${cierreChile} (hora de Chile; la API entrega "${item.fechas.fecha_cierre}" sin zona horaria)`
+          : String(item.fechas.fecha_cierre);
+        const alertMsg = `[${new Date().toISOString()}] [ALERTA] Código: ${item.codigo} | Presupuesto: $${item.montos.monto_disponible_clp.toLocaleString('es-CL')} CLP | Cierre: ${cierreTexto} | Institución: ${item.institucion.organismo_comprador} | Coincidencia: "${matchedKeyword}" | Nombre: ${item.nombre.trim()}\n`;
 
         // Escribir en alerts.log
         fs.appendFileSync(ALERTS_LOG_PATH, alertMsg, 'utf8');

@@ -75,7 +75,20 @@ Ninguno de los dos extremos servía: en serie las herramientas de análisis tard
 * **Verificado en producción** con la API degradada: ante una tanda de 5, el limitador bajó a 2 y el análisis **completó igual** con 42 s y 10 cotizaciones útiles, informando que 4 de 5 consultas habían fallado. Antes esa misma consulta fallaba entera.
 * 19 tests nuevos (244 en total). Validados por mutación: quitar la reducción rompe 6, e ignorar el límite rompe 4.
 
+### Corregido — el cálculo de plazos dependía de dónde corriera el servidor
+La API entrega dos formatos para el mismo instante: `fechas.fecha_cierre` viene como `"2026-09-11 12:00"`, **sin zona horaria**, mientras que su hermano `convocatoria.fecha_cierre_primer_llamado` trae `"2026-09-11T12:00:00Z"`. Verificado en 8 de 8 procesos: el valor es idéntico, solo uno declara su zona.
+
+El peligro no era solo la ambigüedad. Ante un string así, `new Date()` lo interpreta **en la zona horaria del servidor**. Medido: el mismo `"2026-09-11 12:00"` se convierte en 15:00Z desplegado en Chile y en 12:00Z desplegado en UTC. El radar calculaba `horas_restantes` —y con ella hasta 30 puntos de urgencia— con **tres horas de diferencia según dónde estuviera corriendo**, con datos idénticos.
+
+* **`utils/fechas.ts`** interpreta esas fechas de forma determinista, igual en cualquier servidor. Verificado ejecutando la suite con `TZ` en UTC, Santiago y Tokio: 16/16 en las tres.
+* **Se asume UTC** ante la duda. No se pudo determinar con certeza si esos valores son UTC u hora de Chile: el filtro `ttl_cambio_ms` de la API trata las marcas `Z` como UTC real, pero la ficha del portal muestra ese mismo "12:00" a usuarios chilenos sin convertir. Se elige UTC porque **el error es asimétrico**: leerlo como hora local siendo UTC haría creer que quedan tres horas más y se perdería el plazo; al revés, solo se apura de más.
+* **El radar expone `fecha_cierre_hora_chile`** junto al valor crudo, y una `_nota_horaria` en la salida —no en los logs— para que ni el modelo ni la persona asuman hora local.
+* **Las alertas del daemon informan el cierre en hora de Chile.** Su detección no estaba afectada (usa `ttl_cambio_ms`, una ventana relativa), pero el mensaje decía "Cierre: 2026-09-08 10:26" sin indicar zona: en una alerta cuyo objetivo es avisar a tiempo, esa confusión era justo el fallo a evitar.
+* `auditar_compras_desiertas` **no estaba afectada**: resta dos fechas para calcular la duración y el desfase se cancela.
+* 16 tests nuevos (260 en total).
+
 ### Observado, sin corregir
+* **Queda sin resolver si `fecha_cierre` es UTC u hora de Chile.** La prueba concluyente —observar un proceso cruzar de `publicada` a `cerrada`— no se pudo hacer: no había procesos cerrando ese día en la muestra. Mientras tanto la interpretación elegida es la conservadora y está declarada en la salida.
 * **La lentitud es del servicio, no del cliente.** Los 504 en el endpoint de detalle aparecieron en 1 de cada 3 consultas. La caché, el paralelismo y ahora la concurrencia adaptativa lo mitigan, pero la viabilidad de las herramientas de análisis depende de la salud de ChileCompra más que del código.
 
 ---
