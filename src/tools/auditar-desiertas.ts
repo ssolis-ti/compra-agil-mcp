@@ -111,6 +111,8 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
         const successDurations: number[] = [];
         const successPrices: number[] = [];
         const processedCases: any[] = [];
+        let fallosDetalle = 0;
+        let intentosDetalle = 0;
         const itemsToProcess = (searchResponse.items || []).slice(0, limit);
 
         if (itemsToProcess.length > 0) {
@@ -129,6 +131,9 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
               }
             })
           );
+
+          intentosDetalle = detallados.length;
+          fallosDetalle = detallados.filter((d) => d === null).length;
 
           for (const entrada of detallados) {
             if (!entrada) continue;
@@ -282,6 +287,12 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
           busqueda_comparativa: {
             termino_clave: keyword,
             procesos_comparables_con_cotizaciones: successPrices.length,
+            // Un comparativo vacío puede deberse a que no hay comparables o a
+            // que la API no respondió, y son cosas muy distintas: la primera
+            // habla del mercado, la segunda solo de la infraestructura.
+            ...(fallosDetalle > 0 && {
+              _aviso_cobertura: `${fallosDetalle} de ${intentosDetalle} consultas de detalle fallaron (la API no respondió). La comparación se basa en menos procesos de los pedidos; no lo interpretes como escasez de datos del rubro.`,
+            }),
             estadisticas_montos_cotizados: successPrices.length > 0 ? {
               minimo_cotizado: minPrice,
               maximo_cotizado: maxPrice,

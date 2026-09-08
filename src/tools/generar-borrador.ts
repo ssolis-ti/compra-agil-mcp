@@ -52,6 +52,8 @@ export async function estimarPrecioUnitario(
 
   const keyword = detalle.productos_solicitados?.[0]?.nombre || detalle.nombre || '';
   const precios: number[] = [];
+  let fallosDetalle = 0;
+  let intentosDetalle = 0;
 
   if (keyword) {
     try {
@@ -83,6 +85,13 @@ export async function estimarPrecioUnitario(
           }
         })
       );
+
+      // Se cuentan los fallos: si todas las consultas de detalle se cayeron,
+      // el precio no se estimó "porque no había comparables" sino porque la
+      // API no respondió, y el borrador debe decirlo. Confundir ambas cosas
+      // llevaría al proveedor a cotizar sobre una premisa falsa.
+      fallosDetalle = detallados.filter((d) => d === null).length;
+      intentosDetalle = detallados.length;
 
       for (const det of detallados) {
         if (!det) continue;
@@ -117,7 +126,9 @@ export async function estimarPrecioUnitario(
     const cantidadTotal = detalle.productos_solicitados?.reduce((acc, p) => acc + p.cantidad, 0) || 1;
     return {
       precio: Math.round((presupuesto * 0.9) / cantidadTotal),
-      fuente: 'Sugerencia automática: presupuesto del comprador descontado 10% (no hubo cotizaciones de mercado comparables)',
+      fuente: intentosDetalle > 0 && fallosDetalle === intentosDetalle
+        ? `Sugerencia automática: presupuesto del comprador descontado 10%. ⚠ NO se pudo consultar el mercado — las ${fallosDetalle} consultas de detalle fallaron (la API no respondió). Esto no significa que no existan comparables: reintenta más tarde para obtener un precio de mercado.`
+        : `Sugerencia automática: presupuesto del comprador descontado 10% (no se encontraron cotizaciones de mercado comparables${fallosDetalle > 0 ? `; además ${fallosDetalle} de ${intentosDetalle} consultas fallaron` : ''})`,
       sugerido: true,
     };
   }

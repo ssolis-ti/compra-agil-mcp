@@ -130,12 +130,27 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
             try {
               return { item, det: await client.detalle(item.codigo) };
             } catch (e) {
-              // Un histórico que falla no invalida la muestra: se descarta.
+              // Un histórico que falla no invalida la muestra: se descarta,
+              // PERO se cuenta. Ver la nota sobre `consultasFallidas` más abajo.
               logger.warn(`analizar_precios_mercado: falló el detalle de ${item.codigo}: ${safeError(e)}`);
               return null;
             }
           })
         );
+
+        // ⚠ Cuántas consultas de detalle FALLARON, no cuántas se pretendía hacer.
+        //   Sin esto, la herramienta informaba "se revisaron N procesos pero
+        //   ninguno expuso cotizaciones con precios" incluso cuando las N
+        //   consultas habían fallado con HTTP 504 y no se revisó nada. El
+        //   usuario concluía que su rubro no tiene precios publicados —una
+        //   afirmación sobre el mercado— cuando el hecho real era que la API no
+        //   respondió. Observado en producción el 8 de septiembre de 2026: 6 de
+        //   6 detalles devolvieron 504 y el mensaje siguió siendo el de "sin
+        //   precios". Un fallo de infraestructura no puede disfrazarse de
+        //   conclusión de negocio.
+        const consultasIntentadas = detallados.length;
+        const consultasFallidas = detallados.filter((d) => d === null).length;
+        const consultasOk = consultasIntentadas - consultasFallidas;
 
         for (const entrada of detallados) {
           if (!entrada) continue;
@@ -182,14 +197,35 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
         }
 
         if (preciosUnitarios.length === 0 && montosNetos.length === 0) {
+          // Sin datos hay dos causas muy distintas y no deben confundirse:
+          // que la API no respondiera, o que respondiera sin precios.
+          if (consultasOk === 0) {
+            return {
+              content: [{
+                type: 'text' as const,
+                text: [
+                  `No se pudo consultar el detalle de ninguno de los ${consultasIntentadas} procesos que coinciden con "${keyword}": las ${consultasFallidas} consultas fallaron.`,
+                  '',
+                  '⚠ Esto NO significa que no haya precios publicados para este rubro: significa que la API no respondió. No saques conclusiones de mercado desde este resultado.',
+                  'Reintenta en unos minutos. Si persiste, baja "limite_analisis" para pedir menos por vez.',
+                ].join('\n'),
+              }],
+              isError: true,
+            };
+          }
+
+          const aviso = consultasFallidas > 0
+            ? `\n⚠ Además, ${consultasFallidas} de las ${consultasIntentadas} consultas de detalle fallaron, así que la cobertura real fue menor a la pedida.`
+            : '';
+
           return {
             content: [{
               type: 'text' as const,
               text: [
-                `Se revisaron ${Math.min(limite, busqueda.items.length)} procesos históricos que coinciden con "${keyword}", pero ninguno expuso cotizaciones con precios.`,
+                `Se revisaron ${consultasOk} procesos históricos que coinciden con "${keyword}", y ninguno expuso cotizaciones con precios.`,
                 '',
                 'Esto es habitual: la API de Mercado Público solo publica las cotizaciones de algunos procesos.',
-                'Sugerencias: usa un término más general, amplía "limite_analisis", o quita el filtro de región.',
+                'Sugerencias: usa un término más general, amplía "limite_analisis", o quita el filtro de región.' + aviso,
               ].join('\n'),
             }],
           };
@@ -227,7 +263,11 @@ export function registerAnalizarPreciosMercado(server: McpServer, client: Compra
           region_analisis: region ? `Región ${region}` : 'Todas las regiones',
           cobertura: {
             procesos_encontrados: busqueda.paginacion.total_resultados,
-            procesos_revisados: Math.min(limite, busqueda.items.length),
+            procesos_revisados: consultasOk,
+            procesos_que_fallaron: consultasFallidas,
+            ...(consultasFallidas > 0 && {
+              _aviso_cobertura: `${consultasFallidas} de ${consultasIntentadas} consultas de detalle fallaron (la API no respondió), así que la muestra es más chica que la pedida. No interpretes esto como escasez de datos del rubro.`,
+            }),
             procesos_con_cotizaciones: procesosConDatos,
             cotizaciones_totales: cotizaciones.length,
             cotizaciones_declaradas_inadmisibles: inadmisibles.length,

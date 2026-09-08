@@ -15,6 +15,18 @@ QA de calidad de salida —no de "¿responde?" sino de "¿sirve lo que devuelve?
 
 **Efecto combinado:** la consulta que devolvía 504 dos veces seguidas, y que tras el primer arreglo aún excedía los 120 s, ahora completa en **52,7 s**.
 
+### Corregido — un fallo de infraestructura se disfrazaba de conclusión de mercado
+Al intentar capturar una muestra real de cotizaciones, las **6 consultas de detalle devolvieron HTTP 504**. Pero la herramienta seguía respondiendo *"Se revisaron 4 procesos históricos, pero ninguno expuso cotizaciones con precios"*: contaba los procesos que **pretendía** revisar, no los que logró. El usuario concluía que su rubro no tiene precios publicados —una afirmación sobre el mercado— cuando el hecho real era que la API no respondió.
+
+Es el mismo defecto que la búsqueda documental de la 2.2.0: convertir un fallo en un negativo confiado. Ahora:
+* `analizar_precios_mercado` distingue las dos causas. Si **todas** las consultas fallan devuelve un error explícito —*"esto NO significa que no haya precios publicados… la API no respondió"*— con `isError: true`. Si fallan solo algunas, entrega el análisis con un `_aviso_cobertura` que advierte que la muestra es menor a la pedida.
+* `generar_borrador_cotizacion` ya no atribuye a "no hay comparables" un precio que cayó al presupuesto porque la API se cayó.
+* `auditar_compras_desiertas` informa cuántas consultas fallaron junto a su comparativo.
+
+### Añadido
+* **23 tests de exactitud estadística** (211 en total) sobre una muestra fija: mediana frente a promedio, percentil 25 por interpolación, comportamiento con n par e impar, resistencia a valores atípicos, y que el orden de entrada no altere el resultado ni mute el arreglo recibido. Validados por mutación: alterar el índice de la mediana rompe 2 tests, y calcular el p25 como p75 rompe otros 2.
+  ⚠ La muestra es **sintética**. Se intentó capturar cotizaciones reales el 8 de septiembre, pero las seis consultas devolvieron 504. Reproduce fielmente la *forma* de la API (precio unitario dentro de `productos_cotizados[]`, `valor_neto` en la raíz, nulos frecuentes, casi todas inadmisibles), así que verifica la aritmética —que es determinista— pero no que la muestra real se parezca a esta. Eso sigue pendiente.
+
 ### Observado, sin corregir
 * **La API está más lenta que lo que documentan las herramientas.** Sus descripciones dicen "~1-5s por consulta"; lo medido el 8 de septiembre fue **15 a 30 s**, con 504 intermitentes. La viabilidad de las herramientas de análisis depende hoy más de la salud del servicio que del código. Pendiente: actualizar esas descripciones y evaluar un límite de concurrencia adaptativo.
 
