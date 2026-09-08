@@ -87,6 +87,17 @@ El peligro no era solo la ambigüedad. Ante un string así, `new Date()` lo inte
 * `auditar_compras_desiertas` **no estaba afectada**: resta dos fechas para calcular la duración y el desfase se cancela.
 * 16 tests nuevos (260 en total).
 
+### Añadido — `verificar_hora_oficial`, contra el reloj oficial de Chile
+Herramienta nueva (16 en total) que contrasta el reloj de esta máquina con **`ntp.shoa.cl`**, del Servicio Hidrográfico y Oceanográfico de la Armada, que es quien fija legalmente la hora en Chile.
+
+Resuelve un problema **distinto y anterior** al de la interpretación de fechas: los plazos se calculan restando la hora local, así que un reloj desviado falsea `horas_restantes` y el puntaje de urgencia del radar aunque la fecha de la API se lea perfectamente. Un reloj atrasado hace creer que queda más tiempo del real — el error que cuesta una licitación.
+
+* Implementa lo mínimo de NTP (RFC 5905) sobre `dgram`, **sin dependencias nuevas**, con la fórmula del protocolo que descuenta el viaje de ida y vuelta en vez de atribuirlo todo al reloj.
+* **No consume cuota** de Mercado Público.
+* **Degrada sin romper** si la red bloquea el UDP 123, habitual en redes corporativas: lo informa y sugiere comparar a mano contra `horaoficial.cl`.
+* Marca el resultado como error cuando el desfase supera un minuto, para que el modelo no lo pase por alto.
+* Verificado en vivo: responde en **97 ms** con un desfase de 50 ms. 9 tests nuevos (269 en total), que dependen de que un servidor inexistente falle y no de que `ntp.shoa.cl` responda, para no atar la suite a la red.
+
 ### Observado, sin corregir
 * **Queda sin resolver si `fecha_cierre` es UTC u hora de Chile.** La prueba concluyente —observar un proceso cruzar de `publicada` a `cerrada`— no se pudo hacer: no había procesos cerrando ese día en la muestra. Mientras tanto la interpretación elegida es la conservadora y está declarada en la salida.
 * **La lentitud es del servicio, no del cliente.** Los 504 en el endpoint de detalle aparecieron en 1 de cada 3 consultas. La caché, el paralelismo y ahora la concurrencia adaptativa lo mitigan, pero la viabilidad de las herramientas de análisis depende de la salud de ChileCompra más que del código.
