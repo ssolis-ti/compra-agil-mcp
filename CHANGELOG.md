@@ -64,7 +64,7 @@ Decían que la API tarda *"~1-5s por consulta"*. Medido el 8 de septiembre sobre
 | Búsqueda con texto | 3/3 | 12,8–17,3 s |
 | Detalle de un proceso | 2/3 | 20,8–25,1 s |
 
-Importa porque el modelo elige  y  leyendo esas descripciones: con "1-5s" en la cabeza, pedir 15 procesos parece barato cuando en realidad son quince llamadas de 20-25 s cada una, varias de las cuales fallarán. Ahora cada parámetro declara su costo real y si las llamadas son paralelas (no multiplican el tiempo, sí la probabilidad de fallo) o secuenciales (lineales en ambas cosas).
+Importa porque el modelo elige `limite_analisis` y `max_paginas` leyendo esas descripciones: con "1-5s" en la cabeza, pedir 15 procesos parece barato cuando en realidad son quince llamadas de 20-25 s cada una, varias de las cuales fallarán. Ahora cada parámetro declara su costo real y si las llamadas son paralelas (no multiplican el tiempo, sí la probabilidad de fallo) o secuenciales (lineales en ambas cosas).
 
 ### Observado, sin corregir
 * **La lentitud es del servicio, no del cliente.** Los 504 en el endpoint de detalle aparecieron en 1 de cada 3 consultas. La caché y el paralelismo lo mitigan, pero la viabilidad de las herramientas de análisis depende hoy más de la salud de ChileCompra que del código. Pendiente: evaluar un límite de concurrencia adaptativo que baje el paralelismo cuando detecte 504 seguidos.
