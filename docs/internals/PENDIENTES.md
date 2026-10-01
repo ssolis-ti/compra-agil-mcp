@@ -1,6 +1,6 @@
 # Pendientes
 
-Estado al **15 de julio de 2026** · versión actual: **2.0.0**
+Revisado el **1 de octubre de 2026** · versión del paquete: **2.5.0**. Lo de abajo sigue abierto. Lo que el changelog ya cerró está al final.
 
 Priorizado. Cada ítem incluye contexto suficiente para retomarlo sin memoria previa.
 
@@ -17,7 +17,7 @@ este servidor. Todo el testing se hizo por JSON-RPC directo contra `dist/index.j
 
 **Qué falta:** añadir el bloque de configuración (hay ejemplos para cada cliente en
 el [README](../../README.md#-integración-con-clientes-mcp-y-agentes)) y comprobar
-que las 15 herramientas aparecen y se invocan desde el chat.
+que las 16 herramientas aparecen y se invocan desde el chat.
 
 **Por qué importa:** el transporte Stdio es sensible a que algo escriba en stdout.
 El logger ya está blindado (todo va a stderr), pero eso solo se prueba de verdad
@@ -105,13 +105,9 @@ cerraría ese hueco.
 
 ### 6. Rendimiento: la API es lenta
 
-**Medido:** entre 1 y 14 segundos por consulta según el tamaño de página.
+**Medido el 8 de septiembre de 2026:** búsqueda simple 10–12 s, búsqueda con texto 13–17 s, detalle 21–25 s, con 504 intermitentes. La cifra vieja de 1–14 s ya no vale.
 
-`radar_oportunidades_calientes` con `max_paginas=3` puede tardar **más de 45
-segundos**, lo que podría superar el timeout de algún cliente MCP.
-
-**Ideas:** caché en memoria por código de proceso (los detalles no cambian una vez
-cerrados), o reducir el `max_paginas` por defecto.
+La 2.5.0 ya añadió caché en disco, detalles en paralelo y concurrencia adaptativa. Sigue abierto el riesgo de timeout del cliente MCP cuando el radar pide varias páginas.
 
 ---
 
@@ -144,3 +140,4 @@ Se desconoce qué representa y qué otros valores admite.
 * **La API no publica adjudicaciones** — 45 procesos, 52 cotizaciones,
   `proveedor_seleccionado = 0` en el 100 %. No es reparable desde el código.
   Ver [hallazgos-api.md](hallazgos-api.md).
+* **429 hasta el día siguiente, adjuntos por enlace directo, logs del protocolo y la hora oficial** — resueltos entre la 2.3.0 y la 2.5.0. Ver [CHANGELOG.md](../../CHANGELOG.md). No reimplementar el bloqueo hasta medianoche ni la descarga directa.
