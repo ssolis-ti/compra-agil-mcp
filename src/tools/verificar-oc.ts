@@ -5,7 +5,8 @@
  * Resuelve la limitación documentada donde el estado "oc_emitida" no aparece
  * en la práctica y el campo codigo_orden_compra retorna null incluso con OC emitida.
  *
- * Implementa la lógica del Ejemplo 8.6 de la documentación oficial.
+ * No barre el Ejemplo 8.6. Esa búsqueda no publica adjudicaciones, así que
+ * esta tool no consulta la API por su cuenta.
  */
 
 import { z } from 'zod';

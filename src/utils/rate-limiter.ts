@@ -1,9 +1,10 @@
 /**
  * Control inteligente de rate limiting para la API de Compra Ágil.
  *
- * La API usa cuota por día calendario (se resetea a medianoche UTC).
- * Este módulo lleva un contador local de requests para advertir
- * proactivamente antes de alcanzar el límite.
+ * Espacia el tráfico a 40 solicitudes por minuto y reacciona a un 429
+ * honrando Retry-After o una espera creciente. No bloquea hasta el día
+ * siguiente: la cuota se comporta como un token bucket. El contador local
+ * sí se reinicia al cambiar el día UTC, solo para la estadística.
  */
 
 import fs from 'fs';

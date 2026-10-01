@@ -18,11 +18,7 @@ const GLOSARIO = [
   },
   {
     termino: 'Ticket',
-    definicion: 'Credencial de acceso a la API. Identifica al cliente y controla su cuota de uso diario.',
-  },
-  {
-    termino: 'Token Bucket',
-    definicion: 'Algoritmo de control de tasa de solicitudes. Un "balde" de tokens se consume con cada request y se recarga automáticamente al inicio de cada día calendario.',
+    definicion: 'Credencial de acceso a la API. Identifica al cliente y controla su cuota de uso. Un 429 no significa que haya que esperar al día siguiente: ver la entrada "429 Too Many Requests".',
   },
   {
     termino: 'EMT',

@@ -371,7 +371,7 @@ El paquete publicado incluye únicamente `dist/` (declarado en `files` de `packa
 * Verás **3 recursos en vez de 13**: `regiones`, `estados` y `glosario`, que están definidos en código. Los diez de `compra-agil://documentacion/…` no existirán.
 * `consultar_documentos_locales` informará que la carpeta `docs/` está vacía, apuntando a tu directorio de trabajo.
 
-Ninguna de las 15 herramientas que consultan la API se ve afectada: la limitación alcanza solo a la documentación local.
+Las herramientas que consultan la API no dependen de esa carpeta. La limitación alcanza solo a la documentación local.
 
 **Si quieres esa documentación**, tienes dos caminos:
 
@@ -387,7 +387,7 @@ Ninguna de las 15 herramientas que consultan la API se ve afectada: la limitaci�
 
 ## ⚠️ Limitaciones conocidas de la API
 
-Estos hallazgos fueron **verificados empíricamente** contra el servicio real de Mercado Público (julio 2026, 45 procesos y 52 cotizaciones inspeccionados; **re-confirmados en septiembre de 2026** junto a una auditoría de las 15 herramientas). La [Guía oficial API Compra Ágil v2](docs/api/) documenta un comportamiento distinto en cada uno de estos puntos.
+Estos hallazgos fueron **verificados empíricamente** contra el servicio real de Mercado Público (julio 2026, 45 procesos y 52 cotizaciones inspeccionados; **re-confirmados en septiembre de 2026** junto a una auditoría de las 15 herramientas de esa pasada). `verificar_hora_oficial`, añadida en la 2.5.0, no consulta esta API. La [Guía oficial API Compra Ágil v2](docs/api/) documenta un comportamiento distinto en cada uno de estos puntos.
 
 ### 🔴 La API no publica adjudicaciones
 
