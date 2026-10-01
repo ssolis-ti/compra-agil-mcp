@@ -14,6 +14,7 @@ import { ResponseCache } from '../utils/cache.js';
 import { LimitadorConcurrencia } from '../utils/concurrencia.js';
 import path from 'path';
 import { registrarSecreto } from '../utils/redact.js';
+import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
 
 // ─── Tipos ──────────────────────────────────────────────────────────
 
@@ -460,7 +461,7 @@ export class CompraAgilClient {
     while (currentPage <= maxPages) {
       const response = await this.buscar({
         ...params,
-        tamano_pagina: params.tamano_pagina || 50,
+        tamano_pagina: params.tamano_pagina || TAMANO_PAGINA_SEGURO,
         numero_pagina: currentPage,
       });
 

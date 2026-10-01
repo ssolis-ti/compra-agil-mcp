@@ -34,7 +34,8 @@ Por favor, sigue estos pasos:
    - estado: "publicada" (solo procesos abiertos recibiendo cotizaciones)
    - region: el código numérico resuelto
    - q: "${args.rubro}" como palabras clave
-   - tamano_pagina: 50
+   - tamano_pagina: 10
+   No pidas 50: una página de ese tamaño sobre un filtro amplio responde HTTP 504.
 
 3. **Analizar los resultados:** Para los 5 procesos más relevantes (por presupuesto o afinidad), usa "obtener_detalle_compra" para obtener:
    - Productos solicitados con cantidades

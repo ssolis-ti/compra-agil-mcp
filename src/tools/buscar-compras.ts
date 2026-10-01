@@ -7,8 +7,10 @@
 
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
+import { conNotaHoraria, enHoraDeChile } from '../utils/fechas.js';
+import { TAMANO_PAGINA_SEGURO, textoPagina } from '../utils/paginacion.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'buscar_compras_agiles';
@@ -16,11 +18,13 @@ const TOOL_NAME = 'buscar_compras_agiles';
 const TOOL_DESCRIPTION = `Busca procesos de Compra Ágil en Mercado Público de Chile.
 Permite filtrar por palabras clave, estado del proceso, región geográfica y rango de fechas de publicación.
 Retorna un listado resumido con código, nombre, estado, presupuesto e institución compradora.
+La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "fecha_cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.
+Hay que enviar al menos un filtro de la API: estado, region, q, id, publicado_desde o publicado_hasta. Sin ninguno, la API responde HTTP 500 y esta herramienta no hace la llamada. El orden, la página y las palabras clave locales no cuentan: las palabras se aplican después, sobre la respuesta.
 Nota: los parámetros 'q' (búsqueda por texto) e 'id' (código exacto) son mutuamente excluyentes.
 Estados válidos: publicada, cerrada, desierta, cancelada, proveedor_seleccionado.
 Regiones: códigos del 1 al 16 (ej: 13 = Metropolitana, 5 = Valparaíso).`;
 
-const inputSchema = {
+export const inputSchema = {
   q: z.string().optional().describe(
     'Palabras clave para buscar en el nombre/descripción del proceso. Ej: "materiales electricos". No usar junto con "id".'
   ),
@@ -48,13 +52,47 @@ const inputSchema = {
   ordenar_por: z.enum(['FechaUltimaModificacion', 'FechaPublicacion']).optional().describe(
     'Criterio de ordenamiento. "FechaPublicacion" para las más recientes primero, "FechaUltimaModificacion" (default) para las últimas modificadas.'
   ),
-  tamano_pagina: z.number().min(10).max(50).optional().describe(
-    'Resultados por página (10-50, default 15).'
+  tamano_pagina: z.number().min(10).max(50).default(TAMANO_PAGINA_SEGURO).describe(
+    'Resultados por página (10-50, default 10). Si no lo indicas, se piden 10. Una página de 50 sobre un filtro amplio responde HTTP 504.'
   ),
   numero_pagina: z.number().min(1).optional().describe(
     'Número de página a consultar (comienza en 1).'
   ),
 };
+
+/** Filtros que la API acepta. Paginación, orden y palabras locales no evitan el HTTP 500. */
+const FILTROS_API = ['q', 'id', 'estado', 'region', 'publicado_desde', 'publicado_hasta'] as const;
+
+export function tieneFiltroDeApi(args: Partial<Record<(typeof FILTROS_API)[number], string>>): boolean {
+  return FILTROS_API.some((clave) => {
+    const valor = args[clave];
+    return typeof valor === 'string' && valor.trim().length > 0;
+  });
+}
+
+const MENSAJE_SIN_FILTRO = [
+  'La API rechaza una búsqueda sin filtros con HTTP 500. No se hizo la llamada.',
+  'Indica al menos uno: estado, region, q, id, publicado_desde o publicado_hasta.',
+  'El orden, el tamaño de página y palabras_clave_requeridas/excluidas no alcanzan: las palabras se filtran aquí, después de que la API responde.',
+].join(' ');
+
+/** Listado que ve el modelo. El cierre crudo se conserva; al lado va la hora de Chile bajo la suposición UTC. */
+export function resumirCompraBusqueda(item: CompraAgilItem) {
+  return {
+    codigo: item.codigo,
+    nombre: item.nombre,
+    estado: item.estado.glosa,
+    convocatoria: item.convocatoria.descripcion,
+    presupuesto_clp: item.montos.monto_disponible_clp,
+    moneda: item.montos.moneda,
+    institucion: item.institucion.organismo_comprador,
+    region: item.institucion.nombre_region,
+    fecha_publicacion: item.fechas.fecha_publicacion,
+    fecha_cierre: item.fechas.fecha_cierre,
+    fecha_cierre_hora_chile: enHoraDeChile(item.fechas.fecha_cierre),
+    ofertas_recibidas: item.resumen.total_ofertas_recibidas,
+  };
+}
 
 export function registerBuscarCompras(server: McpServer, client: CompraAgilClient): void {
   server.registerTool(
@@ -69,6 +107,13 @@ export function registerBuscarCompras(server: McpServer, client: CompraAgilClien
     },
     async (args) => {
       try {
+        if (!tieneFiltroDeApi(args)) {
+          return {
+            content: [{ type: 'text' as const, text: MENSAJE_SIN_FILTRO }],
+            isError: true,
+          };
+        }
+
         // Validar exclusión mutua de q e id
         if (args.q && args.id) {
           return {
@@ -123,26 +168,14 @@ export function registerBuscarCompras(server: McpServer, client: CompraAgilClien
           }
         }
 
-        const summary = filteredItems.map((item) => ({
-          codigo: item.codigo,
-          nombre: item.nombre,
-          estado: item.estado.glosa,
-          convocatoria: item.convocatoria.descripcion,
-          presupuesto_clp: item.montos.monto_disponible_clp,
-          moneda: item.montos.moneda,
-          institucion: item.institucion.organismo_comprador,
-          region: item.institucion.nombre_region,
-          fecha_publicacion: item.fechas.fecha_publicacion,
-          fecha_cierre: item.fechas.fecha_cierre,
-          ofertas_recibidas: item.resumen.total_ofertas_recibidas,
-        }));
+        const summary = filteredItems.map(resumirCompraBusqueda);
 
-        const result = {
+        const result = conNotaHoraria({
           total_resultados: response.paginacion.total_resultados,
           total_filtrados_en_pagina: filteredItems.length,
-          pagina: `${response.paginacion.numero_pagina} de ${response.paginacion.total_paginas}`,
+          pagina: textoPagina(response.paginacion.numero_pagina, response.paginacion.total_paginas),
           resultados: summary,
-        };
+        });
 
         return {
           content: [{

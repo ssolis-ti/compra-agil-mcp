@@ -11,6 +11,7 @@ import { loadEnvManual } from '../utils/env-loader.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { safeError, registrarSecreto } from '../utils/redact.js';
 import { enHoraDeChile } from '../utils/fechas.js';
+import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
 
 // Inicializar entorno
 loadEnvManual();
@@ -80,11 +81,12 @@ async function runCheck() {
     const bufferMinutes = 5;
     const ttlMs = (INTERVAL_MINUTES + bufferMinutes) * 60 * 1000;
 
-    // Buscar cambios recientes en todo el país (auto-paginado completo hasta 10 páginas)
+    // Hasta 10 páginas de 10. Una de 50 agota la pasarela (HTTP 504).
+    // El ciclo cubre como máximo 100 procesos.
     const items = await client.buscarTodo({
       ttl_cambio_ms: ttlMs,
       estado: 'publicada',
-      tamano_pagina: 50
+      tamano_pagina: TAMANO_PAGINA_SEGURO,
     });
 
     console.log(`[${timestamp}] Se encontraron ${items.length} procesos modificados/creados recientemente.`);

@@ -7,8 +7,9 @@
 
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { CompraAgilClient, CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
+import { conNotaHoraria, enHoraDeChile } from '../utils/fechas.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'obtener_detalle_compra';
@@ -17,6 +18,7 @@ const TOOL_DESCRIPTION = `Obtiene el detalle completo de una Compra Ágil espec�
 Incluye: descripción del proceso, productos solicitados con cantidades, proveedores que cotizaron con sus montos,
 presupuesto disponible, dirección y plazo de entrega, estado de la Orden de Compra (si fue emitida),
 y flags de sostenibilidad (requisitos medioambientales y de impacto social).
+La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.
 NOTA: Las cotizaciones detalladas de los proveedores solo se muestran desde el estado "Cerrada" en segundo llamado en adelante.`;
 
 const inputSchema = {
@@ -24,6 +26,18 @@ const inputSchema = {
     'Código único de la Compra Ágil. Formato: XXXXXX-YYY-COTXX. Ej: "1057539-228-COT26".'
   ),
 };
+
+/** Fechas del detalle. `cierre` es el texto de la API; `cierre_hora_chile` es la misma lectura UTC en hora de Chile. */
+export function fechasDeDetalle(detalle: Pick<CompraAgilDetalle, 'fechas' | 'convocatoria'>) {
+  return {
+    publicacion: detalle.fechas.fecha_publicacion,
+    cierre: detalle.fechas.fecha_cierre,
+    cierre_hora_chile: enHoraDeChile(detalle.fechas.fecha_cierre),
+    cierre_primer_llamado: detalle.convocatoria.fecha_cierre_primer_llamado,
+    cierre_segundo_llamado: detalle.convocatoria.fecha_cierre_segundo_llamado,
+    cancelacion: detalle.fechas.fecha_cancelacion,
+  };
+}
 
 export function registerDetalleCompra(server: McpServer, client: CompraAgilClient): void {
   server.registerTool(
@@ -41,7 +55,7 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
         const detalle = await client.detalle(args.codigo);
 
         // Formatear para LLM — estructura limpia y legible
-        const result = {
+        const result = conNotaHoraria({
           codigo: detalle.codigo,
           nombre: detalle.nombre,
           descripcion: detalle.descripcion,
@@ -53,13 +67,7 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
             unidad: detalle.institucion.unidad_compra,
             region: detalle.institucion.nombre_region,
           },
-          fechas: {
-            publicacion: detalle.fechas.fecha_publicacion,
-            cierre: detalle.fechas.fecha_cierre,
-            cierre_primer_llamado: detalle.convocatoria.fecha_cierre_primer_llamado,
-            cierre_segundo_llamado: detalle.convocatoria.fecha_cierre_segundo_llamado,
-            cancelacion: detalle.fechas.fecha_cancelacion,
-          },
+          fechas: fechasDeDetalle(detalle),
           presupuesto: {
             tipo: detalle.presupuesto.tipo_presupuesto,
             monto_disponible_clp: detalle.presupuesto.monto_disponible_clp,
@@ -115,7 +123,7 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
             id: d.id,
             nombre: d.nombre,
           })),
-        };
+        });
 
         return {
           content: [{
