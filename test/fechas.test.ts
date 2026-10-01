@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { parsearFechaApi, esFechaAmbigua, enHoraDeChile, NOTA_ZONA_HORARIA } from '../src/utils/fechas.js';
+import { parsearFechaApi, esFechaAmbigua, enHoraDeChile, NOTA_ZONA_HORARIA, conNotaHoraria } from '../src/utils/fechas.js';
+import { resumirCompraBusqueda } from '../src/tools/buscar-compras.js';
+import { fechasDeDetalle } from '../src/tools/detalle-compra.js';
+import { resumirCambio } from '../src/tools/monitorear-cambios.js';
 import { evaluarOportunidad } from '../src/tools/radar-oportunidades.js';
 import type { CompraAgilItem } from '../src/api/compra-agil-client.js';
 
@@ -79,6 +82,44 @@ describe('la nota advierte lo que hay que advertir', () => {
     expect(NOTA_ZONA_HORARIA).toMatch(/UTC/);
     expect(NOTA_ZONA_HORARIA).toMatch(/3 horas/);
     expect(NOTA_ZONA_HORARIA).toMatch(/ficha/i);
+  });
+
+  it('queda primera en el JSON, antes de las fechas', () => {
+    const salida = conNotaHoraria({ fecha_cierre: '2026-09-11 12:00' });
+    expect(Object.keys(salida)[0]).toBe('_nota_horaria');
+    expect(salida._nota_horaria).toBe(NOTA_ZONA_HORARIA);
+    expect(salida.fecha_cierre).toBe('2026-09-11 12:00');
+  });
+});
+
+describe('búsqueda, detalle y monitoreo declaran la hora', () => {
+  it('el listado conserva el cierre crudo y agrega la hora de Chile', () => {
+    const r = resumirCompraBusqueda(item('2026-09-11 12:00'));
+    expect(r.fecha_cierre).toBe('2026-09-11 12:00');
+    expect(r.fecha_cierre_hora_chile).toBe('2026-09-11 09:00');
+  });
+
+  it('el detalle hace lo mismo con la clave cierre', () => {
+    const base = item('2026-10-05 14:00');
+    const r = fechasDeDetalle({
+      fechas: base.fechas,
+      convocatoria: {
+        estado_convocatoria: 1,
+        descripcion: 'Primer llamado',
+        fecha_cierre_primer_llamado: '2026-10-05T14:00:00Z',
+        fecha_cierre_segundo_llamado: null,
+      },
+    });
+    expect(r.cierre).toBe('2026-10-05 14:00');
+    expect(r.cierre_hora_chile).toBe('2026-10-05 11:00');
+    expect(r.cierre_primer_llamado).toBe('2026-10-05T14:00:00Z');
+  });
+
+  it('el monitoreo no deja el cierre solo', () => {
+    const r = resumirCambio(item('2026-09-11 12:00'));
+    expect(r.fecha_cierre).toBe('2026-09-11 12:00');
+    expect(r.fecha_cierre_hora_chile).toBe('2026-09-11 09:00');
+    expect(r.ultimo_cambio).toBe('2026-09-10T09:00:00Z');
   });
 });
 

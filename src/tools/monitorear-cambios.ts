@@ -9,8 +9,10 @@
 
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
+import { conNotaHoraria, enHoraDeChile } from '../utils/fechas.js';
+import { TAMANO_PAGINA_SEGURO, textoPagina } from '../utils/paginacion.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'monitorear_cambios_recientes';
@@ -21,12 +23,13 @@ La ventana se define de UNA de dos formas, mutuamente excluyentes:
   • Relativa: 'minutos' (últimos N minutos, máx 1440 = 24h). Es el modo por defecto (60 min).
   • Absoluta: 'cambio_desde' + 'cambio_hasta' (rango ISO-8601 arbitrario), para resincronizar un período pasado
     o retomar desde el último timestamp procesado, sin el techo de 24 horas.
-Puede combinarse con filtros de estado y región para acotar los resultados.`;
+Puede combinarse con filtros de estado y región para acotar los resultados.
+La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "fecha_cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.`;
 
 /** Acepta ISO-8601 con 'Z' o con offset (±HH:MM). Los segundos son opcionales. */
 const ISO_8601 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 
-const inputSchema = {
+export const inputSchema = {
   minutos: z.number().min(1).max(1440).optional().describe(
     'Ventana RELATIVA: buscar cambios en los últimos N minutos. Ej: 60 = última hora, 1440 = últimas 24 horas. Máximo 1440 (24h). Se usa 60 por defecto si no se indica ni "minutos" ni un rango. No combinar con "cambio_desde"/"cambio_hasta".'
   ),
@@ -42,8 +45,8 @@ const inputSchema = {
   region: z.string().optional().describe(
     'Código(s) de región, separados por coma. Ej: "13" para Metropolitana.'
   ),
-  tamano_pagina: z.number().min(10).max(50).default(50).describe(
-    'Resultados por página (10-50, default 50).'
+  tamano_pagina: z.number().min(10).max(50).default(TAMANO_PAGINA_SEGURO).describe(
+    'Resultados por página (10-50, default 10). Una página de 50 sobre un filtro amplio responde HTTP 504. Para ver más, pide numero_pagina siguiente.'
   ),
   numero_pagina: z.number().min(1).optional().describe(
     'Número de página a consultar (comienza en 1).'
@@ -121,6 +124,21 @@ export function resolverVentanaCambios(args: {
   };
 }
 
+/** Igual que el listado de búsqueda: el cierre crudo y su lectura en hora de Chile. */
+export function resumirCambio(item: CompraAgilItem) {
+  return {
+    codigo: item.codigo,
+    nombre: item.nombre,
+    estado: item.estado.glosa,
+    presupuesto_clp: item.montos.monto_disponible_clp,
+    institucion: item.institucion.organismo_comprador,
+    region: item.institucion.nombre_region,
+    fecha_cierre: item.fechas.fecha_cierre,
+    fecha_cierre_hora_chile: enHoraDeChile(item.fechas.fecha_cierre),
+    ultimo_cambio: item.fechas.fecha_ultimo_cambio,
+  };
+}
+
 export function registerMonitorearCambios(server: McpServer, client: CompraAgilClient): void {
   server.registerTool(
     TOOL_NAME,
@@ -150,23 +168,14 @@ export function registerMonitorearCambios(server: McpServer, client: CompraAgilC
           numero_pagina: args.numero_pagina,
         });
 
-        const summary = response.items.map((item) => ({
-          codigo: item.codigo,
-          nombre: item.nombre,
-          estado: item.estado.glosa,
-          presupuesto_clp: item.montos.monto_disponible_clp,
-          institucion: item.institucion.organismo_comprador,
-          region: item.institucion.nombre_region,
-          fecha_cierre: item.fechas.fecha_cierre,
-          ultimo_cambio: item.fechas.fecha_ultimo_cambio,
-        }));
+        const summary = response.items.map(resumirCambio);
 
-        const result = {
+        const result = conNotaHoraria({
           ventana_temporal: ventana.descripcion,
           total_resultados: response.paginacion.total_resultados,
-          pagina: `${response.paginacion.numero_pagina} de ${response.paginacion.total_paginas}`,
+          pagina: textoPagina(response.paginacion.numero_pagina, response.paginacion.total_paginas),
           resultados: summary,
-        };
+        });
 
         return {
           content: [{

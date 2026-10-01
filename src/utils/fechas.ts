@@ -71,6 +71,14 @@ export const NOTA_ZONA_HORARIA =
   'Como la API no lo especifica, confirma el plazo exacto en la ficha del proceso antes de comprometerte.';
 
 /**
+ * Pone la nota al inicio del JSON que ve el modelo. No cambia ninguna fecha:
+ * la suposición UTC sigue abierta y la nota pide confirmar en la ficha.
+ */
+export function conNotaHoraria<T extends Record<string, unknown>>(datos: T): { _nota_horaria: string } & T {
+  return { _nota_horaria: NOTA_ZONA_HORARIA, ...datos };
+}
+
+/**
  * Misma fecha, expresada también en hora de Chile, para que el usuario no tenga
  * que hacer la resta mental. Devuelve `null` si la fecha no se pudo interpretar.
  */
