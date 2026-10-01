@@ -49,6 +49,11 @@ describe('E2E: API → cliente → radar → informe', () => {
     const client = new CompraAgilClient(TICKET_FALSO);
     const datos = await recolectarDatosRadar(client, { max_paginas: 1 }, AHORA);
 
+    const urlRadar = String(fetchSpy.mock.calls[0][0]);
+    expect(urlRadar).toContain('estado=publicada');
+    expect(urlRadar).toContain('tamano_pagina=10');
+    expect(urlRadar).not.toContain('tamano_pagina=50');
+
     // El fixture trae 3 procesos, pero uno ya cerró → el radar debe descartarlo.
     expect(datos.totalAnalizadas).toBe(2);
     expect(datos.oportunidades.map((o) => o.codigo)).not.toContain('9999-99-COT26');
@@ -122,6 +127,28 @@ describe('E2E: API → cliente → radar → informe', () => {
 
     const client = new CompraAgilClient(TICKET_FALSO);
     await expect(client.buscar({})).rejects.toMatchObject({ httpStatus: 403 });
+  });
+
+  it('un 504 nombra la búsqueda que falló y no filtra el ticket', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 504,
+      json: async () => { throw new Error('gateway timeout'); },
+    })));
+
+    const client = new CompraAgilClient(TICKET_FALSO);
+    try {
+      await client.buscar({ estado: 'publicada', region: '13', tamano_pagina: 50, numero_pagina: 1 });
+      expect.unreachable('debió lanzar');
+    } catch (e: any) {
+      expect(e.httpStatus).toBe(504);
+      expect(e.actionableMessage).toContain('GET /v2/compra-agil?');
+      expect(e.actionableMessage).toContain('estado=publicada');
+      expect(e.actionableMessage).toContain('region=13');
+      expect(e.actionableMessage).toContain('tamano_pagina=50');
+      expect(e.actionableMessage).not.toContain('desierta');
+      expect(e.actionableMessage).not.toContain(TICKET_FALSO);
+    }
   });
 
   it('un mensaje de error de la API que haga eco del ticket sale redactado', async () => {

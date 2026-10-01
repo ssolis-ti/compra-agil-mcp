@@ -17,7 +17,7 @@ const inputSchema = {
   q: z.string().optional().describe('Término de búsqueda opcional para acotar a un rubro o producto específico (ej: "licencias").'),
   presupuesto_minimo: z.number().optional().describe('Filtrar solo procesos con presupuesto disponible mayor o igual a este monto en CLP.'),
   limite_resultados: z.number().min(1).max(20).default(10).optional().describe('Cantidad máxima de oportunidades destacadas a retornar (1-20, default 10).'),
-  max_paginas: z.number().min(1).max(10).default(3).optional().describe('Cuántas páginas de 50 resultados escanear antes de rankear (1-10, default 3 = hasta 150 procesos). Cada página es una consulta secuencial de 10-17 s (medido en septiembre de 2026), así que 3 páginas rondan los 30-50 s. Más páginas dan más cobertura, pero cuestan cuota y tiempo de forma lineal.'),
+  max_paginas: z.number().min(1).max(10).default(3).optional().describe('Cuántas páginas de 10 resultados escanear antes de rankear (1-10, default 3 = hasta 30 procesos). Cada página es una consulta secuencial de unos 8 s (medido el 1 de octubre de 2026: publicada + región, tamano_pagina=10). La misma búsqueda con tamano_pagina=50 responde HTTP 504. Más páginas dan más cobertura y cuestan cuota y tiempo de forma lineal.'),
 };
 
 export interface OportunidadRadar {
@@ -190,7 +190,10 @@ export async function recolectarDatosRadar(
     estado: 'publicada',
     region: params.region || undefined,
     q: params.q || undefined,
-    tamano_pagina: 50,
+    // Página de 10, no de 50. Medido el 1 de octubre de 2026: publicada + región
+    // con tamano_pagina=50 agota la pasarela (HTTP 504 a los ~30 s); con 10 la
+    // misma búsqueda respondió en ~8 s. 10 es el mínimo que acepta la API.
+    tamano_pagina: 10,
   }, maxPaginas);
 
   const minBudget = params.presupuesto_minimo || 0;
