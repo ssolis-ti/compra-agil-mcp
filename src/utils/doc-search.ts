@@ -123,3 +123,41 @@ export function buscarEnTexto(
   candidatos.sort((a, b) => b.puntaje - a.puntaje);
   return { fragmentos: candidatos.slice(0, maxFragmentos), terminos, ausentes };
 }
+
+/** Nombre del manual que describe el comportamiento medido de este servidor. */
+export const ARCHIVO_MANUAL_SERVIDOR = 'manual_servidor_mcp.md';
+
+export function esManualServidor(archivo: string): boolean {
+  return archivo.replace(/\\/g, '/').toLowerCase().endsWith(ARCHIVO_MANUAL_SERVIDOR);
+}
+
+export interface ResultadoArchivo {
+  archivo: string;
+  /** Puntaje del mejor fragmento de ese archivo. */
+  mejorPuntaje: number;
+}
+
+/**
+ * Pone el manual del servidor al frente cuando coincidió de verdad.
+ *
+ * La guía de ChileCompra describe la API prometida y, en el orden del disco,
+ * se lee antes. Una coincidencia de un solo término no alcanza cuando la
+ * consulta tiene varios: si no, "multas de compra" adelantaría el manual
+ * por la palabra "compra" y taparía la guía de multas.
+ */
+export function anteponerManualServidor<T extends ResultadoArchivo>(
+  resultados: T[],
+  cantidadTerminos: number,
+): { resultados: T[]; manualPrimero: boolean } {
+  const indice = resultados.findIndex((r) => esManualServidor(r.archivo));
+  if (indice < 0) return { resultados, manualPrimero: false };
+
+  const umbral = cantidadTerminos <= 1 ? 1 : 2;
+  if (resultados[indice].mejorPuntaje < umbral) {
+    return { resultados, manualPrimero: false };
+  }
+
+  const manual = resultados[indice];
+  const resto = resultados.filter((_, i) => i !== indice);
+  return { resultados: [manual, ...resto], manualPrimero: true };
+}

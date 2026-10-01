@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { normalizar, tokenizar, buscarEnTexto } from '../src/utils/doc-search.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor } from '../src/utils/doc-search.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Regresión del fallo original: la búsqueda comparaba la consulta completa
@@ -91,5 +96,65 @@ describe('buscarEnTexto — el fallo que motivó el módulo', () => {
     const largo = Array(50).fill('el proveedor incumple el plazo').join('\n');
     const r = buscarEnTexto(largo, 'proveedor', 5);
     expect(r.fragmentos.length).toBe(5);
+  });
+});
+
+describe('anteponerManualServidor', () => {
+  it('pone el manual delante y conserva el orden del resto', () => {
+    const r = anteponerManualServidor([
+      { archivo: 'api/Documentacion_API_Compra_Agil.md', mejorPuntaje: 6 },
+      { archivo: 'api/manual_servidor_mcp.md', mejorPuntaje: 3 },
+      { archivo: 'guias/multas.pdf', mejorPuntaje: 4 },
+    ], 4);
+    expect(r.manualPrimero).toBe(true);
+    expect(r.resultados.map((x) => x.archivo)).toEqual([
+      'api/manual_servidor_mcp.md',
+      'api/Documentacion_API_Compra_Agil.md',
+      'guias/multas.pdf',
+    ]);
+  });
+
+  it('una coincidencia de un solo término no adelanta el manual si la consulta tiene varios', () => {
+    const r = anteponerManualServidor([
+      { archivo: 'guias/multas.pdf', mejorPuntaje: 2 },
+      { archivo: 'api/manual_servidor_mcp.md', mejorPuntaje: 1 },
+    ], 2);
+    expect(r.manualPrimero).toBe(false);
+    expect(r.resultados[0].archivo).toBe('guias/multas.pdf');
+  });
+
+  it('reconoce el manual con separadores de Windows', () => {
+    const r = anteponerManualServidor([
+      { archivo: 'api/guia.md', mejorPuntaje: 3 },
+      { archivo: 'api\\manual_servidor_mcp.md', mejorPuntaje: 2 },
+    ], 3);
+    expect(r.manualPrimero).toBe(true);
+    expect(r.resultados[0].archivo).toMatch(/manual_servidor_mcp\.md$/);
+  });
+
+  it('la pregunta de OC y adjunto abre con el manual, no con la guía oficial', () => {
+    const dir = path.join(__dirname, '../docs/api');
+    const manual = fs.readFileSync(path.join(dir, 'manual_servidor_mcp.md'), 'utf8');
+    const guia = fs.readFileSync(path.join(dir, 'Documentacion_API_Compra_Agil.md'), 'utf8');
+    const consulta = 'como verifico si hay orden de compra y si puedo descargar el adjunto';
+    const hallazgoManual = buscarEnTexto(manual, consulta);
+    const hallazgoGuia = buscarEnTexto(guia, consulta);
+
+    expect(hallazgoManual.fragmentos.length).toBeGreaterThan(0);
+    expect(hallazgoManual.fragmentos[0].puntaje).toBeGreaterThanOrEqual(2);
+
+    const r = anteponerManualServidor([
+      {
+        archivo: 'api/Documentacion_API_Compra_Agil.md',
+        mejorPuntaje: hallazgoGuia.fragmentos[0]?.puntaje ?? 0,
+      },
+      {
+        archivo: 'api/manual_servidor_mcp.md',
+        mejorPuntaje: hallazgoManual.fragmentos[0]?.puntaje ?? 0,
+      },
+    ], hallazgoManual.terminos.length);
+
+    expect(r.manualPrimero).toBe(true);
+    expect(r.resultados[0].archivo).toBe('api/manual_servidor_mcp.md');
   });
 });

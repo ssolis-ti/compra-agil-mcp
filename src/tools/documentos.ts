@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
-import { buscarEnTexto } from '../utils/doc-search.js';
+import { anteponerManualServidor, buscarEnTexto } from '../utils/doc-search.js';
 import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
@@ -210,7 +210,7 @@ export function registerDocumentosTools(server: McpServer): void {
     {
       title: "Consultar las guías locales",
       annotations: { readOnlyHint: true, openWorldHint: false },
-      description: 'Busca y lee información dentro de los manuales, normativas o guías de Compra Ágil almacenados localmente en la carpeta docs/ (soporta formatos .pdf, .txt, .md).',
+      description: 'Busca en los manuales y guías locales de docs/ (.pdf, .txt, .md). Si el manual de este servidor coincide con la consulta, sus fragmentos van primero: describen el comportamiento medido. La guía oficial de ChileCompra describe la API prometida y puede contradecirlo.',
       inputSchema: {
         query: z.string().optional().describe('Qué buscar. Admite tanto un término suelto ("multas", "garantía") como una pregunta en lenguaje natural ("¿qué multas me pueden aplicar?"): la consulta se descompone en términos y se ignoran acentos y palabras vacías. Si se omite, lista los documentos disponibles.'),
         max_caracteres: z.number().min(500).max(15000).default(3000).optional().describe('Cantidad máxima de texto a retornar de cada coincidencia.'),
@@ -248,7 +248,8 @@ export function registerDocumentosTools(server: McpServer): void {
           };
         }
 
-        const results: string[] = [];
+        const coincidencias: { archivo: string; mejorPuntaje: number; texto: string }[] = [];
+        const errores: string[] = [];
         // Términos que sí aparecieron en algún documento, para poder explicar
         // un resultado vacío en vez de afirmar que no existe información.
         const terminosEncontrados = new Set<string>();
@@ -280,12 +281,19 @@ export function registerDocumentosTools(server: McpServer): void {
               const matchesText = hallazgo.fragmentos.map((f) => f.texto).join('\n\n---\n\n');
               const truncated = matchesText.length > limit ? `${matchesText.substring(0, limit)}... [TRUNCADO]` : matchesText;
               const cubiertos = [...new Set(hallazgo.fragmentos.flatMap((f) => f.terminos))];
-              results.push(`### Archivo: ${file}\n(términos encontrados aquí: ${cubiertos.join(', ')})\n\n${truncated}`);
+              coincidencias.push({
+                archivo: file,
+                mejorPuntaje: hallazgo.fragmentos[0]?.puntaje ?? 0,
+                texto: `### Archivo: ${file}\n(términos encontrados aquí: ${cubiertos.join(', ')})\n\n${truncated}`,
+              });
             }
           } catch (e: any) {
-            results.push(`### Archivo: ${file}\nError al leer o parsear: ${safeError(e)}`);
+            errores.push(`### Archivo: ${file}\nError al leer o parsear: ${safeError(e)}`);
           }
         }
+
+        const orden = anteponerManualServidor(coincidencias, terminosConsulta.length);
+        const results = [...orden.resultados.map((r) => r.texto), ...errores];
 
         if (results.length === 0) {
           const detalle = terminosConsulta.length > 0
@@ -299,10 +307,14 @@ export function registerDocumentosTools(server: McpServer): void {
           };
         }
 
+        const aviso = orden.manualPrimero
+          ? '\n\nEl primer archivo es el manual de este servidor. Describe el comportamiento medido. Los archivos que siguen, incluida la guía de ChileCompra, describen la API prometida y pueden contradecirlo.'
+          : '';
+
         return {
           content: [{
             type: 'text' as const,
-            text: `Resultados de búsqueda para "${args.query}" en documentos locales:\n\n${results.join('\n\n====================\n\n')}`,
+            text: `Resultados de búsqueda para "${args.query}" en documentos locales:${aviso}\n\n${results.join('\n\n====================\n\n')}`,
           }],
         };
       } catch (error: any) {
