@@ -354,7 +354,16 @@ export class CompraAgilClient {
       this.rateLimiter.recordRequest();
     }
 
-    const payload = await handleApiResponse(response);
+    let payload: unknown;
+    try {
+      payload = await handleApiResponse(response);
+    } catch (error) {
+      if (error instanceof CompraAgilApiError) {
+        const consulta = `GET ${sanitizedUrl.pathname}${sanitizedUrl.search}`;
+        throw new CompraAgilApiError(error.httpStatus, error.apiErrors, consulta);
+      }
+      throw error;
+    }
 
     // Solo se guardan respuestas exitosas: un error no debe quedar congelado.
     const ttl = path.includes('/compra-agil/') ? TTL_DETALLE_SEG : TTL_BUSQUEDA_SEG;

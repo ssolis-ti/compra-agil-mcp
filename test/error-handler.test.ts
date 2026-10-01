@@ -54,4 +54,31 @@ describe('CompraAgilApiError.actionableMessage', () => {
     const err = new CompraAgilApiError(400, [{ codigo: '400', mensaje: 'fecha inválida', detalle: null }]);
     expect(err.actionableMessage).toContain('fecha inválida');
   });
+
+  it('un 504 sin llamada no inventa la causa desierta', () => {
+    const err = new CompraAgilApiError(504, []);
+    expect(err.actionableMessage).toContain('HTTP 504');
+    expect(err.actionableMessage).not.toContain('desierta');
+    expect(err.actionableMessage).not.toContain('La llamada que falló');
+  });
+
+  it('un 504 nombra la llamada publicada y no culpa a desierta', () => {
+    const consulta = 'GET /v2/compra-agil?estado=publicada&region=13&tamano_pagina=50&numero_pagina=1';
+    const err = new CompraAgilApiError(504, [], consulta);
+    expect(err.actionableMessage).toContain(consulta);
+    expect(err.actionableMessage).not.toContain('desierta');
+  });
+
+  it('un 504 de texto sobre desierta sí nombra esa combinación', () => {
+    const consulta = 'GET /v2/compra-agil?estado=desierta&q=resma&tamano_pagina=50';
+    const err = new CompraAgilApiError(504, [], consulta);
+    expect(err.actionableMessage).toContain(consulta);
+    expect(err.actionableMessage).toContain('búsqueda de texto y estado=desierta');
+  });
+
+  it('redacta el ticket si la llamada que falló lo trae', () => {
+    const err = new CompraAgilApiError(502, [], 'GET /servicios/v1/publico/OrdenCompra.json?ticket=SECRETO-NO-IMPRIMIR&codigo=X');
+    expect(err.actionableMessage).not.toContain('SECRETO-NO-IMPRIMIR');
+    expect(err.actionableMessage).toContain('ticket=[REDACTED]');
+  });
 });

@@ -24,23 +24,40 @@ export class CompraAgilApiError extends Error {
   public readonly httpStatus: number;
   public readonly apiErrors: ApiError[];
   public readonly actionableMessage: string;
+  /** Llamada que falló, ya sin ticket. Vacío cuando el error es local (cuota). */
+  public readonly consulta: string;
 
-  constructor(httpStatus: number, apiErrors: ApiError[] = []) {
-    const actionable = getActionableMessage(httpStatus, apiErrors);
+  constructor(httpStatus: number, apiErrors: ApiError[] = [], consulta = '') {
+    const actionable = getActionableMessage(httpStatus, apiErrors, consulta);
     super(actionable);
     this.name = 'CompraAgilApiError';
     this.httpStatus = httpStatus;
     this.apiErrors = apiErrors;
+    this.consulta = consulta;
     this.actionableMessage = actionable;
   }
 }
 
-function getActionableMessage(httpStatus: number, apiErrors: ApiError[]): string {
+/**
+ * La combinación medida como la más lenta: texto (`q`) sobre `estado=desierta`.
+ * Solo se menciona si ESA llamada la trae. Un 504 de otro filtro no es esa causa.
+ */
+function esTextoSobreDesierta(consulta: string): boolean {
+  const separador = consulta.indexOf('?');
+  if (separador < 0) return false;
+  const params = new URLSearchParams(consulta.slice(separador + 1));
+  const estado = params.get('estado') ?? '';
+  const texto = params.get('q');
+  return estado.split(',').includes('desierta') && texto !== null && texto !== '';
+}
+
+function getActionableMessage(httpStatus: number, apiErrors: ApiError[], consulta = ''): string {
   // El mensaje viene de la API: no se controla su contenido y podría hacer eco
   // de la URL solicitada (que en el endpoint legado lleva el ticket en la query).
   const detail = apiErrors.length > 0
     ? ` Detalle de la API: "${redact(apiErrors[0].mensaje ?? '')}"`
     : '';
+  const llamada = consulta ? ` La llamada que falló: ${redact(consulta)}.` : '';
 
   switch (httpStatus) {
     case 400:
@@ -58,13 +75,16 @@ function getActionableMessage(httpStatus: number, apiErrors: ApiError[]): string
     case 503:
       return `El servicio de Mercado Público está temporalmente no disponible (posible mantenimiento). Reintenta más tarde.${detail}`;
     // 502 y 504 no están en la tabla de errores de la guía oficial, pero la API
-    // los devuelve: se observó un 504 sistemático (septiembre 2026) al pedir
-    // tamano_pagina=50 sobre `estado=desierta` con búsqueda de texto — la
-    // pasarela corta a los ~30 s. Sin este caso caían en "Error inesperado", que
-    // hacía parecer un fallo del cliente lo que es una lentitud del servicio.
+    // los devuelve: la pasarela corta a los ~30 s. El mensaje nombra la llamada
+    // real. La nota de texto+desierta se agrega solo cuando esa llamada la trae:
+    // decirla siempre hacía que el agente cambiara un filtro que no había usado.
     case 502:
-    case 504:
-      return `La pasarela de Mercado Público cortó la conexión antes de que la API respondiera (HTTP ${httpStatus}): la consulta tardó demasiado, no es un error de tus parámetros. Reintenta, y si se repite reduce el trabajo por consulta — un 'tamano_pagina' más chico, menos 'limite_analisis' o un filtro más específico. Las búsquedas por texto sobre 'estado=desierta' son las más lentas.${detail}`;
+    case 504: {
+      const pistaLenta = esTextoSobreDesierta(consulta)
+        ? ' Esta llamada combina búsqueda de texto y estado=desierta, la combinación más lenta medida.'
+        : '';
+      return `La pasarela de Mercado Público cortó la conexión antes de que la API respondiera (HTTP ${httpStatus}).${llamada} La consulta tardó demasiado. Reintenta, y si se repite reduce el trabajo de esa misma llamada: baja 'tamano_pagina' (mínimo 10), baja 'limite_analisis' o 'max_paginas', o agrega un filtro. Un 'tamano_pagina' de 50 sobre un filtro amplio agota los ~30 s de la pasarela.${pistaLenta}${detail}`;
+    }
     default:
       return `Error inesperado HTTP ${httpStatus} de la API de Compra Ágil.${detail}`;
   }
