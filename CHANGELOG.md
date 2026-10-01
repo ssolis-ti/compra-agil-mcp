@@ -4,6 +4,18 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [Unreleased]
+
+### Corregido
+* **`radar_oportunidades_calientes` pedía páginas de 50 y la pasarela las cortaba.** Medido el 1 de octubre de 2026: `estado=publicada` + región con `tamano_pagina=10` respondió en ~8 s; la misma búsqueda con 50 devolvió HTTP 504 a los ~30 s. El radar y el informe que usa los mismos datos piden ahora 10, el mínimo de la API. `max_paginas` sigue en 3, así que el barrido por defecto cubre 30 procesos.
+* **El texto del 504 culpaba siempre a una búsqueda que no se había hecho.** Decía que lo más lento es texto sobre `estado=desierta` en cualquier corte de pasarela. Ahora nombra la llamada real (`GET` + ruta + query, sin ticket) y esa nota aparece solo cuando la llamada trae las dos cosas.
+* **`buscar_compras_agiles`, `obtener_detalle_compra` y `monitorear_cambios_recientes` devolvían el cierre sin zona.** El radar ya decía que `"2026-09-11 12:00"` se lee como UTC y mostraba la hora de Chile. Esas tres herramientas entregaban el texto crudo. Ahora incluyen `_nota_horaria` y la hora de Chile junto al valor de la API. Sigue sin resolverse si la API habla en UTC o en hora de Chile: la suposición es UTC, y la nota pide confirmar el plazo en la ficha.
+* **`buscar_compras_agiles` decía que la página por defecto era 15 y no enviaba ninguna.** El tamaño quedaba en manos de la API. Ahora, si no se indica, pide 10.
+* **El monitoreo pedía páginas de 50.** `monitorear_cambios_recientes` usaba ese default y el daemon `monitor.ts` también. El mismo tamaño, sobre `publicada` + región, respondió HTTP 504 el 1 de octubre de 2026. Ahora piden 10, el mínimo de la API. El daemon sigue cortando a las 10 páginas, así que un ciclo cubre como máximo 100 procesos. El prompt `buscar_oportunidades_proveedor` ya no pide 50.
+* **`buscar_compras_agiles` aceptaba una llamada sin filtros y la API respondía HTTP 500.** Ahora se rechaza en el servidor, sin gastar cuota, si no viene `estado`, `region`, `q`, `id`, `publicado_desde` o `publicado_hasta`. Orden, página y palabras clave locales no cuentan.
+* **Una ventana sin resultados decía "1 de 0".** La API responde `numero_pagina=1` y `total_paginas=0`. `monitorear_cambios_recientes` y `buscar_compras_agiles` copiaban esos números. Ahora `pagina` dice `0 de 0`.
+* **`consultar_documentos_locales` abría con la guía oficial.** Una pregunta sobre orden de compra y adjuntos devolvía primero `Documentacion_API_Compra_Agil.md`, que promete `oc_emitida` y descarga directa. El manual de este servidor quedaba detrás. Si ese manual coincide en al menos dos términos —o en el único término de una consulta corta— ahora va primero, y la respuesta lo dice. `docs/internals/` sigue fuera del índice.
+
 ## [2.5.0] - 2026-09-08
 
 QA de calidad de salida —no de "¿responde?" sino de "¿sirve lo que devuelve?"— sobre las herramientas de análisis. Las tres podían fallar por completo, y el motivo estaba en su propio código.
