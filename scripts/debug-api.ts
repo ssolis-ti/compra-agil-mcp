@@ -98,7 +98,9 @@ const CASOS: Caso[] = [
   // ¿Es cierto el mínimo de 10 en tamano_pagina?
   { nombre: 'tamano_pagina=1 (probar minimo)', path: '/v2/compra-agil', params: { estado: 'publicada', tamano_pagina: 1 } },
   { nombre: 'tamano_pagina=5', path: '/v2/compra-agil', params: { estado: 'publicada', tamano_pagina: 5 } },
-  { nombre: 'tamano_pagina=50 (maximo)', path: '/v2/compra-agil', params: { estado: 'publicada', tamano_pagina: 50 } },
+  // Sonda del máximo documentado, no un tamaño de trabajo. publicada + región con 50
+  // devolvió HTTP 504 a los ~30 s el 1 oct 2026. Esta sonda no lleva región.
+  { nombre: 'tamano_pagina=50 (maximo, puede ser 504)', path: '/v2/compra-agil', params: { estado: 'publicada', tamano_pagina: 50 } },
 ];
 
 async function main() {

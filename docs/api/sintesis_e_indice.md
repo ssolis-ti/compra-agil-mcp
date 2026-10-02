@@ -24,10 +24,11 @@ Este documento contiene la síntesis detallada página por página y el índice 
 
 ### 3. Control de Tráfico y Límites (Rate Limiting)
 *   **3.1. Algoritmo Token Bucket y Cuotas** `[Pág. 4]`
-    *   Límites basados en día calendario (reseteo automático a medianoche UTC). ⚠ Verificado contra la API real (septiembre 2026): en la práctica se comporta como un *token bucket* que se recarga solo — tras un 429, el servicio respondió con normalidad 13 minutos después. No esperes al día siguiente; reintenta en minutos.
+    *   La cuota medida es un *token bucket* que se recarga solo. Tras un 429, el servicio respondió con normalidad 13 minutos después (septiembre 2026). No hay que esperar al día siguiente.
+    *   La §4 de la guía dice otra cosa: límite por día calendario, con reseteo a medianoche UTC. Su §7 y su glosario describen el token bucket. Manda lo medido.
 *   **3.2. Gestión del Error 429 (Too Many Requests)** `[Pág. 5]`
     *   Estructura del payload de error.
-    *   Algoritmo para calcular el tiempo de espera dinámico y evitar el bloqueo del ticket.
+    *   Este servidor no calcula la pausa hasta el reseteo diario. Honra `Retry-After` si viene; si no, espera 15 → 30 → 60 → 120 minutos y se reinicia con la primera consulta que sale bien.
 
 ### 4. Referencia de la API (Endpoints y Parámetros)
 *   **4.1. Listado y Búsqueda (`GET /v2/compra-agil`)** `[Pág. 6-7]`
@@ -90,11 +91,11 @@ Este documento contiene la síntesis detallada página por página y el índice 
 
 ### **Página 04**
 *   **Sección:** Autenticación y Control de Cuotas.
-*   **Lógica:** Detalla el uso obligatorio de la cabecera `ticket` y cómo funciona el límite de solicitudes por día calendario (resetea al cambiar de día, no a las 24h). ⚠ La propia guía se contradice: su §7 manda esperar el header Retry-After y su glosario define la cuota como un token bucket que se recarga automáticamente. La medición respalda esto último.
+*   **Lógica:** Detalla el uso obligatorio de la cabecera `ticket`. La §4 describe un límite por día calendario (resetea al cambiar de día UTC, no a las 24 h de Chile). Eso no es lo que hace el servicio: el glosario de la misma guía lo llama token bucket, la §7 manda esperar `Retry-After`, y un 429 medido en septiembre 2026 se recuperó en 13 minutos.
 
 ### **Página 05**
 *   **Sección:** Límite Excedido (Error 429) y Mitigación.
-*   **Lógica:** Estructura de error JSON ante cuota agotada y código para calcular la pausa requerida hasta el reseteo diario. Es la lógica central que debe implementar el controlador de red del MCP para evitar interrupciones o bloqueos del ticket.
+*   **Lógica:** Estructura de error JSON ante cuota agotada. El ejemplo de la guía calcula la pausa hasta el reseteo diario; ese cálculo deja el cliente mudo durante horas. `src/utils/rate-limiter.ts` espera `Retry-After` o, si no viene, 15 → 30 → 60 → 120 minutos. No bloquea hasta el día UTC siguiente.
 
 ### **Página 06**
 *   **Sección:** Endpoints y Filtros de Fecha.
@@ -142,7 +143,7 @@ Este documento contiene la síntesis detallada página por página y el índice 
 
 ### **Página 17**
 *   **Sección:** Ejemplo 8.5 (Paginación automática) y Ejemplo 8.6 (Cruce con OC).
-*   **Lógica:** Bucle incremental de páginas y resolución del problema de emisión de OC mediante inspección profunda de compras en `proveedor_seleccionado`.
+*   **Lógica:** Bucle incremental de páginas. El ejemplo 8.6 busca la OC inspeccionando `proveedor_seleccionado`. Medido sobre 45 procesos y 52 cotizaciones, ese campo valió 0 en todos: la API no publica adjudicaciones. No es un hueco del servidor.
 
 ### **Página 18**
 *   **Sección:** Página en blanco.
