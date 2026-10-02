@@ -145,15 +145,55 @@ export interface ResultadoArchivo {
  * consulta tiene varios: si no, "multas de compra" adelantaría el manual
  * por la palabra "compra" y taparía la guía de multas.
  */
+/** Misma guía en MD y PDF no debe gastar dos cupos. */
+export function claveDocumento(archivo: string): string {
+  const base = archivo.replace(/\\/g, '/').split('/').pop() ?? archivo;
+  return base.replace(/\.(md|pdf|txt)$/i, '').toLowerCase();
+}
+
+export function deduplicarDocumentos<T extends ResultadoArchivo>(resultados: T[]): T[] {
+  const elegidos = new Map<string, T>();
+  for (const actual of resultados) {
+    const clave = claveDocumento(actual.archivo);
+    const previo = elegidos.get(clave);
+    if (!previo) {
+      elegidos.set(clave, actual);
+      continue;
+    }
+    const actualEsMd = actual.archivo.toLowerCase().endsWith('.md');
+    const previoEsPdf = previo.archivo.toLowerCase().endsWith('.pdf');
+    if (actual.mejorPuntaje > previo.mejorPuntaje || (actual.mejorPuntaje === previo.mejorPuntaje && actualEsMd && previoEsPdf)) {
+      elegidos.set(clave, actual);
+    }
+  }
+  const vistos = new Set<string>();
+  const orden: T[] = [];
+  for (const actual of resultados) {
+    const clave = claveDocumento(actual.archivo);
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    const elegido = elegidos.get(clave);
+    if (elegido) orden.push(elegido);
+  }
+  return orden;
+}
+
+/** OC, adjuntos y adjudicación: el manual medido va primero aunque la guía oficial puntúe más. */
+export function consultaSensible(query: string): boolean {
+  const texto = normalizar(query);
+  return /orden de compra|oc emitida|adjunto|adjudic|proveedor seleccion|ganador/.test(texto);
+}
+
 export function anteponerManualServidor<T extends ResultadoArchivo>(
   resultados: T[],
   cantidadTerminos: number,
+  forzar = false,
 ): { resultados: T[]; manualPrimero: boolean } {
   const indice = resultados.findIndex((r) => esManualServidor(r.archivo));
   if (indice < 0) return { resultados, manualPrimero: false };
 
   const umbral = cantidadTerminos <= 1 ? 1 : 2;
-  if (resultados[indice].mejorPuntaje < umbral) {
+  if (!forzar && resultados[indice].mejorPuntaje < umbral) {
     return { resultados, manualPrimero: false };
   }
 
