@@ -40,6 +40,7 @@ import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
 import { registerGenerarInforme } from './tools/generar-informe.js';
 import { registerVerificarTicket } from './tools/verificar-ticket.js';
 import { registerVerificarHora } from './tools/verificar-hora.js';
+import { INSTRUCCIONES } from './instrucciones.js';
 
 // Resources
 import { registerRegionesResource } from './resources/regiones.js';
@@ -99,6 +100,7 @@ async function main() {
       //   característica que el README anuncia como "Logs Nativos en el
       //   Protocolo" nunca había funcionado.
       capabilities: { logging: {} },
+      instructions: INSTRUCCIONES,
     }
   );
 

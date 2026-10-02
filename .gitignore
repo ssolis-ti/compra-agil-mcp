@@ -44,3 +44,6 @@ informes/
 
 # Salidas de depuración (crudas, pueden contener datos de la API)
 debug/
+
+# Grafo local de trabajo. No forma parte del servidor.
+graphify-out/

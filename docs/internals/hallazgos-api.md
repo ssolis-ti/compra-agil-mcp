@@ -7,7 +7,7 @@ La [Guía oficial API Compra Ágil v2 (v3.0, mayo 2026)](../api/Documentacion_AP
 difiere de la realidad en varios puntos. **Este documento gana sobre la guía**: lo
 de abajo está medido, no prometido.
 
-Reproducible con los scripts de `scripts/debug-*.ts`.
+La medición quedó fijada en los tests de `test/quotation-realidad.test.ts`.
 
 ---
 
@@ -165,19 +165,8 @@ Notas:
 
 ---
 
-## Cómo reproducir
-
-```bash
-npx tsx scripts/debug-api.ts          # parámetros, mínimos de paginación, latencia
-npx tsx scripts/debug-estados.ts      # qué estados devuelven datos
-npx tsx scripts/debug-cotizaciones.ts # busca procesos que expongan cotizaciones
-npx tsx scripts/debug-ganadores.ts    # ¿existe algún adjudicado?
-```
-
-Los scripts **redactan su propia salida** (nunca imprimen el ticket) y dejan las
-respuestas crudas en `debug/` —gitignored— para inspección humana.
+## Cómo se sostiene
 
 Los hallazgos están blindados por tests en
-[`test/quotation-realidad.test.ts`](../../test/quotation-realidad.test.ts): si alguien
-"corrige" el código para volver a confiar en la guía oficial, la suite falla y explica
-por qué.
+[`test/quotation-realidad.test.ts`](../../test/quotation-realidad.test.ts). Si el código
+vuelve a tratar la guía oficial como si fuera el comportamiento medido, la suite falla.
