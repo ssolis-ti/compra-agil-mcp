@@ -6,6 +6,10 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-02
+
+Informes para el resto del flujo, y respuestas que dejan de tirar lo que la API ya manda. `generar_informe` con `tipo=radar` sigue igual.
+
 ### Añadido
 * **`generar_informe` tiene cuatro plantillas además del radar.** `cotizacion` presenta el borrador (ítems, neto, IVA 19 % y carta). `precio` grafica la distribución cotizada. `auditoria` muestra las brechas y las recomendaciones. `competencia` compara cotizantes y la brecha entre montos, sin nombrar un adjudicado. Cada una usa la misma recolección que la herramienta JSON. El archivo sigue siendo HTML.
 

@@ -1,6 +1,6 @@
 # Pendientes
 
-Revisado el **1 de octubre de 2026** · versión del paquete: **2.5.0**. Lo de abajo sigue abierto. Lo que el changelog ya cerró está al final.
+Revisado el **2 de octubre de 2026** · versión del paquete: **2.6.0**. Lo de abajo sigue abierto. Lo que el changelog ya cerró está al final.
 
 Priorizado. Cada ítem incluye contexto suficiente para retomarlo sin memoria previa.
 
@@ -48,7 +48,7 @@ porque no es una llamada a `Read`.
 
 ### 3. Completar las plantillas de informe
 
-**Estado:** hecho el 1 de octubre de 2026. Sigue sin publicar (el paquete sigue en 2.5.0).
+**Estado:** incluido en la 2.6.0.
 
 `generar_informe` acepta `radar`, `cotizacion`, `precio`, `auditoria` y `competencia`. Cada una lee el mismo objeto que la herramienta JSON: `construirBorradorCotizacion`, `recolectarDatosPrecios` y `recolectarDatosAuditoria`. `competencia` arma la tabla con `compararCotizantes()` sobre el detalle. Ese bloque no se agregó al JSON de `obtener_detalle_compra` y no marca un adjudicado. El HTML sigue yéndose a disco. El PDF de la sección 4 sigue pendiente.
 
