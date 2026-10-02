@@ -20,7 +20,7 @@ Permite filtrar por palabras clave, estado del proceso, región geográfica y ra
 Retorna un listado resumido con código, nombre, estado, presupuesto e institución compradora.
 La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "fecha_cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.
 Cada resultado trae el RUT del organismo y fecha_ultimo_cambio. motivo_seleccion solo aparece si la API lo envió con texto; un valor presente no prueba que haya un proveedor adjudicado.
-Hay que enviar al menos un filtro de la API: estado, region, q, id, publicado_desde o publicado_hasta. Sin ninguno, la API responde HTTP 500 y esta herramienta no hace la llamada. El orden, la página y las palabras clave locales no cuentan: las palabras se aplican después, sobre la respuesta.
+Hay que enviar al menos un filtro de la API: estado, region, q, id, publicado_desde o publicado_hasta. Sin ninguno, esta herramienta no hace la llamada. Si esa consulta se enviara, la API responde HTTP 500. El orden, la página y las palabras clave locales no cuentan: las palabras se aplican después, sobre la respuesta.
 Nota: los parámetros 'q' (búsqueda por texto) e 'id' (código exacto) son mutuamente excluyentes.
 Estados válidos: publicada, cerrada, desierta, cancelada, proveedor_seleccionado.
 Regiones: códigos del 1 al 16 (ej: 13 = Metropolitana, 5 = Valparaíso).`;
@@ -72,9 +72,9 @@ export function tieneFiltroDeApi(args: Partial<Record<(typeof FILTROS_API)[numbe
 }
 
 const MENSAJE_SIN_FILTRO = [
-  'La API rechaza una búsqueda sin filtros con HTTP 500. No se hizo la llamada.',
-  'Indica al menos uno: estado, region, q, id, publicado_desde o publicado_hasta.',
-  'El orden, el tamaño de página y palabras_clave_requeridas/excluidas no alcanzan: las palabras se filtran aquí, después de que la API responde.',
+  'No se hizo la llamada.',
+  'Indica al menos uno de estos filtros: estado, region, q, id, publicado_desde o publicado_hasta.',
+  'El orden, el tamaño de página y palabras_clave_requeridas/excluidas no cuentan: se aplican aquí, después de que la API responde.',
 ].join(' ');
 
 /** Listado que ve el modelo. El cierre crudo se conserva; al lado va la hora de Chile bajo la suposición UTC. */

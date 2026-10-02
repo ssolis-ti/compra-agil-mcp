@@ -60,7 +60,7 @@ export function registerVerificarTicket(server: McpServer, client: CompraAgilCli
               '',
               `Ticket configurado: ${referencia}`,
               `Consulta de prueba: cambios en la última hora → ${resp.paginacion.total_resultados} resultado(s).`,
-              `Cuota consumida en esta sesión: ${client.getRateLimitStats().requestsToday} request(s).`,
+              `Conteo local del día UTC, compartido por todos los procesos de esta instalación: ${client.getRateLimitStats().requestsToday} request(s). No es el saldo del ticket ni la cuota de este chat.`,
               '',
               'Nota: un total de 0 es normal si no hubo movimientos en la última hora;',
               'lo relevante es que la API respondió correctamente con este ticket.',
