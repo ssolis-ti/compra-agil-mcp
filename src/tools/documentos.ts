@@ -20,7 +20,7 @@ export function registerDocumentosTools(server: McpServer): void {
     {
       title: "Enlace a un adjunto del proceso",
       annotations: { readOnlyHint: true, openWorldHint: false },
-      description: 'Genera el enlace oficial en Mercado Público para acceder a un adjunto de forma pública y sin requerir inicio de sesión.',
+      description: 'Entrega la ficha pública del proceso, que es donde se abre el adjunto. No hay un enlace de descarga que funcione: el enlace heredado responde 404. No requiere iniciar sesión para ver la ficha.',
       inputSchema: {
         id_documento: z.string().describe('ID único del documento. Ej: "123456" o un UUID como "5f47e991-c525-40a0-b36c-44d53e538ae5".'),
         codigo_compra: z.string().describe('Código de la Compra Ágil asociada (Ej: "2494-141-COT26"). Requerido para generar el enlace de la ficha pública.'),
@@ -82,8 +82,8 @@ export function registerDocumentosTools(server: McpServer): void {
         //
         //   Los UUID SÍ se intentan: usan otro endpoint (adjunto.mercadopublico.cl)
         //   que nunca se pudo ejercitar, así que no se da por muerto sin prueba.
-        //   Si algún día vuelven a servirse los numéricos, `scripts/debug-*.ts`
-        //   y esta guarda son el punto por donde revertirlo.
+        //   Si algún día vuelven a servirse los numéricos, esta guarda es el
+        //   punto por donde revertirlo.
         if (!isUuid) {
           const ficha = args.codigo_compra
             ? `\n\nÁbrelo desde la ficha pública del proceso (en un navegador, sin iniciar sesión):\nhttps://buscador.mercadopublico.cl/ficha?code=${args.codigo_compra}`

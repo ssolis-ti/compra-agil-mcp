@@ -42,6 +42,10 @@ export class CompraAgilApiError extends Error {
  * La combinación medida como la más lenta: texto (`q`) sobre `estado=desierta`.
  * Solo se menciona si ESA llamada la trae. Un 504 de otro filtro no es esa causa.
  */
+function esDetallePorCodigo(consulta: string): boolean {
+  return /\/v2\/compra-agil\/[^/?\s]+/.test(consulta);
+}
+
 function esTextoSobreDesierta(consulta: string): boolean {
   const separador = consulta.indexOf('?');
   if (separador < 0) return false;
@@ -80,10 +84,13 @@ function getActionableMessage(httpStatus: number, apiErrors: ApiError[], consult
     // decirla siempre hacía que el agente cambiara un filtro que no había usado.
     case 502:
     case 504: {
+      if (esDetallePorCodigo(consulta)) {
+        return `La pasarela de Mercado Público cortó el detalle por código (HTTP ${httpStatus}).${llamada} Esta llamada no tiene tamaño de página ni otro parámetro que bajar. No reintentes en ráfaga. Espera y, si se repite, confirma el proceso en la ficha pública. Este fallo no dejó el detalle en caché.${detail}`;
+      }
       const pistaLenta = esTextoSobreDesierta(consulta)
         ? ' Esta llamada combina búsqueda de texto y estado=desierta, la combinación más lenta medida.'
         : '';
-      return `La pasarela de Mercado Público cortó la conexión antes de que la API respondiera (HTTP ${httpStatus}).${llamada} La consulta tardó demasiado. Reintenta, y si se repite reduce el trabajo de esa misma llamada: baja 'tamano_pagina' (mínimo 10), baja 'limite_analisis' o 'max_paginas', o agrega un filtro. Un 'tamano_pagina' de 50 sobre un filtro amplio agota los ~30 s de la pasarela.${pistaLenta}${detail}`;
+      return `La pasarela de Mercado Público cortó la conexión antes de que la API respondiera (HTTP ${httpStatus}).${llamada} La consulta tardó demasiado. No reintentes en ráfaga. Si se repite, reduce el trabajo de esa misma llamada: baja 'tamano_pagina' (mínimo 10), baja 'limite_analisis' o 'max_paginas', o agrega un filtro. Un 'tamano_pagina' de 50 sobre un filtro amplio agota los ~30 s de la pasarela.${pistaLenta}${detail}`;
     }
     default:
       return `Error inesperado HTTP ${httpStatus} de la API de Compra Ágil.${detail}`;

@@ -311,7 +311,7 @@ export class CompraAgilClient {
     if (limitCheck.limited) {
       throw new CompraAgilApiError(429, [{
         codigo: '429',
-        mensaje: `Cuota diaria agotada. Se restablece en ${limitCheck.resetIn}.`,
+        mensaje: `Esta instalación ya vio un 429 y espera hasta ${limitCheck.resetIn}. Es un token bucket, no el saldo del ticket ni un bloqueo hasta el día siguiente.`,
         detalle: null,
       }]);
     }

@@ -69,6 +69,15 @@ describe('CompraAgilApiError.actionableMessage', () => {
     expect(err.actionableMessage).not.toContain('desierta');
   });
 
+  it('un 504 de detalle por código no pide bajar el tamaño de página', () => {
+    const consulta = 'GET /v2/compra-agil/3658-476-COT26';
+    const err = new CompraAgilApiError(504, [], consulta);
+    expect(err.actionableMessage).toContain(consulta);
+    expect(err.actionableMessage).toContain('No reintentes en ráfaga');
+    expect(err.actionableMessage).not.toContain('tamano_pagina');
+    expect(err.actionableMessage).toContain('no dejó el detalle en caché');
+  });
+
   it('un 504 de texto sobre desierta sí nombra esa combinación', () => {
     const consulta = 'GET /v2/compra-agil?estado=desierta&q=resma&tamano_pagina=50';
     const err = new CompraAgilApiError(504, [], consulta);

@@ -16,20 +16,24 @@ export function registerEstadisticasUso(server: McpServer, client: CompraAgilCli
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Estado de la cuota de la API",
+      title: "Conteo local del día UTC",
       description: TOOL_DESCRIPTION,
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async () => {
       const stats = client.getRateLimitStats();
       const salida = {
-        _alcance: 'Conteo local de esta instalación para el día UTC en curso. La API no expone el saldo real del ticket; si otras herramientas usan el mismo ticket, el consumo real es mayor que este número.',
+        _alcance: 'Conteo local de esta instalación para el día UTC en curso, compartido por todos los procesos que usan el mismo archivo de estado. La API no expone el saldo real del ticket.',
+        dia_utc: new Date().toISOString().slice(0, 10),
         requests_hechos_hoy: stats.requestsToday,
         cuota_agotada: stats.isLimited,
         reset_estimado: stats.resetTime,
+        reset_estimado_nota: stats.resetTime
+          ? 'Hora en que esta instalación volverá a intentar después de un 429. No es la medianoche ni el saldo oficial.'
+          : 'null porque esta instalación no ha visto un 429 en el día UTC en curso.',
         _nota: stats.isLimited
-          ? 'Se recibió un 429: la cuota diaria del ticket está agotada hasta el reset indicado. Evita nuevas consultas hasta entonces.'
-          : 'No se ha recibido ningún 429 en esta jornada. Eso NO garantiza que quede cuota: solo que esta instalación aún no ha chocado con el límite.',
+          ? 'Se recibió un 429. Es un token bucket que se recarga solo, no un bloqueo hasta el día siguiente, salvo que el 429 dure horas. Espera hasta reset_estimado.'
+          : 'No se ha recibido ningún 429 en este día UTC. El número lo mueven todos los procesos de esta instalación. No es el saldo del ticket.',
       };
       return {
         content: [{
