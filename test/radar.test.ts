@@ -63,7 +63,8 @@ describe('evaluarOportunidad', () => {
   it('expone los factores de calificación de forma legible', () => {
     const r = evaluarOportunidad(item(), NOW)!;
     expect(r.factores_calificacion.length).toBeGreaterThan(0);
-    expect(r.factores_calificacion.some((f) => f.includes('oferentes'))).toBe(true);
+    expect(r.factores_calificacion.some((f) => f.includes('0 ofertas'))).toBe(true);
+    expect(r.factores_calificacion.join(' ')).not.toMatch(/sin leer bases/i);
   });
 });
 

@@ -12,6 +12,6 @@ export const TAMANO_PAGINA_SEGURO = 10;
  * Copiar eso como "1 de 0" parece una página que existe.
  */
 export function textoPagina(numeroPagina: number, totalPaginas: number): string {
-  if (!(totalPaginas > 0)) return '0 de 0';
+  if (!(totalPaginas > 0)) return 'sin resultados en esta ventana';
   return `${numeroPagina} de ${totalPaginas}`;
 }

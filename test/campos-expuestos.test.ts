@@ -65,6 +65,11 @@ describe('buscar expone RUT, último cambio y el motivo solo si hay texto', () =
     expect(r.fecha_ultimo_cambio).toBe('2026-09-10T09:00:00Z');
     expect(r.fecha_ultimo_cambio_hora_chile).toBe('2026-09-10 06:00');
     expect(r).not.toHaveProperty('motivo_seleccion');
+    expect(r.estado_codigo).toBe('publicada');
+    expect(r.estado_convocatoria).toBe(1);
+    expect(r.tipo_cambio).toBeNull();
+    expect(r.tipo_cambio_nota).toMatch(/CLP/);
+    expect(r.fecha_publicacion_hora_chile).toBe('2026-09-10 06:00');
   });
 
   it('omite un motivo vacío o en blanco', () => {

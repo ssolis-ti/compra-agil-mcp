@@ -158,7 +158,7 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
             ``,
             `Resumen del contenido:`,
             `• ${ops.length} oportunidades incluidas (de ${datos.totalAnalizadas} vigentes analizadas)`,
-            `• ${sinOferentes} sin oferentes (competencia cero)`,
+            `• ${sinOferentes} con 0 ofertas en el listado`,
             `• ${ops.filter((o) => o.horas_restantes <= 24).length} cierran en menos de 24 horas`,
             `• Monto total en juego: ${clp(montoTotal)}`,
             mejor ? `• Mejor oportunidad: ${mejor.nombre} (${mejor.codigo}) — ${mejor.puntuacion_caliente} pts` : '',

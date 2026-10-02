@@ -75,12 +75,18 @@ describe('enHoraDeChile — evita que el usuario haga la resta', () => {
   it('devuelve null si no hay fecha', () => {
     expect(enHoraDeChile(null)).toBeNull();
   });
+
+  it('en invierno continental resta 4 horas, no 3', () => {
+    expect(enHoraDeChile('2026-06-15 12:00')).toBe('2026-06-15 08:00');
+  });
 });
 
 describe('la nota advierte lo que hay que advertir', () => {
-  it('menciona UTC, el desfase chileno y que hay que confirmar en la ficha', () => {
+  it('menciona UTC, los dos desfases de Chile y que hay que confirmar en la ficha', () => {
     expect(NOTA_ZONA_HORARIA).toMatch(/UTC/);
-    expect(NOTA_ZONA_HORARIA).toMatch(/3 horas/);
+    expect(NOTA_ZONA_HORARIA).toMatch(/UTC-3/);
+    expect(NOTA_ZONA_HORARIA).toMatch(/UTC-4/);
+    expect(NOTA_ZONA_HORARIA).toMatch(/fecha_ultimo_cambio/);
     expect(NOTA_ZONA_HORARIA).toMatch(/ficha/i);
   });
 

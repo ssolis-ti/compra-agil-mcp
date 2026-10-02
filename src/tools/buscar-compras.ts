@@ -83,13 +83,20 @@ export function resumirCompraBusqueda(item: CompraAgilItem) {
     codigo: item.codigo,
     nombre: item.nombre,
     estado: item.estado.glosa,
+    estado_codigo: item.estado.codigo,
     convocatoria: item.convocatoria.descripcion,
+    estado_convocatoria: item.convocatoria.estado_convocatoria,
     presupuesto_clp: item.montos.monto_disponible_clp,
     moneda: item.montos.moneda,
+    tipo_cambio: null,
+    tipo_cambio_nota: (item.montos.moneda ?? '').trim().toUpperCase() === 'CLP'
+      ? 'omitido porque la moneda es CLP'
+      : 'el listado no trae el tipo de cambio; pídelo en el detalle',
     institucion: item.institucion.organismo_comprador,
     rut_organismo: item.institucion.rut,
     region: item.institucion.nombre_region,
     fecha_publicacion: item.fechas.fecha_publicacion,
+    fecha_publicacion_hora_chile: enHoraDeChile(item.fechas.fecha_publicacion),
     fecha_cierre: item.fechas.fecha_cierre,
     fecha_cierre_hora_chile: enHoraDeChile(item.fechas.fecha_cierre),
     fecha_ultimo_cambio: item.fechas.fecha_ultimo_cambio,
@@ -180,6 +187,8 @@ export function registerBuscarCompras(server: McpServer, client: CompraAgilClien
         const result = conNotaHoraria({
           total_resultados: response.paginacion.total_resultados,
           total_filtrados_en_pagina: filteredItems.length,
+          numero_pagina: response.paginacion.numero_pagina,
+          total_paginas: response.paginacion.total_paginas,
           pagina: textoPagina(response.paginacion.numero_pagina, response.paginacion.total_paginas),
           resultados: summary,
         });

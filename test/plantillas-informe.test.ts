@@ -255,6 +255,29 @@ describe('recolectarDatosAuditoria', () => {
     expect(html).toContain('size: 216mm 330mm');
     expect(html).not.toContain('<script');
   });
+
+  it('no compara el proceso consigo mismo cuando es el único resultado', async () => {
+    const objetivo = detalle({
+      codigo: '1391-601-COT26',
+      proveedores_cotizando: [
+        { rut_proveedor: '1-9', razon_social: 'Oferente', es_emt: false, valor_neto: 238_425, monto_total: 283_726 },
+      ],
+    });
+    const client = {
+      detalle: async () => objetivo,
+      buscar: async () => ({
+        items: [{ codigo: '1391-601-COT26', institucion: { organismo_comprador: 'Gendarmería' }, fechas: {} }],
+      }),
+      detallesEnParalelo: async () => [objetivo],
+    };
+    const rec = await recolectarDatosAuditoria(client as never, { codigo_compra: '1391-601-COT26', limite_analisis: 1 });
+    expect(rec.kind).toBe('datos');
+    if (rec.kind !== 'datos') return;
+    expect(rec.datos.busqueda_comparativa.sin_comparables_distintos).toBe(true);
+    expect(rec.datos.busqueda_comparativa.procesos_comparables_con_cotizaciones).toBe(0);
+    expect(rec.datos.analisis_de_brechas.diferencia_presupuesto_porcentaje).toBe(0);
+    expect(rec.datos.recomendaciones_de_optimizacion[0]).toMatch(/consigo mismo/);
+  });
 });
 
 describe('compararCotizantes', () => {
