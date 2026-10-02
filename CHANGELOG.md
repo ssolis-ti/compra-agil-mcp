@@ -6,6 +6,19 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-10-02
+
+Respuestas que dejan de contradecir lo ya medido. No hubo llamada nueva a la API.
+
+### Corregido
+* **La página que se ofrece es 10.** `buscar_compras_agiles` y `monitorear_cambios_recientes` rechazan otro tamaño. `analizar_precios_mercado` y `auditar_compras_desiertas` piden 10. Un HTTP 504 pide bajar `tamano_pagina` solo si esa URL traía más de 10.
+* **Una ventana vacía ya no se puede leer como «1 de 0».** `numero_pagina` y `total_paginas` van en 0, y `pagina` sigue diciendo `sin resultados en esta ventana`. El monitor trae `total_filtrados_en_pagina`. Una fila con 0 ofertas trae `_nota_ofertas`: es dato del listado, no de la ficha.
+* **El recurso `compra-agil://compras/{codigo}` trae `_nota_horaria` y `cierre_hora_chile`.** `verificar_hora_oficial` dice si ese instante es UTC-3 o UTC-4.
+* **El glosario ya no dice «máx. 50» ni define la orden de compra como compra al proveedor seleccionado.** La frase corta de `desierta` no niega las ofertas. Si la región del prompt ya es un código del 1 al 16, se usa tal cual.
+* **`consultar_documentos_locales` adelanta el PDF de sanciones en una consulta de multas.** La guía oficial se marca como descripción prometida. El recorte termina en una palabra. El listado sin consulta agrupa el Markdown y el PDF de la misma guía. `obtener_enlace_documento` nombra el 404 y no ofrece la URL heredada.
+* **El borrador no se presenta como cotización formal enviada.** `activo` y `es_emt` traen una nota de que no son un dictamen. `verificar_orden_compra` sin caché no habla de un corte reciente. `obtener_estadisticas_uso` conserva `cuota_agotada` y agrega `vio_rechazo_temporal`. Si fallan todos los detalles de precios y se conoce el HTTP, el aviso lo nombra.
+* **Dos procesos ya no se pisan el contador de `.rate-limit-state.json`.** Se relee y se escribe bajo un lock. `buscar_compras_agiles` no anuncia un HTTP 500 por una llamada que no se hizo. El radar no habla de llamados fáciles de ganar. Un solo detalle de precios caído no pide bajar `limite_analisis`.
+
 ## [2.6.0] - 2026-10-02
 
 Informes para el resto del flujo, y respuestas que dejan de tirar lo que la API ya manda. `generar_informe` con `tipo=radar` sigue igual.

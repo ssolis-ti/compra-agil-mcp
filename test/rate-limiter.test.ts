@@ -103,6 +103,18 @@ describe('RateLimiter — memoria de la cuota entre reinicios', () => {
     expect(new RateLimiter(40, tmp).getStats().requestsToday).toBe(3);
   });
 
+  it('dos procesos que arrancaron juntos no se pisan el contador', () => {
+    const a = new RateLimiter(40, tmp);
+    const b = new RateLimiter(40, tmp);
+    a.recordRequest();
+    b.recordRequest();
+    a.recordRequest();
+
+    expect(new RateLimiter(40, tmp).getStats().requestsToday).toBe(3);
+    expect(a.getStats().requestsToday).toBe(3);
+    expect(b.getStats().requestsToday).toBe(2);
+  });
+
   it('descarta un estado guardado en otro día UTC', () => {
     fs.writeFileSync(tmp, JSON.stringify({
       day: '2020-01-01', requestCount: 999, isLimited: true,

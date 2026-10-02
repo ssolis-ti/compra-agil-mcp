@@ -537,6 +537,11 @@ export class CompraAgilClient {
     return this.rateLimiter.getStats();
   }
 
+  /** HTTP del último fallo de la tanda de detalles en paralelo. Null si no hubo status. */
+  ultimoHttpDeConcurrencia(): number | null {
+    return this.concurrencia.ultimoHttpVisto;
+  }
+
   /**
    * Obtener el detalle completo de una Orden de Compra (OC).
    * Admite tanto el ID numérico interno como el código alfanumérico.

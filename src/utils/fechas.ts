@@ -89,3 +89,24 @@ export function enHoraDeChile(valor: string | null | undefined): string | null {
   // sv-SE da el formato ISO "YYYY-MM-DD HH:MM", legible y sin ambigüedad.
   return d.toLocaleString('sv-SE', { timeZone: 'America/Santiago' }).slice(0, 16);
 }
+
+/**
+ * Desfase continental de America/Santiago en ese instante.
+ * UTC-3 en horario de verano y UTC-4 en invierno. No es una tabla de meses:
+ * el cambio de hora no cae el día 1.
+ */
+export function desfaseChileEn(instante: Date): 'UTC-3' | 'UTC-4' {
+  const partes = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).format(instante);
+  const comoUtc = new Date(`${partes.replace(' ', 'T')}Z`);
+  const horas = Math.round((comoUtc.getTime() - instante.getTime()) / 3_600_000);
+  return horas <= -4 ? 'UTC-4' : 'UTC-3';
+}

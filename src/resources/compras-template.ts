@@ -8,7 +8,17 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
+import { conNotaHoraria, enHoraDeChile } from '../utils/fechas.js';
 import { safeError } from '../utils/redact.js';
+import type { CompraAgilDetalle } from '../api/compra-agil-client.js';
+
+/** El recurso deja de ser el JSON crudo: la hora de Chile y la nota van en el cuerpo. */
+export function cuerpoRecursoCompra(detalle: CompraAgilDetalle): { _nota_horaria: string } & CompraAgilDetalle & { cierre_hora_chile: string | null } {
+  return conNotaHoraria({
+    ...detalle,
+    cierre_hora_chile: enHoraDeChile(detalle.fechas?.fecha_cierre),
+  });
+}
 
 export function registerComprasTemplateResource(server: McpServer, client: CompraAgilClient): void {
   // Crear plantilla de URI para compra-agil://compras/{codigo}
@@ -35,7 +45,7 @@ export function registerComprasTemplateResource(server: McpServer, client: Compr
           contents: [{
             uri: uri.toString(),
             mimeType: 'application/json',
-            text: JSON.stringify(detalle, null, 2),
+            text: JSON.stringify(cuerpoRecursoCompra(detalle), null, 2),
           }],
         };
       } catch (error) {

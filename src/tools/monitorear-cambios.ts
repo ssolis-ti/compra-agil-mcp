@@ -12,7 +12,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { conNotaHoraria, enHoraDeChile } from '../utils/fechas.js';
-import { TAMANO_PAGINA_SEGURO, textoPagina } from '../utils/paginacion.js';
+import { TAMANO_PAGINA_SEGURO, camposPagina } from '../utils/paginacion.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'monitorear_cambios_recientes';
@@ -45,8 +45,8 @@ export const inputSchema = {
   region: z.string().optional().describe(
     'Código(s) de región, separados por coma. Ej: "13" para Metropolitana.'
   ),
-  tamano_pagina: z.number().min(10).max(50).default(TAMANO_PAGINA_SEGURO).describe(
-    'Resultados por página (10-50, default 10). Una página de 50 sobre un filtro amplio responde HTTP 504. Para ver más, pide numero_pagina siguiente.'
+  tamano_pagina: z.number().min(10).max(10).default(TAMANO_PAGINA_SEGURO).describe(
+    'Fijo en 10. Una página de 50 sobre un filtro amplio responde HTTP 504. Para ver más, pide numero_pagina siguiente.'
   ),
   numero_pagina: z.number().min(1).optional().describe(
     'Número de página a consultar (comienza en 1).'
@@ -172,10 +172,12 @@ export function registerMonitorearCambios(server: McpServer, client: CompraAgilC
 
         const result = conNotaHoraria({
           ventana_temporal: ventana.descripcion,
-          total_resultados: response.paginacion.total_resultados,
-          numero_pagina: response.paginacion.numero_pagina,
-          total_paginas: response.paginacion.total_paginas,
-          pagina: textoPagina(response.paginacion.numero_pagina, response.paginacion.total_paginas),
+          ...camposPagina(
+            response.paginacion.numero_pagina,
+            response.paginacion.total_paginas,
+            response.paginacion.total_resultados,
+            summary.length,
+          ),
           resultados: summary,
         });
 

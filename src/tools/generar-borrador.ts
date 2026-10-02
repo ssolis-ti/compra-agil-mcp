@@ -162,6 +162,7 @@ export interface BorradorCotizacion {
   razon_social: string;
   es_emt: null;
   activo: true;
+  _nota_campos_fijos: string;
   plazo_entrega_dias: number;
   valor_neto: number;
   porcentaje_impuesto: 19;
@@ -237,7 +238,7 @@ export async function construirBorradorCotizacion(
   // Cover letter/carta de presentación comercial
   const userDesc = args.descripcion_propuesta || '';
   const coverLetter = `Estimados ${targetDetail.institucion?.organismo_comprador || 'Sres. Compradores'},\n\n` +
-    `Junto con saludar, a través del presente documento presentamos nuestra cotización formal para el proceso de Compra Ágil "${targetDetail.nombre}" (Código: ${targetDetail.codigo}).\n\n` +
+    `Junto con saludar, a través del presente documento presentamos este borrador de cotización para el proceso de Compra Ágil "${targetDetail.nombre}" (Código: ${targetDetail.codigo}). No ha sido enviado.\n\n` +
     `Detalles de nuestra propuesta:\n` +
     (userDesc ? `- ${userDesc}\n` : '') +
     `- Cumplimiento garantizado con todas las especificaciones y características solicitadas.\n` +
@@ -261,6 +262,7 @@ export async function construirBorradorCotizacion(
     razon_social: razonSocial,
     es_emt: null, // Desconocido: depende del Registro de Proveedores del RUT real, no se asume.
     activo: true,
+    _nota_campos_fijos: 'activo queda en true y es_emt en null. No son un dictamen sobre el proveedor.',
     plazo_entrega_dias: plazoEntrega,
     valor_neto: valorNeto,
     porcentaje_impuesto: 19,

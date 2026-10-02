@@ -19,6 +19,11 @@ import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'verificar_orden_compra';
 
+/** Sin detalle guardado no hubo corte en esta llamada. No se pide repetir el detalle. */
+export function textoVerificacionSinCache(): string {
+  return 'El detalle de este código no está en caché. Esta llamada no consultó la API y no hubo un corte. No llames a obtener_detalle_compra solo por esta respuesta.';
+}
+
 const TOOL_DESCRIPTION = `Informa si una Compra Ágil tiene Orden de Compra emitida, leyendo id_orden_compra del detalle.
 ⚠ LIMITACIÓN VERIFICADA (julio 2026, re-confirmada en septiembre): en 45 procesos inspeccionados NINGUNO traía id_orden_compra, y el filtro "proveedor_seleccionado" devuelve 0 resultados. La API de Compra Ágil no publica adjudicaciones. Por eso esta herramienta NO consulta la API por su cuenta —sería gastar cuota para responder "no puedo saberlo"—: reutiliza el detalle si ya se pidió con "obtener_detalle_compra", y en cualquier caso indica cómo confirmarlo en la ficha pública.
 Un "sin OC" NO prueba que la OC no exista: significa que la API no la expone.`;
@@ -64,7 +69,7 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
                 detalle_en_cache: false,
                 verificacion_oc: {
                   tiene_orden_compra: null,
-                  significado: 'El detalle de este código no está en caché. No vuelvo a la API. Un 504 reciente tampoco deja el detalle guardado: no llames otra vez a obtener_detalle_compra en ráfaga.',
+                  significado: textoVerificacionSinCache(),
                   motivo: 'No se consultó la API a propósito, para no gastar cuota en una respuesta que se conoce de antemano: la API de Compra Ágil no publica adjudicaciones ni órdenes de compra (0 de 45 procesos inspeccionados traían id_orden_compra, re-verificado en septiembre de 2026).',
                   como_confirmarlo: `Abre la ficha pública del proceso, que sí muestra el estado real: https://buscador.mercadopublico.cl/ficha?code=${args.codigo}`,
                 },

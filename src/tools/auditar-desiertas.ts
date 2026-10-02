@@ -145,7 +145,7 @@ export async function recolectarDatosAuditoria(
     // era desperdicio — y provocaba HTTP 504: medido en producción, esta
     // misma consulta con tamano_pagina=50 agota los ~30 s de la pasarela,
     // y con 15 responde en 9,9 s.
-    tamano_pagina: Math.max(10, Math.min(limit, 50)),
+    tamano_pagina: 10,
     numero_pagina: 1,
   });
 

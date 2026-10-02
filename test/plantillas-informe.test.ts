@@ -85,6 +85,8 @@ describe('construirBorradorCotizacion', () => {
     expect(borrador._campos_a_revisar.join(' ')).toMatch(/rut_proveedor/);
     expect(borrador._campos_a_revisar.join(' ')).toMatch(/razon_social/);
     expect(borrador.descripcion_cotizacion).toContain('Entrega en bodega');
+    expect(borrador.descripcion_cotizacion).not.toContain('cotización formal');
+    expect(borrador._nota_campos_fijos).toMatch(/no son un dictamen/i);
     expect(borrador.metadata_estimacion.precio_unitario_sugerido_automatico).toBe(false);
     expect(borrador.metadata_estimacion.fuente_precio_unitario).toMatch(/ingresado por el usuario/);
     expect(JSON.stringify(borrador)).not.toContain('proveedor_seleccionado');
@@ -187,6 +189,7 @@ describe('recolectarDatosPrecios', () => {
         paginacion: { total_resultados: 1, total_paginas: 1, numero_pagina: 1, tamano_pagina: 10 },
       }),
       detallesEnParalelo: async () => [null],
+      ultimoHttpDeConcurrencia: () => 504,
     };
     const rec = await recolectarDatosPrecios(client as never, { q: 'resma' });
     expect(rec.kind).toBe('mensaje');
@@ -194,6 +197,24 @@ describe('recolectarDatosPrecios', () => {
     expect(rec.isError).toBe(true);
     expect(rec.texto).toContain('Esto NO significa que no haya precios publicados');
     expect(rec.texto).toContain('las 1 consultas fallaron');
+    expect(rec.texto).toContain('ya pidió el mínimo');
+    expect(rec.texto).toContain('HTTP 504');
+    expect(rec.texto).not.toContain('limite_analisis');
+  });
+
+  it('con varios detalles caídos sí pide bajar el límite', async () => {
+    const client = {
+      detalle: async () => { throw new Error('no'); },
+      buscar: async () => ({
+        items: [{ codigo: '1-1-COT26' }, { codigo: '2-2-COT26' }, { codigo: '3-3-COT26' }],
+        paginacion: { total_resultados: 3, total_paginas: 1, numero_pagina: 1, tamano_pagina: 10 },
+      }),
+      detallesEnParalelo: async () => [null, null, null],
+    };
+    const rec = await recolectarDatosPrecios(client as never, { q: 'resma', limite_analisis: 3 });
+    expect(rec.kind).toBe('mensaje');
+    if (rec.kind !== 'mensaje') return;
+    expect(rec.texto).toContain('baja "limite_analisis"');
   });
 });
 

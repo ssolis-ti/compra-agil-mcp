@@ -13,7 +13,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
  * La documentación oficial difiere en dos puntos importantes,
  * verificados empíricamente y anotados abajo.
  */
-const ESTADOS = [
+export const ESTADOS = [
   {
     codigo: 'publicada',
     descripcion: 'La Compra Ágil está abierta y recibiendo cotizaciones de proveedores.',
@@ -28,7 +28,7 @@ const ESTADOS = [
   },
   {
     codigo: 'desierta',
-    descripcion: 'No se recibieron ofertas válidas para este proceso.',
+    descripcion: 'El organismo declaró desierto el proceso.',
     funciona: true,
     nota: 'Contraintuitivo pero útil: los procesos desiertos SÍ suelen exponer las cotizaciones que recibieron (y por qué fueron declaradas inadmisibles). Es la mejor fuente de precios de mercado disponible en la API.',
   },

@@ -55,22 +55,36 @@ export class RateLimiter {
   /** Lee el estado del día en curso. Un estado de otro día se descarta. */
   private cargarEstado(): void {
     if (!this.statePath) return;
+    this.aplicarDisco();
+    if (this.isLimited) {
+      logger.info('Rate limiter: se recuperó un estado de cuota agotada de esta misma jornada UTC.');
+    }
+  }
+
+  /**
+   * Trae a memoria lo que hay en disco para el día UTC en curso.
+   * Se llama con el candado ya tomado, antes de sumar o de marcar un 429.
+   */
+  private aplicarDisco(): void {
+    if (!this.statePath || !fs.existsSync(this.statePath)) return;
     try {
-      if (!fs.existsSync(this.statePath)) return;
       const raw = JSON.parse(fs.readFileSync(this.statePath, 'utf8')) as EstadoPersistido;
-      if (raw.day !== this.currentDay) return;
+      if (raw.day !== this.getTodayUTC()) return;
+      this.currentDay = raw.day;
       this.requestCount = raw.requestCount ?? 0;
-      this.isLimited = raw.isLimited ?? false;
-      this.limitResetTime = raw.limitResetTime ? new Date(raw.limitResetTime) : null;
-      if (this.isLimited) {
-        logger.info('Rate limiter: se recuperó un estado de cuota agotada de esta misma jornada UTC.');
+      if (raw.isLimited && raw.limitResetTime && new Date(raw.limitResetTime).getTime() > Date.now()) {
+        this.isLimited = true;
+        const disco = new Date(raw.limitResetTime);
+        if (!this.limitResetTime || disco.getTime() > this.limitResetTime.getTime()) {
+          this.limitResetTime = disco;
+        }
       }
     } catch {
       // Un estado ilegible no debe impedir arrancar: se sigue en memoria.
     }
   }
 
-  private guardarEstado(): void {
+  private escribirEstado(): void {
     if (!this.statePath) return;
     try {
       const estado: EstadoPersistido = {
@@ -82,6 +96,41 @@ export class RateLimiter {
       fs.writeFileSync(this.statePath, JSON.stringify(estado), 'utf8');
     } catch {
       // Persistir es una mejora, no un requisito: si el disco no deja, se sigue.
+    }
+  }
+
+  /**
+   * Un solo escritor a la vez. Sin candado, dos procesos leían el mismo
+   * número, sumaban en memoria y el último en escribir borraba al otro.
+   */
+  private conBloqueo(fn: () => void): void {
+    if (!this.statePath) {
+      fn();
+      return;
+    }
+    const lockPath = `${this.statePath}.lock`;
+    const inicio = Date.now();
+    let fd: number | undefined;
+    while (fd === undefined && Date.now() - inicio < 2000) {
+      try {
+        fd = fs.openSync(lockPath, 'wx');
+      } catch {
+        try {
+          const edad = Date.now() - fs.statSync(lockPath).mtimeMs;
+          if (edad > 5000) fs.unlinkSync(lockPath);
+        } catch {
+          // Otro proceso soltó el candado entre el fallo y el stat.
+        }
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 15);
+      }
+    }
+    try {
+      fn();
+    } finally {
+      if (fd !== undefined) {
+        fs.closeSync(fd);
+        try { fs.unlinkSync(lockPath); } catch { /* ya no está */ }
+      }
     }
   }
 
@@ -116,23 +165,26 @@ export class RateLimiter {
    * Registra un request exitoso. Resetea el contador si cambió el día.
    */
   recordRequest(): void {
-    const today = this.getTodayUTC();
-    if (today !== this.currentDay) {
-      this.requestCount = 0;
-      this.currentDay = today;
-      this.isLimited = false;
-      this.limitResetTime = null;
-      logger.info('Rate limiter: contador diario reseteado (nuevo día calendario UTC).');
-    }
-    this.requestCount++;
-    // Una consulta exitosa prueba que el balde volvió a tener fichas.
-    if (this.consecutive429 > 0 || this.isLimited) {
-      this.consecutive429 = 0;
-      this.isLimited = false;
-      this.limitResetTime = null;
-    }
-    logger.debug(`Rate limiter: request #${this.requestCount} del día.`);
-    this.guardarEstado();
+    this.conBloqueo(() => {
+      this.aplicarDisco();
+      const today = this.getTodayUTC();
+      if (today !== this.currentDay) {
+        this.requestCount = 0;
+        this.currentDay = today;
+        this.isLimited = false;
+        this.limitResetTime = null;
+        logger.info('Rate limiter: contador diario reseteado (nuevo día calendario UTC).');
+      }
+      this.requestCount++;
+      // Una consulta exitosa prueba que el balde volvió a tener fichas.
+      if (this.consecutive429 > 0 || this.isLimited) {
+        this.consecutive429 = 0;
+        this.isLimited = false;
+        this.limitResetTime = null;
+      }
+      logger.debug(`Rate limiter: request #${this.requestCount} del día.`);
+      this.escribirEstado();
+    });
   }
 
   /**
@@ -154,20 +206,26 @@ export class RateLimiter {
    * @param retryAfterSeconds Valor del header `Retry-After`, si la API lo envió.
    */
   markLimited(retryAfterSeconds?: number): void {
-    this.isLimited = true;
-    this.consecutive429++;
+    this.conBloqueo(() => {
+      this.aplicarDisco();
+      this.isLimited = true;
+      this.consecutive429++;
 
-    const esperaSegundos = retryAfterSeconds && retryAfterSeconds > 0
-      ? retryAfterSeconds
-      : this.esperaPorDefecto();
+      const esperaSegundos = retryAfterSeconds && retryAfterSeconds > 0
+        ? retryAfterSeconds
+        : this.esperaPorDefecto();
 
-    this.limitResetTime = new Date(Date.now() + esperaSegundos * 1000);
-    const origen = retryAfterSeconds && retryAfterSeconds > 0 ? 'header Retry-After' : 'espera progresiva local';
-    logger.warn(
-      `Rate limiter: 429 recibido (#${this.consecutive429} consecutivo). ` +
-      `Reintentable a partir de ${this.limitResetTime.toISOString()} (${origen}).`
-    );
-    this.guardarEstado();
+      const propuesto = new Date(Date.now() + esperaSegundos * 1000);
+      if (!this.limitResetTime || propuesto.getTime() > this.limitResetTime.getTime()) {
+        this.limitResetTime = propuesto;
+      }
+      const origen = retryAfterSeconds && retryAfterSeconds > 0 ? 'header Retry-After' : 'espera progresiva local';
+      logger.warn(
+        `Rate limiter: 429 recibido (#${this.consecutive429} consecutivo). ` +
+        `Reintentable a partir de ${this.limitResetTime.toISOString()} (${origen}).`
+      );
+      this.escribirEstado();
+    });
   }
 
   /** Espera creciente ante 429 sucesivos, para no martillar la API. */
@@ -187,12 +245,17 @@ export class RateLimiter {
 
     const now = new Date();
     if (this.limitResetTime && now >= this.limitResetTime) {
-      this.isLimited = false;
-      this.limitResetTime = null;
-      this.requestCount = 0;
-      this.currentDay = this.getTodayUTC();
-      this.guardarEstado();
-      return { limited: false };
+      this.conBloqueo(() => {
+        this.aplicarDisco();
+        if (this.limitResetTime && new Date() >= this.limitResetTime) {
+          this.isLimited = false;
+          this.limitResetTime = null;
+          this.requestCount = 0;
+          this.currentDay = this.getTodayUTC();
+          this.escribirEstado();
+        }
+      });
+      if (!this.isLimited) return { limited: false };
     }
 
     const waitMs = this.limitResetTime

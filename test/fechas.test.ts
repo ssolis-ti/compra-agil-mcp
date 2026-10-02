@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parsearFechaApi, esFechaAmbigua, enHoraDeChile, NOTA_ZONA_HORARIA, conNotaHoraria } from '../src/utils/fechas.js';
+import { parsearFechaApi, esFechaAmbigua, enHoraDeChile, desfaseChileEn, NOTA_ZONA_HORARIA, conNotaHoraria } from '../src/utils/fechas.js';
+import { cuerpoRecursoCompra } from '../src/resources/compras-template.js';
 import { resumirCompraBusqueda } from '../src/tools/buscar-compras.js';
 import { fechasDeDetalle } from '../src/tools/detalle-compra.js';
 import { resumirCambio } from '../src/tools/monitorear-cambios.js';
@@ -18,6 +19,24 @@ import type { CompraAgilItem } from '../src/api/compra-agil-client.js';
  * —y con ella hasta 30 puntos de urgencia— con tres horas de diferencia según
  * dónde corriera. Estos tests fijan que eso no vuelva a ocurrir.
  */
+
+describe('desfaseChileEn', () => {
+  it('octubre 2026 es horario de verano', () => {
+    expect(desfaseChileEn(new Date('2026-10-02T15:00:00Z'))).toBe('UTC-3');
+  });
+
+  it('junio 2026 es horario de invierno', () => {
+    expect(desfaseChileEn(new Date('2026-06-15T15:00:00Z'))).toBe('UTC-4');
+  });
+});
+
+describe('cuerpoRecursoCompra', () => {
+  it('antepone la nota y la hora de Chile al detalle crudo', () => {
+    const cuerpo = cuerpoRecursoCompra({ fechas: { fecha_cierre: '2026-10-02 15:00' } } as never);
+    expect(cuerpo._nota_horaria).toMatch(/ficha del proceso/);
+    expect(cuerpo.cierre_hora_chile).toBe('2026-10-02 12:00');
+  });
+});
 
 describe('parsearFechaApi — no depende de la zona del servidor', () => {
   it('interpreta como UTC el formato sin zona horaria', () => {
