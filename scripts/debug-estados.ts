@@ -58,7 +58,8 @@ async function main() {
   log('\nEstados presentes en una muestra sin filtrar (ttl 24h):');
   const url = new URL('/v2/compra-agil', BASE);
   url.searchParams.set('ttl_cambio_ms', '86400000');
-  url.searchParams.set('tamano_pagina', '50');
+  // Página de 10. Con 50, un filtro ancho devolvió HTTP 504 el 1 oct 2026.
+  url.searchParams.set('tamano_pagina', '10');
   const r = await fetch(url.toString(), { headers: { ticket: TICKET } });
   const j: any = await r.json();
   const conteo = new Map<string, number>();

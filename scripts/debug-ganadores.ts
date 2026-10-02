@@ -49,9 +49,10 @@ async function main() {
 
   for (const plan of planes) {
     log(`\n═══ ${plan.estado} · página ${plan.pagina} ═══`);
+    // Página de 10. Con 50, un filtro ancho devolvió HTTP 504 el 1 oct 2026.
     const busq = await get('/v2/compra-agil', {
       estado: plan.estado,
-      tamano_pagina: 50,
+      tamano_pagina: 10,
       numero_pagina: plan.pagina,
     });
     const items = busq.payload?.items ?? [];

@@ -36,7 +36,8 @@ async function main() {
 
   for (const estado of estados) {
     log(`\n═══ Escaneando estado="${estado}" ═══`);
-    const busq = await get('/v2/compra-agil', { estado, tamano_pagina: 50 });
+    // 10 es el mínimo de la API. Una página de 50 en un filtro ancho devolvió HTTP 504 el 1 oct 2026.
+    const busq = await get('/v2/compra-agil', { estado, tamano_pagina: 10 });
     const items = busq.payload?.items ?? [];
     log(`${items.length} procesos a inspeccionar...\n`);
 
