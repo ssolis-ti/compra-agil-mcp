@@ -37,7 +37,7 @@ Un 429 no bloquea hasta el día siguiente. El servicio volvió a responder 13 mi
 
 Recursos de código: `compra-agil://regiones`, `compra-agil://estados`, `compra-agil://glosario`, `compra-agil://compras/{codigo}`. Con el repositorio clonado también aparecen los documentos de `docs/` como `compra-agil://documentacion/{filename}`.
 
-Prompts: `buscar_oportunidades_proveedor` y `analizar_competencia`. El segundo compara la oferta más barata y la más cara. No identifica un proveedor adjudicado.
+Prompts: `buscar_oportunidades_proveedor` y `analizar_competencia`. El segundo compara la oferta más barata y la más cara. No identifica un proveedor adjudicado ni pregunta si un seleccionado fue el más barato. Una marca en la cotización no es una adjudicación.
 
 ## Daemon
 

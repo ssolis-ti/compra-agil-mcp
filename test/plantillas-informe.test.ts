@@ -85,6 +85,8 @@ describe('construirBorradorCotizacion', () => {
     expect(borrador._campos_a_revisar.join(' ')).toMatch(/rut_proveedor/);
     expect(borrador._campos_a_revisar.join(' ')).toMatch(/razon_social/);
     expect(borrador.descripcion_cotizacion).toContain('Entrega en bodega');
+    expect(borrador.metadata_estimacion.precio_unitario_sugerido_automatico).toBe(false);
+    expect(borrador.metadata_estimacion.fuente_precio_unitario).toMatch(/ingresado por el usuario/);
     expect(JSON.stringify(borrador)).not.toContain('proveedor_seleccionado');
   });
 

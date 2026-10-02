@@ -66,6 +66,7 @@ describe('estimarPrecioUnitario — el precio ingresado manda', () => {
     const e = await estimarPrecioUnitario(clienteQueFalla, detalleBase(), 850_000);
     expect(e.precio).toBe(850_000);
     expect(e.sugerido).toBe(true);
+    expect(e.automatico).toBe(false);
     expect(e.fuente).toMatch(/ingresado por el usuario/);
   });
 
@@ -81,6 +82,7 @@ describe('estimarPrecioUnitario — respaldo por presupuesto (el defecto)', () =
     // 4.800.000 * 0,9 / 2 unidades
     expect(e.precio).toBe(2_160_000);
     expect(e.sugerido).toBe(true);
+    expect(e.automatico).toBe(true);
     expect(e.precio).not.toBe(PRECIO_PLACEHOLDER);
   });
 
@@ -126,6 +128,7 @@ describe('estimarPrecioUnitario — placeholder solo como último recurso', () =
     const e = await estimarPrecioUnitario(clienteQueFalla, d);
     expect(e.precio).toBe(PRECIO_PLACEHOLDER);
     expect(e.sugerido).toBe(false);
+    expect(e.automatico).toBe(false);
   });
 });
 
@@ -149,6 +152,7 @@ describe('estimarPrecioUnitario — precios de mercado cuando existen', () => {
 
     const e = await estimarPrecioUnitario(cliente, detalleBase());
     expect(e.fuente).toMatch(/percentil 25/);
+    expect(e.automatico).toBe(true);
     expect(e.precio).toBeLessThan(2_160_000);
   });
 });
