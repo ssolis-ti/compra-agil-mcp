@@ -70,6 +70,7 @@ describe('buscar expone RUT, último cambio y el motivo solo si hay texto', () =
     expect(r.tipo_cambio).toBeNull();
     expect(r.tipo_cambio_nota).toMatch(/CLP/);
     expect(r.fecha_publicacion_hora_chile).toBe('2026-09-10 06:00');
+    expect(r._nota_ofertas).toMatch(/listado informa 0 ofertas/);
   });
 
   it('omite un motivo vacío o en blanco', () => {

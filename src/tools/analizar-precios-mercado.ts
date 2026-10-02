@@ -104,7 +104,9 @@ export type RecoleccionPrecios =
  * cual: un fallo de la API no se convierte en un informe de mercado.
  */
 export async function recolectarDatosPrecios(
-  client: Pick<CompraAgilClient, 'buscar' | 'detalle' | 'detallesEnParalelo'>,
+  client: Pick<CompraAgilClient, 'buscar' | 'detalle' | 'detallesEnParalelo'> & {
+    ultimoHttpDeConcurrencia?: () => number | null;
+  },
   args: ArgsPreciosMercado,
 ): Promise<RecoleccionPrecios> {
   let keyword = args.q || '';
@@ -159,7 +161,7 @@ export async function recolectarDatosPrecios(
     // la pasarela corta a los ~30 s. Con 15 la misma consulta respondió
     // en 9,9 s. Se pide lo que se va a usar, con el mínimo de 10 que
     // exige la API.
-    tamano_pagina: Math.max(10, Math.min(limite, 50)),
+    tamano_pagina: 10,
     numero_pagina: 1,
   });
 
@@ -262,7 +264,12 @@ export async function recolectarDatosPrecios(
           `No se pudo consultar el detalle de ninguno de los ${consultasIntentadas} procesos que coinciden con "${keyword}": las ${consultasFallidas} consultas fallaron.`,
           '',
           '⚠ Esto NO significa que no haya precios publicados para este rubro: significa que la API no respondió. No saques conclusiones de mercado desde este resultado.',
-          'Reintenta en unos minutos. Si persiste, baja "limite_analisis" para pedir menos por vez.',
+          consultasIntentadas <= 1
+            ? 'Reintenta en unos minutos. Esta consulta ya pidió el mínimo de procesos.'
+            : 'Reintenta en unos minutos. Si persiste, baja "limite_analisis" para pedir menos por vez.',
+          ...(typeof client.ultimoHttpDeConcurrencia === 'function' && client.ultimoHttpDeConcurrencia() !== null
+            ? [`El corte visto en esta tanda fue HTTP ${client.ultimoHttpDeConcurrencia()}.`]
+            : []),
         ].join('\n'),
       };
     }

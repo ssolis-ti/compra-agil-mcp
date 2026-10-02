@@ -4,10 +4,16 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
-import { anteponerManualServidor, buscarEnTexto, consultaSensible, deduplicarDocumentos, recortarArchivos } from '../utils/doc-search.js';
+import { agruparCatalogo, anteponerManualServidor, anteponerSanciones, buscarEnTexto, consultaSensible, deduplicarDocumentos, marcarSiEsGuiaOficial, recortarArchivos, recortarEnPalabra } from '../utils/doc-search.js';
 import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
+
+/** La ficha es el camino. La descarga heredada responde 404 y no se ofrece. */
+export function textoEnlaceAdjunto(idDocumento: string, codigoCompra: string): string {
+  const fichaUrl = `https://buscador.mercadopublico.cl/ficha?code=${codigoCompra}`;
+  return `Para acceder al adjunto ${idDocumento}, abre la ficha pública del proceso (no requiere iniciar sesión):\n${fichaUrl}\n\nLa descarga directa heredada responde 404 para los adjuntos de Compra Ágil. No la abras.`;
+}
 
 /**
  * Registra las herramientas relacionadas con documentos y especificaciones en el servidor MCP.
@@ -38,15 +44,12 @@ export function registerDocumentosTools(server: McpServer): void {
           }],
         };
       } else {
-        // Verificado en septiembre 2026: este endpoint heredado responde 404
-        // para los adjuntos de Compra Ágil, aun con IDs numéricos válidos
-        // entregados por la API. Se sigue ofreciendo por si el portal lo
-        // restablece, pero la ficha va primero y sin prometer que funcionará.
-        const directUrl = `https://www.mercadopublico.cl/FichaLicitacion/RetornaDocumento.aspx?id=${args.id_documento}`;
+        // Medido en septiembre 2026: el endpoint heredado responde 404
+        // para los adjuntos de Compra Ágil, aun con IDs numéricos válidos.
         return {
           content: [{
             type: 'text' as const,
-            text: `Para acceder al adjunto ${args.id_documento}, abre la ficha pública del proceso (no requiere iniciar sesión):\n${fichaUrl}\n\nExiste además un enlace heredado de descarga directa, pero se comprobó que hoy responde 404 para los adjuntos de Compra Ágil, así que probablemente no funcione:\n${directUrl}`,
+            text: textoEnlaceAdjunto(args.id_documento, args.codigo_compra),
           }],
         };
       }
@@ -235,9 +238,13 @@ export function registerDocumentosTools(server: McpServer): void {
 
         // Si no hay query, listar los archivos disponibles
         if (!args.query) {
-          const fileList = files.map(file => {
-            const stats = fs.statSync(path.join(DOCS_DIR, file));
-            return `- ${file} (${(stats.size / 1024).toFixed(1)} KB)`;
+          const fileList = agruparCatalogo(files).map((grupo) => {
+            const detalle = grupo.archivos.map((file) => {
+              const stats = fs.statSync(path.join(DOCS_DIR, file));
+              return `${file} (${(stats.size / 1024).toFixed(1)} KB)`;
+            }).join(' y ');
+            const mismo = grupo.archivos.length > 1 ? ' — el mismo documento en más de un formato' : '';
+            return `- ${detalle}${mismo}`;
           }).join('\n');
 
           return {
@@ -279,12 +286,13 @@ export function registerDocumentosTools(server: McpServer): void {
             if (hallazgo.fragmentos.length > 0) {
               const limit = args.max_caracteres || 3000;
               const matchesText = hallazgo.fragmentos.map((f) => f.texto).join('\n\n---\n\n');
-              const truncated = matchesText.length > limit ? `${matchesText.substring(0, limit)}... [TRUNCADO]` : matchesText;
+              const truncated = recortarEnPalabra(matchesText, limit);
               const cubiertos = [...new Set(hallazgo.fragmentos.flatMap((f) => f.terminos))];
+              const cuerpo = `### Archivo: ${file}\n(términos encontrados aquí: ${cubiertos.join(', ')})\n\n${truncated}`;
               coincidencias.push({
                 archivo: file,
                 mejorPuntaje: hallazgo.fragmentos[0]?.puntaje ?? 0,
-                texto: `### Archivo: ${file}\n(términos encontrados aquí: ${cubiertos.join(', ')})\n\n${truncated}`,
+                texto: marcarSiEsGuiaOficial(file, cuerpo),
               });
             }
           } catch (e: any) {
@@ -294,7 +302,8 @@ export function registerDocumentosTools(server: McpServer): void {
 
         const unicos = deduplicarDocumentos(coincidencias);
         const orden = anteponerManualServidor(unicos, terminosConsulta.length, consultaSensible(args.query));
-        const recorte = recortarArchivos(orden.resultados, orden.manualPrimero);
+        const conSanciones = anteponerSanciones(orden.resultados, args.query, orden.manualPrimero);
+        const recorte = recortarArchivos(conSanciones, orden.manualPrimero);
         const results = [...recorte.resultados.map((r) => r.texto), ...errores];
 
         if (results.length === 0) {

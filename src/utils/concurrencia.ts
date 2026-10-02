@@ -50,6 +50,12 @@ export class LimitadorConcurrencia {
   private readonly maximo: number;
   private tandas = 0;
   private congestiones = 0;
+  private ultimoHttp: number | null = null;
+
+  /** Último HTTP visto en la tanda en curso. Null si esa tanda no falló con un status. */
+  get ultimoHttpVisto(): number | null {
+    return this.ultimoHttp;
+  }
 
   constructor(opciones: OpcionesConcurrencia = {}) {
     this.maximo = Math.max(1, opciones.maximo ?? 5);
@@ -102,6 +108,7 @@ export class LimitadorConcurrencia {
     if (tareas.length === 0) return resultados;
 
     this.tandas++;
+    this.ultimoHttp = null;
     let huboCongestion = false;
     let siguiente = 0;
     let enVuelo = 0;
@@ -115,6 +122,8 @@ export class LimitadorConcurrencia {
             .then((valor) => { resultados[i] = valor; })
             .catch((e) => {
               resultados[i] = null;
+              const status = (e as { httpStatus?: number } | null)?.httpStatus;
+              if (typeof status === 'number') this.ultimoHttp = status;
               if (esSenalDeCongestion(e)) {
                 huboCongestion = true;
                 this.reducir(); // efecto inmediato sobre lo que queda por lanzar

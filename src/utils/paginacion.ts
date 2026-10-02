@@ -15,3 +15,33 @@ export function textoPagina(numeroPagina: number, totalPaginas: number): string 
   if (!(totalPaginas > 0)) return 'sin resultados en esta ventana';
   return `${numeroPagina} de ${totalPaginas}`;
 }
+
+/**
+ * Números que ve el agente. La API manda 1 y 0 cuando no hay páginas;
+ * ese par se lee como "1 de 0". Cero y cero no describen una página.
+ */
+export function numerosPaginaVisibles(numeroPagina: number, totalPaginas: number): { numero_pagina: number; total_paginas: number } {
+  if (!(totalPaginas > 0)) return { numero_pagina: 0, total_paginas: 0 };
+  return { numero_pagina: numeroPagina, total_paginas: totalPaginas };
+}
+
+/** Forma compartida por la búsqueda y el monitor. */
+export function camposPagina(
+  numeroPagina: number,
+  totalPaginas: number,
+  totalResultados: number,
+  filtrados: number,
+): {
+  total_resultados: number;
+  total_filtrados_en_pagina: number;
+  numero_pagina: number;
+  total_paginas: number;
+  pagina: string;
+} {
+  return {
+    total_resultados: totalResultados,
+    total_filtrados_en_pagina: filtrados,
+    ...numerosPaginaVisibles(numeroPagina, totalPaginas),
+    pagina: textoPagina(numeroPagina, totalPaginas),
+  };
+}

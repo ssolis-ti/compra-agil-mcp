@@ -205,6 +205,71 @@ export function anteponerManualServidor<T extends ResultadoArchivo>(
 /** Cuántos archivos devuelve `consultar_documentos_locales` como máximo. */
 export const TOPE_ARCHIVOS_LOCALES = 3;
 
+/** PDF que trae el régimen de sanciones. Una coincidencia de «aplicar» no debe ganarle. */
+export const ARCHIVO_SANCIONES = 'multas-sanciones-procedimientos.pdf';
+
+export const MARCA_DESCRIPCION_PROMETIDA = 'Descripción prometida, no es la medición.';
+
+export function consultaDeMultas(query: string): boolean {
+  return normalizar(query).includes('multa');
+}
+
+export function esPdfSanciones(archivo: string): boolean {
+  return archivo.replace(/\\/g, '/').toLowerCase().endsWith(ARCHIVO_SANCIONES);
+}
+
+/**
+ * En una consulta de multas, el PDF de sanciones va primero.
+ * Si el manual medido ya encabeza una consulta sensible, se queda ahí.
+ */
+export function anteponerSanciones<T extends ResultadoArchivo>(
+  resultados: T[],
+  query: string,
+  manualYaPrimero: boolean,
+): T[] {
+  if (manualYaPrimero || !consultaDeMultas(query)) return resultados;
+  const indice = resultados.findIndex((r) => esPdfSanciones(r.archivo));
+  if (indice <= 0) return resultados;
+  const sanciones = resultados[indice];
+  return [sanciones, ...resultados.filter((_, i) => i !== indice)];
+}
+
+export function esGuiaOficial(archivo: string): boolean {
+  const base = archivo.replace(/\\/g, '/').split('/').pop() ?? archivo;
+  return /^documentacion_api_compra_agil\.(md|pdf)$/i.test(base);
+}
+
+export function marcarSiEsGuiaOficial(archivo: string, texto: string): string {
+  if (!esGuiaOficial(archivo)) return texto;
+  return `${MARCA_DESCRIPCION_PROMETIDA}\n\n${texto}`;
+}
+
+/** Corta en un espacio. Si la primera palabra no cabe, la deja entera. */
+export function recortarEnPalabra(texto: string, limite: number): string {
+  if (texto.length <= limite) return texto;
+  const corte = texto.lastIndexOf(' ', limite);
+  const espacio = corte > 0 ? corte : texto.indexOf(' ');
+  const trozo = espacio > 0 ? texto.slice(0, espacio) : texto;
+  return `${trozo}... [TRUNCADO]`;
+}
+
+/** Una línea lógica por documento, aunque exista en MD y en PDF. Conserva el orden de llegada. */
+export function agruparCatalogo(archivos: string[]): Array<{ clave: string; archivos: string[] }> {
+  const grupos = new Map<string, string[]>();
+  const orden: string[] = [];
+  for (const archivo of archivos) {
+    const clave = claveDocumento(archivo);
+    const lista = grupos.get(clave);
+    if (!lista) {
+      grupos.set(clave, [archivo]);
+      orden.push(clave);
+    } else {
+      lista.push(archivo);
+    }
+  }
+  return orden.map((clave) => ({ clave, archivos: grupos.get(clave) ?? [] }));
+}
+
 export interface RecorteArchivos<T extends ResultadoArchivo> {
   resultados: T[];
   /** Archivos que coincidieron y no entraron en el tope, del mayor puntaje al menor. */

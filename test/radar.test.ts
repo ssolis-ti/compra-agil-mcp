@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { evaluarOportunidad } from '../src/tools/radar-oportunidades.js';
 import type { CompraAgilItem } from '../src/api/compra-agil-client.js';
 
@@ -25,6 +26,17 @@ function item(overrides: Partial<CompraAgilItem> = {}): CompraAgilItem {
   };
   return { ...base, ...overrides };
 }
+
+describe('descripción del radar', () => {
+  const src = readFileSync(new URL('../src/tools/radar-oportunidades.ts', import.meta.url), 'utf8');
+
+  it('habla de 0 ofertas en el listado', () => {
+    const descripcion = src.slice(src.indexOf('const TOOL_DESCRIPTION'), src.indexOf('const inputSchema'));
+    expect(descripcion).toMatch(/0 ofertas/);
+    expect(descripcion).not.toMatch(/fáciles de ganar/);
+    expect(descripcion).not.toMatch(/falta de oferentes/);
+  });
+});
 
 describe('evaluarOportunidad', () => {
   it('omite procesos ya cerrados (horas restantes <= 0)', () => {

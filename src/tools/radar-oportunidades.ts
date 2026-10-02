@@ -8,9 +8,9 @@ import { parsearFechaApi, enHoraDeChile, NOTA_ZONA_HORARIA } from '../utils/fech
 
 const TOOL_NAME = 'radar_oportunidades_calientes';
 
-const TOOL_DESCRIPTION = `Escanea, califica y clasifica de forma priorizada los procesos de Compra Ágil activos (publicados).
-Utiliza una fórmula ponderada (Hot Score) basada en la falta de oferentes, el presupuesto disponible, las horas restantes de cierre y si el proceso va en segundo llamado, para destacar los llamados más convenientes y fáciles de ganar.
-Cada resultado incluye "llamado" (1 = primero, 2 = segundo) y el desglose de factores que explican su puntuación.`;
+const TOOL_DESCRIPTION = `Escanea procesos de Compra Ágil publicados y los ordena con un puntaje.
+El puntaje usa datos del listado: 0 ofertas, el presupuesto, las horas hasta el cierre según la lectura UTC y si el proceso va en segundo llamado. 0 ofertas y la falta de adjuntos no son hechos de la ficha.
+Cada resultado incluye "llamado" (1 = primero, 2 = segundo) y los factores del puntaje. Si q no está en el título, la fila lo dice.`;
 
 const inputSchema = {
   region: z.string().optional().describe('Código de la región para filtrar (1-16). Ej: "13" para Metropolitana.'),

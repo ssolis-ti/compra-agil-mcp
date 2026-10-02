@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-const GLOSARIO = [
+export const GLOSARIO = [
   {
     termino: 'API',
     definicion: 'Interfaz de Programación de Aplicaciones. Permite que sistemas informáticos se comuniquen entre sí de forma estructurada.',
@@ -26,7 +26,7 @@ const GLOSARIO = [
   },
   {
     termino: 'OC / Orden de Compra',
-    definicion: 'Documento oficial que formaliza la compra al proveedor seleccionado en el proceso de Compra Ágil.',
+    definicion: 'Documento que formaliza una compra. Esta API no publica al proveedor adjudicado: un texto de selección no es un ganador.',
   },
   {
     termino: 'Convocatoria',
@@ -50,7 +50,7 @@ const GLOSARIO = [
   },
   {
     termino: 'Paginación',
-    definicion: 'Mecanismo que divide un conjunto grande de resultados en páginas de tamaño fijo (máx. 50 items por página) para facilitar su procesamiento.',
+    definicion: 'Mecanismo que divide los resultados en páginas. Este servidor pide 10 ítems por página. Una página de 50 se corta antes de responder.',
   },
   {
     termino: '429 Too Many Requests',

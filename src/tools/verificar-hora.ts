@@ -13,7 +13,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   consultarHoraOficial, interpretarDesfase, SERVIDOR_NTP_CHILE, DESFASE_PREOCUPANTE_MS,
 } from '../utils/ntp.js';
-import { NOTA_ZONA_HORARIA } from '../utils/fechas.js';
+import { NOTA_ZONA_HORARIA, desfaseChileEn } from '../utils/fechas.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'verificar_hora_oficial';
@@ -61,6 +61,7 @@ export function registerVerificarHora(server: McpServer): void {
               desfase_ms: r.desfaseMs,
               demora_consulta_ms: r.demoraMs,
               diagnostico: interpretarDesfase(r.desfaseMs),
+              desfase_chile_vigente: desfaseChileEn(new Date(r.horaOficial)),
               _nota_horaria: NOTA_ZONA_HORARIA,
             }, null, 2),
           }],

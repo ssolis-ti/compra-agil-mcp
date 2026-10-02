@@ -83,6 +83,19 @@ describe('CompraAgilApiError.actionableMessage', () => {
     const err = new CompraAgilApiError(504, [], consulta);
     expect(err.actionableMessage).toContain(consulta);
     expect(err.actionableMessage).toContain('búsqueda de texto y estado=desierta');
+    expect(err.actionableMessage).toContain("Baja 'tamano_pagina' hasta 10");
+  });
+
+  it('un 504 sin tamaño de página no nombra perillas que la llamada no tiene', () => {
+    const err = new CompraAgilApiError(504, [], 'GET /v2/compra-agil?estado=publicada');
+    expect(err.actionableMessage).not.toContain('tamano_pagina');
+    expect(err.actionableMessage).not.toContain('limite_analisis');
+    expect(err.actionableMessage).not.toContain('max_paginas');
+  });
+
+  it('un 504 que ya pidió 10 no pide bajar el tamaño', () => {
+    const err = new CompraAgilApiError(504, [], 'GET /v2/compra-agil?estado=publicada&tamano_pagina=10');
+    expect(err.actionableMessage).not.toContain("Baja 'tamano_pagina'");
   });
 
   it('redacta el ticket si la llamada que falló lo trae', () => {

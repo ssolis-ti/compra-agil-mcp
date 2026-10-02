@@ -55,6 +55,15 @@ function esTextoSobreDesierta(consulta: string): boolean {
   return estado.split(',').includes('desierta') && texto !== null && texto !== '';
 }
 
+/** Solo si ESA url pidió más de 10. Un 10 ya es el mínimo y no se puede bajar. */
+function pistaTamano(consulta: string): string {
+  const separador = consulta.indexOf('?');
+  if (separador < 0) return '';
+  const n = Number(new URLSearchParams(consulta.slice(separador + 1)).get('tamano_pagina'));
+  if (!Number.isFinite(n) || n <= 10) return '';
+  return " Baja 'tamano_pagina' hasta 10.";
+}
+
 function getActionableMessage(httpStatus: number, apiErrors: ApiError[], consulta = ''): string {
   // El mensaje viene de la API: no se controla su contenido y podría hacer eco
   // de la URL solicitada (que en el endpoint legado lleva el ticket en la query).
@@ -90,7 +99,7 @@ function getActionableMessage(httpStatus: number, apiErrors: ApiError[], consult
       const pistaLenta = esTextoSobreDesierta(consulta)
         ? ' Esta llamada combina búsqueda de texto y estado=desierta, la combinación más lenta medida.'
         : '';
-      return `La pasarela de Mercado Público cortó la conexión antes de que la API respondiera (HTTP ${httpStatus}).${llamada} La consulta tardó demasiado. No reintentes en ráfaga. Si se repite, reduce el trabajo de esa misma llamada: baja 'tamano_pagina' (mínimo 10), baja 'limite_analisis' o 'max_paginas', o agrega un filtro. Un 'tamano_pagina' de 50 sobre un filtro amplio agota los ~30 s de la pasarela.${pistaLenta}${detail}`;
+      return `La pasarela de Mercado Público cortó la conexión antes de que la API respondiera (HTTP ${httpStatus}).${llamada} La consulta tardó demasiado. No reintentes en ráfaga.${pistaTamano(consulta)}${pistaLenta}${detail}`;
     }
     default:
       return `Error inesperado HTTP ${httpStatus} de la API de Compra Ágil.${detail}`;

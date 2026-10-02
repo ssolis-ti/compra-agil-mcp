@@ -10,7 +10,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { conNotaHoraria, enHoraDeChile } from '../utils/fechas.js';
-import { TAMANO_PAGINA_SEGURO, textoPagina } from '../utils/paginacion.js';
+import { TAMANO_PAGINA_SEGURO, camposPagina } from '../utils/paginacion.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'buscar_compras_agiles';
@@ -20,9 +20,9 @@ Permite filtrar por palabras clave, estado del proceso, región geográfica y ra
 Retorna un listado resumido con código, nombre, estado, presupuesto e institución compradora.
 La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "fecha_cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.
 Cada resultado trae el RUT del organismo y fecha_ultimo_cambio. motivo_seleccion solo aparece si la API lo envió con texto; un valor presente no prueba que haya un proveedor adjudicado.
-Hay que enviar al menos un filtro de la API: estado, region, q, id, publicado_desde o publicado_hasta. Sin ninguno, esta herramienta no hace la llamada. Si esa consulta se enviara, la API responde HTTP 500. El orden, la página y las palabras clave locales no cuentan: las palabras se aplican después, sobre la respuesta.
+Hay que enviar al menos un filtro de la API: estado, region, q, id, publicado_desde o publicado_hasta. Sin ninguno, esta herramienta no hace la llamada. El orden, la página y las palabras clave locales no cuentan: las palabras se aplican después, sobre la respuesta.
 Nota: los parámetros 'q' (búsqueda por texto) e 'id' (código exacto) son mutuamente excluyentes.
-Estados válidos: publicada, cerrada, desierta, cancelada, proveedor_seleccionado.
+Estados que devuelven filas: publicada, cerrada, desierta, cancelada. proveedor_seleccionado devuelve 0 filas y oc_emitida responde HTTP 400.
 Regiones: códigos del 1 al 16 (ej: 13 = Metropolitana, 5 = Valparaíso).`;
 
 export const inputSchema = {
@@ -33,7 +33,7 @@ export const inputSchema = {
     'Código exacto de una Compra Ágil. Ej: "1057539-228-COT26". No usar junto con "q".'
   ),
   estado: z.string().optional().describe(
-    'Estado(s) del proceso, separados por coma. Valores: publicada, cerrada, desierta, cancelada, proveedor_seleccionado. Ej: "publicada,proveedor_seleccionado".'
+    'Estado(s) que devuelven filas, separados por coma: publicada, cerrada, desierta, cancelada. proveedor_seleccionado devuelve 0 filas. oc_emitida responde HTTP 400.'
   ),
   region: z.string().optional().describe(
     'Código(s) de región del organismo comprador, separados por coma (1-16). Ej: "13" para Metropolitana, "13,5" para Metropolitana y Valparaíso.'
@@ -53,15 +53,15 @@ export const inputSchema = {
   ordenar_por: z.enum(['FechaUltimaModificacion', 'FechaPublicacion']).optional().describe(
     'Criterio de ordenamiento. "FechaPublicacion" para las más recientes primero, "FechaUltimaModificacion" (default) para las últimas modificadas.'
   ),
-  tamano_pagina: z.number().min(10).max(50).default(TAMANO_PAGINA_SEGURO).describe(
-    'Resultados por página (10-50, default 10). Si no lo indicas, se piden 10. Una página de 50 sobre un filtro amplio responde HTTP 504.'
+  tamano_pagina: z.number().min(10).max(10).default(TAMANO_PAGINA_SEGURO).describe(
+    'Fijo en 10. Una página de 50 sobre un filtro amplio responde HTTP 504.'
   ),
   numero_pagina: z.number().min(1).optional().describe(
     'Número de página a consultar (comienza en 1).'
   ),
 };
 
-/** Filtros que la API acepta. Paginación, orden y palabras locales no evitan el HTTP 500. */
+/** Filtros que la API acepta. Paginación, orden y palabras locales no disparan la consulta. */
 const FILTROS_API = ['q', 'id', 'estado', 'region', 'publicado_desde', 'publicado_hasta'] as const;
 
 export function tieneFiltroDeApi(args: Partial<Record<(typeof FILTROS_API)[number], string>>): boolean {
@@ -103,9 +103,12 @@ export function resumirCompraBusqueda(item: CompraAgilItem) {
     fecha_ultimo_cambio_hora_chile: enHoraDeChile(item.fechas.fecha_ultimo_cambio),
     ofertas_recibidas: item.resumen.total_ofertas_recibidas,
   };
+  const conOfertas = item.resumen.total_ofertas_recibidas === 0
+    ? { ...resumen, _nota_ofertas: 'El listado informa 0 ofertas. No es un hecho de la ficha.' }
+    : resumen;
   const motivo = item.motivos.motivo_seleccion?.trim();
-  if (!motivo) return resumen;
-  return { ...resumen, motivo_seleccion: motivo };
+  if (!motivo) return conOfertas;
+  return { ...conOfertas, motivo_seleccion: motivo };
 }
 
 export function registerBuscarCompras(server: McpServer, client: CompraAgilClient): void {
@@ -185,11 +188,12 @@ export function registerBuscarCompras(server: McpServer, client: CompraAgilClien
         const summary = filteredItems.map(resumirCompraBusqueda);
 
         const result = conNotaHoraria({
-          total_resultados: response.paginacion.total_resultados,
-          total_filtrados_en_pagina: filteredItems.length,
-          numero_pagina: response.paginacion.numero_pagina,
-          total_paginas: response.paginacion.total_paginas,
-          pagina: textoPagina(response.paginacion.numero_pagina, response.paginacion.total_paginas),
+          ...camposPagina(
+            response.paginacion.numero_pagina,
+            response.paginacion.total_paginas,
+            response.paginacion.total_resultados,
+            filteredItems.length,
+          ),
           resultados: summary,
         });
 

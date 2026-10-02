@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor, consultaSensible, deduplicarDocumentos, recortarArchivos } from '../src/utils/doc-search.js';
+import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor, anteponerSanciones, consultaSensible, deduplicarDocumentos, recortarArchivos, recortarEnPalabra, agruparCatalogo, marcarSiEsGuiaOficial, MARCA_DESCRIPCION_PROMETIDA } from '../src/utils/doc-search.js';
+import { textoEnlaceAdjunto } from '../src/tools/documentos.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -238,5 +239,47 @@ describe('recortarArchivos — tope de 3', () => {
     ], false);
     expect(r.resultados.map((x) => x.archivo)).toEqual(['a.pdf', 'b.pdf', 'c.pdf']);
     expect(r.omitidos.map((x) => x.archivo)).toEqual(['d.pdf', 'e.pdf']);
+  });
+});
+
+describe('multas, guía prometida, recorte y catálogo', () => {
+  it('pone el PDF de sanciones delante de la guía municipal', () => {
+    const r = anteponerSanciones([
+      { archivo: 'guias/guia-de-buenas-practicas-en-compras-municipales.pdf', mejorPuntaje: 9 },
+      { archivo: 'guias/multas-sanciones-procedimientos.pdf', mejorPuntaje: 2 },
+    ], 'qué multas me pueden aplicar', false);
+    expect(r[0].archivo).toBe('guias/multas-sanciones-procedimientos.pdf');
+  });
+
+  it('no le quita el primer lugar al manual en una consulta sensible', () => {
+    const r = anteponerSanciones([
+      { archivo: 'api/manual_servidor_mcp.md', mejorPuntaje: 1 },
+      { archivo: 'guias/multas-sanciones-procedimientos.pdf', mejorPuntaje: 4 },
+    ], 'multas y orden de compra', true);
+    expect(r[0].archivo).toBe('api/manual_servidor_mcp.md');
+  });
+
+  it('marca la guía oficial y no parte la palabra', () => {
+    expect(marcarSiEsGuiaOficial('api/Documentacion_API_Compra_Agil.md', 'cuerpo')).toContain(MARCA_DESCRIPCION_PROMETIDA);
+    expect(recortarEnPalabra('correspondientes al plazo', 8)).toBe('correspondientes... [TRUNCADO]');
+    expect(recortarEnPalabra('uno dos tres', 7)).toBe('uno dos... [TRUNCADO]');
+  });
+
+  it('agrupa el markdown y el pdf de la misma guía', () => {
+    const grupos = agruparCatalogo([
+      'api/Documentacion_API_Compra_Agil.md',
+      'api/Documentacion_API_Compra_Agil.pdf',
+      'api/manual_servidor_mcp.md',
+    ]);
+    expect(grupos).toHaveLength(2);
+    expect(grupos[0].archivos).toHaveLength(2);
+  });
+
+  it('el enlace de adjunto no invita a abrir la descarga heredada', () => {
+    const texto = textoEnlaceAdjunto('123', '1-2-COT26');
+    expect(texto).toContain('ficha?code=1-2-COT26');
+    expect(texto).toContain('404');
+    expect(texto).not.toContain('probablemente');
+    expect(texto).not.toContain('RetornaDocumento');
   });
 });
