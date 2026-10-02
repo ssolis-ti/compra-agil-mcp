@@ -31,7 +31,7 @@ Un 429 no bloquea hasta el día siguiente. El servicio volvió a responder 13 mi
 | `auditar_compras_desiertas` | Cruza un proceso desierto con precios cotizados del mismo rubro. |
 | `generar_borrador_cotizacion` | JSON de cotización con IVA 19 % y carta. Los placeholders van marcados. |
 | `radar_oportunidades_calientes` | Hot Score sobre procesos `publicada`, máximo 115. Incluye puntos por segundo llamado. Cada página pide 10 procesos: una de 50 cae en HTTP 504. Corta en `max_paginas` (default 3, hasta 30 procesos). |
-| `generar_informe` | HTML imprimible en `carta`, `oficio` o `a4`. Devuelve la ruta del archivo. Hoy el único tipo es `radar`. |
+| `generar_informe` | HTML imprimible en `carta`, `oficio` o `a4`. Devuelve la ruta, no el HTML. Tipos: `radar`, `cotizacion`, `precio`, `auditoria` y `competencia`. El de competencia no nombra un adjudicado. |
 
 ## Recursos y prompts
 

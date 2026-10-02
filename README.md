@@ -352,7 +352,7 @@ const resources = await client.listResources();
 | `auditar_compras_desiertas` | Analiza por qué una convocatoria quedó desierta, cruzando su presupuesto y plazo contra los precios que el mercado cotizó en procesos del mismo rubro. Reporta el motivo oficial de deserción. |
 | `generar_borrador_cotizacion` | Auto-completa propuestas JSON de cotización bajo el esquema oficial, calculando impuestos (19% IVA) y redactando la carta de presentación. Marca explícitamente los campos placeholder. |
 | `radar_oportunidades_calientes` | Califica y ordena convocatorias publicadas con un score ponderado (Hot Score, máx 115) de competencia, urgencia de cierre, presupuesto, simplicidad y **segundo llamado**. Cada resultado trae el desglose de factores y el campo `llamado`. Auto-pagina. |
-| `generar_informe` | Genera un **informe profesional imprimible** (HTML autocontenido, diseño A4/Carta/Oficio) y devuelve la ruta del archivo. Ver [Informes](#-informes-imprimibles). |
+| `generar_informe` | Genera un **informe profesional imprimible** (HTML autocontenido, diseño A4/Carta/Oficio) y devuelve la ruta del archivo. Tipos: `radar`, `cotizacion`, `precio`, `auditoria` y `competencia`. Ver [Informes](#-informes-imprimibles). |
 
 ### Recursos Disponibles (Resources)
 
@@ -450,9 +450,17 @@ Por eso este servidor **no bloquea hasta el día siguiente**: honra `Retry-After
 
 Abre el archivo en tu navegador y usa **Ctrl+P** para exportarlo a PDF, seleccionando el papel correspondiente en el diálogo de impresión.
 
+| Tipo | Qué imprime |
+| :--- | :--- |
+| `radar` | Oportunidades activas ordenadas por puntuación |
+| `cotizacion` | Borrador de cotización: ítems, neto, IVA 19 % y carta. No se envía a Mercado Público |
+| `precio` | Distribución de precios **cotizados** (gráfico de mínimo, p25, mediana, promedio y máximo) |
+| `auditoria` | Brechas de presupuesto y plazo de un proceso desierto, con recomendaciones |
+| `competencia` | Tabla de cotizantes y la brecha entre el menor y el mayor monto. No nombra un adjudicado |
+
 Para iterar el diseño sin consumir cuota de la API ni requerir ticket:
 ```bash
-npx tsx scripts/preview-informe.ts   # genera los tres formatos con datos de muestra
+npx tsx scripts/preview-informe.ts   # radar en los tres papeles, y las otras cuatro plantillas en carta
 ```
 
 ---
@@ -468,6 +476,9 @@ npx tsx scripts/preview-informe.ts   # genera los tres formatos con datos de mue
 * **Informe de oportunidades:**
   * *Usuario:* "Genérame un informe en oficio del radar de oportunidades de la RM."
   * *Acción del LLM:* Llama a `generar_informe` con `tipo="radar"`, `region="13"`, `formato_papel="oficio"`. Recibe la ruta del HTML listo para imprimir.
+* **Cotización para presentar:**
+  * *Usuario:* "Armame la cotización de `1057539-228-COT26` a nombre de mi empresa."
+  * *Acción del LLM:* Llama a `generar_informe` con `tipo="cotizacion"` y el código. Recibe la ruta de un HTML con ítems, IVA y carta. El archivo no se envía a Mercado Público.
 * **Auditoría de un proceso desierto:**
   * *Usuario:* "¿Por qué quedó desierta la compra `758-329-COT26`?"
   * *Acción del LLM:* Llama a `auditar_compras_desiertas` con `codigo_compra="758-329-COT26"`. Recibe el motivo oficial, las brechas de presupuesto/plazo frente al mercado y recomendaciones.

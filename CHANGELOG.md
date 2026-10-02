@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Añadido
+* **`generar_informe` tiene cuatro plantillas además del radar.** `cotizacion` presenta el borrador (ítems, neto, IVA 19 % y carta). `precio` grafica la distribución cotizada. `auditoria` muestra las brechas y las recomendaciones. `competencia` compara cotizantes y la brecha entre montos, sin nombrar un adjudicado. Cada una usa la misma recolección que la herramienta JSON. El archivo sigue siendo HTML.
+
 ### Corregido
 * **`buscar_compras_agiles` y `obtener_detalle_compra` tiraban campos que la API ya manda.** La búsqueda ahora trae el RUT del organismo y `fecha_ultimo_cambio`. `motivo_seleccion` solo si viene con texto, y no se lee como adjudicación. El detalle trae `estado_codigo`, el número de llamado y el último cambio. El tipo de cambio aparece solo si la moneda no es CLP. Una cotización inadmisible trae su justificación. Sigue sin publicarse el proveedor adjudicado.
 * **`docs/api/sintesis_e_indice.md` enseñaba primero la cuota por día calendario.** La §4 de la guía lo dice. La medición, la §7 y el glosario describen un token bucket: un 429 de septiembre 2026 se recuperó en 13 minutos. El índice ahora abre por eso. El servidor espera `Retry-After` o 15 → 30 → 60 → 120 minutos, y no bloquea hasta el día siguiente. El ejemplo 8.6 queda marcado: en la muestra, `proveedor_seleccionado` valió 0.

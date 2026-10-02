@@ -134,6 +134,140 @@ export async function estimarPrecioUnitario(
   };
 }
 
+export interface ArgsBorradorCotizacion {
+  codigo_compra: string;
+  rut_proveedor?: string;
+  razon_social?: string;
+  precio_unitario_personalizado?: number;
+  plazo_entrega_dias?: number;
+  descripcion_propuesta?: string;
+}
+
+export interface BorradorCotizacion {
+  _advertencia: string;
+  _campos_a_revisar: string[];
+  codigo_compra: string;
+  nombre_compra: string;
+  organismo_comprador: string;
+  rut_proveedor: string;
+  razon_social: string;
+  es_emt: null;
+  activo: true;
+  plazo_entrega_dias: number;
+  valor_neto: number;
+  porcentaje_impuesto: 19;
+  nombre_impuesto: 'IVA';
+  total_impuesto: number;
+  monto_total: number;
+  descripcion_cotizacion: string;
+  productos_cotizados: Array<{
+    codigo_producto: number | string;
+    nombre_producto: string;
+    descripcion: string;
+    cantidad: number;
+    precio_unitario: number;
+    monto_total_producto: number;
+  }>;
+  metadata_estimacion: {
+    precio_unitario_utilizado: number;
+    fuente_precio_unitario: string;
+    precio_unitario_sugerido_automatico: boolean;
+  };
+}
+
+/**
+ * Arma el borrador que devuelve `generar_borrador_cotizacion`.
+ * La tool JSON y el informe HTML leen este objeto, así que no pueden divergir.
+ */
+export async function construirBorradorCotizacion(
+  client: Pick<CompraAgilClient, 'buscar' | 'detalle' | 'detallesEnParalelo'>,
+  args: ArgsBorradorCotizacion,
+): Promise<BorradorCotizacion> {
+  logger.info(`generar_borrador_cotizacion: Obteniendo detalle de la compra activa ${args.codigo_compra}`);
+  const targetDetail = await client.detalle(args.codigo_compra);
+
+  // Detectar qué campos son placeholders (no aportados por el usuario) para advertir en la salida.
+  const advertencias: string[] = [];
+  const rutProv = args.rut_proveedor || '76.000.000-0';
+  const razonSocial = args.razon_social || 'Proveedor Demo SpA';
+  if (!args.rut_proveedor) advertencias.push('rut_proveedor es un valor PLACEHOLDER; reemplázalo por el RUT real del proveedor antes de presentar.');
+  if (!args.razon_social) advertencias.push('razon_social es un valor PLACEHOLDER; reemplázalo por la razón social real.');
+  let plazoEntrega = args.plazo_entrega_dias;
+  if (plazoEntrega === undefined) {
+    plazoEntrega = targetDetail.entrega?.plazo_entrega_dias || 5;
+  }
+
+  const estimacion = await estimarPrecioUnitario(
+    client,
+    targetDetail,
+    args.precio_unitario_personalizado
+  );
+  const suggestedPrice = estimacion.precio;
+  const isPriceSuggested = estimacion.sugerido;
+  const priceSource = estimacion.fuente;
+
+  // Construir productos cotizados
+  const productosCotizados = (targetDetail.productos_solicitados || []).map(prod => {
+    const uPrice = suggestedPrice;
+    const totalProd = prod.cantidad * uPrice;
+    return {
+      codigo_producto: prod.codigo_producto,
+      nombre_producto: prod.nombre,
+      descripcion: prod.descripcion || `Suministro de ${prod.nombre}`,
+      cantidad: prod.cantidad,
+      precio_unitario: uPrice,
+      monto_total_producto: totalProd,
+    };
+  });
+
+  // Totales de cotización
+  const valorNeto = productosCotizados.reduce((acc, p) => acc + p.monto_total_producto, 0);
+  const totalImpuesto = Math.round(valorNeto * 0.19); // 19% IVA en Chile
+  const montoTotal = valorNeto + totalImpuesto;
+
+  // Cover letter/carta de presentación comercial
+  const userDesc = args.descripcion_propuesta || '';
+  const coverLetter = `Estimados ${targetDetail.institucion?.organismo_comprador || 'Sres. Compradores'},\n\n` +
+    `Junto con saludar, a través del presente documento presentamos nuestra cotización formal para el proceso de Compra Ágil "${targetDetail.nombre}" (Código: ${targetDetail.codigo}).\n\n` +
+    `Detalles de nuestra propuesta:\n` +
+    (userDesc ? `- ${userDesc}\n` : '') +
+    `- Cumplimiento garantizado con todas las especificaciones y características solicitadas.\n` +
+    `- Plazo de entrega: ${plazoEntrega} días corridos contados desde la recepción de la Orden de Compra.\n` +
+    `- Validez de la oferta: 30 días corridos.\n\n` +
+    `Agradecemos de antemano su consideración y nos mantenemos a su disposición para aclarar cualquier duda técnica o comercial.\n\n` +
+    `Atentamente,\n` +
+    `${razonSocial}\nRUT: ${rutProv}`;
+
+  if (!isPriceSuggested) {
+    advertencias.push(`precio_unitario es un valor por defecto ($${suggestedPrice.toLocaleString('es-CL')}); no se pudo estimar de mercado. Ingresa "precio_unitario_personalizado".`);
+  }
+
+  return {
+    _advertencia: '⚠ BORRADOR AUTOGENERADO. Revisa y reemplaza los campos marcados como placeholder antes de presentar la cotización real. Este documento no ha sido enviado a Mercado Público.',
+    _campos_a_revisar: advertencias,
+    codigo_compra: targetDetail.codigo,
+    nombre_compra: targetDetail.nombre,
+    organismo_comprador: targetDetail.institucion?.organismo_comprador || 'No especificado',
+    rut_proveedor: rutProv,
+    razon_social: razonSocial,
+    es_emt: null, // Desconocido: depende del Registro de Proveedores del RUT real, no se asume.
+    activo: true,
+    plazo_entrega_dias: plazoEntrega,
+    valor_neto: valorNeto,
+    porcentaje_impuesto: 19,
+    nombre_impuesto: 'IVA',
+    total_impuesto: totalImpuesto,
+    monto_total: montoTotal,
+    descripcion_cotizacion: coverLetter,
+    productos_cotizados: productosCotizados,
+    metadata_estimacion: {
+      precio_unitario_utilizado: suggestedPrice,
+      fuente_precio_unitario: priceSource,
+      precio_unitario_sugerido_automatico: isPriceSuggested,
+    }
+  };
+}
+
 const TOOL_NAME = 'generar_borrador_cotizacion';
 
 const TOOL_DESCRIPTION = `Genera un borrador estructurado en formato JSON para presentar una cotización formal a un llamado de Compra Ágil activa.
@@ -161,89 +295,7 @@ export function registerGenerarBorrador(server: McpServer, client: CompraAgilCli
     },
     async (args) => {
       try {
-        logger.info(`generar_borrador_cotizacion: Obteniendo detalle de la compra activa ${args.codigo_compra}`);
-        const targetDetail = await client.detalle(args.codigo_compra);
-
-        // Detectar qué campos son placeholders (no aportados por el usuario) para advertir en la salida.
-        const advertencias: string[] = [];
-        const rutProv = args.rut_proveedor || '76.000.000-0';
-        const razonSocial = args.razon_social || 'Proveedor Demo SpA';
-        if (!args.rut_proveedor) advertencias.push('rut_proveedor es un valor PLACEHOLDER; reemplázalo por el RUT real del proveedor antes de presentar.');
-        if (!args.razon_social) advertencias.push('razon_social es un valor PLACEHOLDER; reemplázalo por la razón social real.');
-        let plazoEntrega = args.plazo_entrega_dias;
-        if (plazoEntrega === undefined) {
-          plazoEntrega = targetDetail.entrega?.plazo_entrega_dias || 5;
-        }
-
-        const estimacion = await estimarPrecioUnitario(
-          client,
-          targetDetail,
-          args.precio_unitario_personalizado
-        );
-        const suggestedPrice = estimacion.precio;
-        const isPriceSuggested = estimacion.sugerido;
-        const priceSource = estimacion.fuente;
-
-        // Construir productos cotizados
-        const productosCotizados = (targetDetail.productos_solicitados || []).map(prod => {
-          const uPrice = suggestedPrice;
-          const totalProd = prod.cantidad * uPrice;
-          return {
-            codigo_producto: prod.codigo_producto,
-            nombre_producto: prod.nombre,
-            descripcion: prod.descripcion || `Suministro de ${prod.nombre}`,
-            cantidad: prod.cantidad,
-            precio_unitario: uPrice,
-            monto_total_producto: totalProd,
-          };
-        });
-
-        // Totales de cotización
-        const valorNeto = productosCotizados.reduce((acc, p) => acc + p.monto_total_producto, 0);
-        const totalImpuesto = Math.round(valorNeto * 0.19); // 19% IVA en Chile
-        const montoTotal = valorNeto + totalImpuesto;
-
-        // Cover letter/carta de presentación comercial
-        const userDesc = args.descripcion_propuesta || '';
-        const coverLetter = `Estimados ${targetDetail.institucion?.organismo_comprador || 'Sres. Compradores'},\n\n` +
-          `Junto con saludar, a través del presente documento presentamos nuestra cotización formal para el proceso de Compra Ágil "${targetDetail.nombre}" (Código: ${targetDetail.codigo}).\n\n` +
-          `Detalles de nuestra propuesta:\n` +
-          (userDesc ? `- ${userDesc}\n` : '') +
-          `- Cumplimiento garantizado con todas las especificaciones y características solicitadas.\n` +
-          `- Plazo de entrega: ${plazoEntrega} días corridos contados desde la recepción de la Orden de Compra.\n` +
-          `- Validez de la oferta: 30 días corridos.\n\n` +
-          `Agradecemos de antemano su consideración y nos mantenemos a su disposición para aclarar cualquier duda técnica o comercial.\n\n` +
-          `Atentamente,\n` +
-          `${razonSocial}\nRUT: ${rutProv}`;
-
-        if (!isPriceSuggested) {
-          advertencias.push(`precio_unitario es un valor por defecto ($${suggestedPrice.toLocaleString('es-CL')}); no se pudo estimar de mercado. Ingresa "precio_unitario_personalizado".`);
-        }
-
-        const borradorCotizacion = {
-          _advertencia: '⚠ BORRADOR AUTOGENERADO. Revisa y reemplaza los campos marcados como placeholder antes de presentar la cotización real. Este documento no ha sido enviado a Mercado Público.',
-          _campos_a_revisar: advertencias,
-          codigo_compra: targetDetail.codigo,
-          nombre_compra: targetDetail.nombre,
-          organismo_comprador: targetDetail.institucion?.organismo_comprador || 'No especificado',
-          rut_proveedor: rutProv,
-          razon_social: razonSocial,
-          es_emt: null, // Desconocido: depende del Registro de Proveedores del RUT real, no se asume.
-          activo: true,
-          plazo_entrega_dias: plazoEntrega,
-          valor_neto: valorNeto,
-          porcentaje_impuesto: 19,
-          nombre_impuesto: 'IVA',
-          total_impuesto: totalImpuesto,
-          monto_total: montoTotal,
-          descripcion_cotizacion: coverLetter,
-          productos_cotizados: productosCotizados,
-          metadata_estimacion: {
-            precio_unitario_utilizado: suggestedPrice,
-            fuente_precio_unitario: priceSource,
-            precio_unitario_sugerido_automatico: isPriceSuggested,
-          }
-        };
+        const borradorCotizacion = await construirBorradorCotizacion(client, args);
 
         return {
           content: [{
