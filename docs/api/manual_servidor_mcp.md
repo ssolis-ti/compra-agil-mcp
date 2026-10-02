@@ -26,7 +26,7 @@ Un 429 no bloquea hasta el día siguiente. El servicio volvió a responder 13 mi
 | `verificar_hora_oficial` | NTP de `ntp.shoa.cl`. No gasta cuota de Mercado Público. Si el desfase supera un minuto, la respuesta es un error. |
 | `obtener_enlace_documento` | Arma el enlace a la ficha pública. El enlace heredado de descarga directa se entrega avisando que hoy responde 404. |
 | `descargar_y_leer_documento` | No puede bajar los adjuntos de Compra Ágil. Para un id numérico responde de inmediato con la ficha, sin intentar la descarga. |
-| `consultar_documentos_locales` | Busca en los PDF, TXT y MD de `docs/`, excepto `README.md` y `docs/internals/`. Si este manual coincide con al menos dos términos de la consulta, sus fragmentos van primero. Esos archivos no viajan en el paquete npm. |
+| `consultar_documentos_locales` | Busca en los PDF, TXT y MD de `docs/`, excepto `README.md` y `docs/internals/`. Si este manual coincide con al menos dos términos de la consulta, sus fragmentos van primero. La respuesta incluye como máximo 3 archivos y nombra los que quedaron fuera. Esos archivos no viajan en el paquete npm. |
 | `analizar_precios_mercado` | Distribución de precios cotizados en procesos `desierta`. No son precios adjudicados. |
 | `auditar_compras_desiertas` | Cruza un proceso desierto con precios cotizados del mismo rubro. |
 | `generar_borrador_cotizacion` | JSON de cotización con IVA 19 % y carta. Los placeholders van marcados. |

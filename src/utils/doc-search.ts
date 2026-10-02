@@ -161,3 +161,37 @@ export function anteponerManualServidor<T extends ResultadoArchivo>(
   const resto = resultados.filter((_, i) => i !== indice);
   return { resultados: [manual, ...resto], manualPrimero: true };
 }
+
+/** Cuántos archivos devuelve `consultar_documentos_locales` como máximo. */
+export const TOPE_ARCHIVOS_LOCALES = 3;
+
+export interface RecorteArchivos<T extends ResultadoArchivo> {
+  resultados: T[];
+  /** Archivos que coincidieron y no entraron en el tope, del mayor puntaje al menor. */
+  omitidos: T[];
+}
+
+/**
+ * Deja el manual en el primer lugar cuando ya calificó, y completa el cupo
+ * con los demás archivos de mayor puntaje.
+ *
+ * Sin este corte, cada archivo que roza un término aporta hasta 3.000
+ * caracteres y la respuesta pega la carpeta entera. El empate se rompe por
+ * el orden de llegada, que es el del disco.
+ */
+export function recortarArchivos<T extends ResultadoArchivo>(
+  resultados: T[],
+  manualPrimero: boolean,
+  tope = TOPE_ARCHIVOS_LOCALES,
+): RecorteArchivos<T> {
+  const reservaManual = manualPrimero && resultados.length > 0 && tope > 0;
+  const cabeza = reservaManual ? [resultados[0]] : [];
+  const resto = reservaManual ? resultados.slice(1) : resultados;
+  const porPuntaje = resto
+    .map((archivo, indice) => ({ archivo, indice }))
+    .sort((a, b) => b.archivo.mejorPuntaje - a.archivo.mejorPuntaje || a.indice - b.indice)
+    .map((item) => item.archivo);
+  const cupo = Math.max(0, tope - cabeza.length);
+  const mostrados = [...cabeza, ...porPuntaje.slice(0, cupo)];
+  return { resultados: mostrados, omitidos: porPuntaje.slice(cupo) };
+}
