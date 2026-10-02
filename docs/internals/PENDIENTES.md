@@ -48,23 +48,9 @@ porque no es una llamada a `Read`.
 
 ### 3. Completar las plantillas de informe
 
-**Estado:** solo existe `radar`. Faltan 4.
+**Estado:** hecho el 1 de octubre de 2026. Sigue sin publicar (el paquete sigue en 2.5.0).
 
-La capa de informes (`src/reports/`) está terminada: design system, componentes,
-formatos de papel y el shell del documento. Añadir una plantilla es escribir un
-archivo en `src/reports/templates/` y sumar el tipo al enum de
-[`generar-informe.ts`](../../src/tools/generar-informe.ts).
-
-| Plantilla | Fuente de datos | Notas |
-| :--- | :--- | :--- |
-| `cotizacion` | `generar_borrador_cotizacion` | **La de mayor valor comercial**: un PDF de cotización presentable para un proveedor |
-| `precio` | `analizar_precios_mercado` | Aprovechar `barChartSVG` para la distribución de precios |
-| `auditoria` | `auditar_compras_desiertas` | Brechas de presupuesto/plazo y recomendaciones |
-| `competencia` | `obtener_detalle_compra` | Tabla comparativa de cotizantes y spread |
-
-**Prerequisito por plantilla:** extraer la recolección de datos a una función pura
-reutilizable, como se hizo con `recolectarDatosRadar()`. Así la tool JSON y el
-informe consumen el mismo dataset y no pueden divergir.
+`generar_informe` acepta `radar`, `cotizacion`, `precio`, `auditoria` y `competencia`. Cada una lee el mismo objeto que la herramienta JSON: `construirBorradorCotizacion`, `recolectarDatosPrecios` y `recolectarDatosAuditoria`. `competencia` arma la tabla con `compararCotizantes()` sobre el detalle. Ese bloque no se agregó al JSON de `obtener_detalle_compra` y no marca un adjudicado. El HTML sigue yéndose a disco. El PDF de la sección 4 sigue pendiente.
 
 **Iterar el diseño sin gastar cuota:** `npx tsx scripts/preview-informe.ts`
 
@@ -135,6 +121,7 @@ Se desconoce qué representa y qué otros valores admite.
 
 ## ✅ Cerrado — no reabrir sin datos nuevos
 
+* **Plantillas de informe** — `cotizacion`, `precio`, `auditoria` y `competencia`, además del radar. El PDF directo sigue abierto en la §4.
 * **`tamano_pagina` mínimo 10** — verificado: `1` y `5` devuelven HTTP 400. El
   comentario original del código tenía razón.
 * **La API no publica adjudicaciones** — 45 procesos, 52 cotizaciones,

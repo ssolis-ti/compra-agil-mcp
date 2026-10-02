@@ -19,6 +19,338 @@ const inputSchema = {
   limite_analisis: z.number().min(1).max(8).default(3).optional().describe('Cantidad de procesos comparables con los que contrastar (1-8, default 3). Cada uno es una consulta de cuota y una llamada de detalle — lo lento: medido en septiembre de 2026, 20-25 s cada una, con HTTP 504 intermitentes. Se piden en paralelo, así que subirlo no multiplica el tiempo, pero sí la probabilidad de que alguna falle.'),
 };
 
+export interface ArgsAuditoria {
+  codigo_compra?: string;
+  q?: string;
+  limite_analisis?: number;
+}
+
+export interface ProcesoComparable {
+  codigo: string;
+  estado?: string;
+  institucion: string;
+  cotizaciones_recibidas: number;
+  cotizaciones_inadmisibles: number;
+  menor_monto_cotizado: number;
+  mayor_monto_cotizado: number;
+  duracion_dias: number;
+  fecha_cierre?: string;
+  motivo_desierta: string | null;
+}
+
+export interface DatosAuditoria {
+  proceso_auditado: {
+    codigo: string;
+    nombre: string;
+    region: string;
+    estado: string;
+    presupuesto_disponible: number;
+    duracion_dias: number;
+    items_solicitados: Array<{ nombre: string; cantidad: number; unidad: string }>;
+    motivo_desierta: string;
+  };
+  busqueda_comparativa: {
+    termino_clave: string;
+    procesos_comparables_con_cotizaciones: number;
+    _aviso_cobertura?: string;
+    estadisticas_montos_cotizados: { minimo_cotizado: number; maximo_cotizado: number; promedio_cotizado: number } | null;
+    estadisticas_duracion: { minimo_dias: number; maximo_dias: number; promedio_dias: number } | null;
+  };
+  analisis_de_brechas: {
+    presupuesto_insuficiente: boolean;
+    plazo_insuficiente: boolean;
+    requisitos_complejos: boolean;
+    diferencia_presupuesto_porcentaje: number;
+    diferencia_plazo_dias: number;
+  };
+  recomendaciones_de_optimizacion: string[];
+  procesos_comparables_analizados: ProcesoComparable[];
+  _nota_metodologica: string;
+}
+
+export type RecoleccionAuditoria =
+  | { kind: 'mensaje'; texto: string; isError: boolean }
+  | { kind: 'datos'; datos: DatosAuditoria };
+
+/**
+ * Misma recolección que `auditar_compras_desiertas`. La tool JSON y el informe
+ * HTML leen este resultado. Los textos de validación y de búsqueda vacía no cambian.
+ */
+export async function recolectarDatosAuditoria(
+  client: Pick<CompraAgilClient, 'buscar' | 'detalle' | 'detallesEnParalelo'>,
+  args: ArgsAuditoria,
+): Promise<RecoleccionAuditoria> {
+  let targetCode = args.codigo_compra || '';
+  let keyword = args.q || '';
+  let region = '';
+
+  // 1. Si no hay código pero hay keyword q, buscar un proceso desierto reciente
+  if (!targetCode && keyword) {
+    logger.info(`auditar_compras_desiertas: Buscando proceso desierto reciente para "${keyword}"`);
+    const desiertasSearch = await client.buscar({
+      q: keyword,
+      estado: 'desierta',
+      tamano_pagina: 10, // API v2 requiere mínimo 10
+      numero_pagina: 1,
+    });
+
+    if (!desiertasSearch.items || desiertasSearch.items.length === 0) {
+      return { kind: 'mensaje', isError: false, texto: `No se encontraron procesos recientes en estado "desierta" para la búsqueda "${keyword}". Por favor intenta con otra palabra clave o ingresa un "codigo_compra" específico.` };
+    }
+    targetCode = desiertasSearch.items[0].codigo;
+  }
+
+  if (!targetCode) {
+    return { kind: 'mensaje', isError: true, texto: 'Error de validación: Debes proporcionar "codigo_compra" o un término de búsqueda "q" para encontrar un proceso a auditar.' };
+  }
+
+  // 2. Obtener el detalle del proceso desierto a auditar
+  logger.info(`auditar_compras_desiertas: Consultando detalle del proceso objetivo ${targetCode}`);
+  const targetDetail = await client.detalle(targetCode);
+
+  // Extraer metadatos clave del proceso objetivo
+  const targetName = targetDetail.nombre || 'Sin nombre';
+  const targetBudget = targetDetail.presupuesto?.monto_disponible_clp || targetDetail.presupuesto?.monto_disponible || 0;
+  
+  let targetDuration = 0;
+  if (targetDetail.fechas?.fecha_cierre && targetDetail.fechas?.fecha_publicacion) {
+    const start = new Date(targetDetail.fechas.fecha_publicacion).getTime();
+    const end = new Date(targetDetail.fechas.fecha_cierre).getTime();
+    targetDuration = Math.round(((end - start) / (1000 * 60 * 60 * 24)) * 10) / 10;
+  }
+
+  if (targetDetail.institucion?.region !== null) {
+    region = String(targetDetail.institucion.region);
+  }
+
+  // Determinar la palabra clave para la comparativa histórica
+  if (!keyword) {
+    if (targetDetail.productos_solicitados && targetDetail.productos_solicitados.length > 0) {
+      keyword = targetDetail.productos_solicitados[0].nombre;
+    } else {
+      keyword = targetDetail.nombre;
+    }
+  }
+
+  // 3. Buscar procesos comparables del mismo rubro que publiquen cotizaciones.
+  //    Solo `desierta`: medido contra la API real, es el único estado que las
+  //    expone (desierta 5/8 procesos con precios; cerrada 0/8).
+  //    `proveedor_seleccionado` devuelve 0 resultados.
+  logger.info(`auditar_compras_desiertas: Buscando procesos comparables para "${keyword}"`);
+  const limit = args.limite_analisis || 3;
+  const searchResponse = await client.buscar({
+    q: keyword,
+    estado: 'desierta',
+    // Solo se examinan los primeros `limit` resultados, así que pedir 50
+    // era desperdicio — y provocaba HTTP 504: medido en producción, esta
+    // misma consulta con tamano_pagina=50 agota los ~30 s de la pasarela,
+    // y con 15 responde en 9,9 s.
+    tamano_pagina: Math.max(10, Math.min(limit, 50)),
+    numero_pagina: 1,
+  });
+
+  const successDurations: number[] = [];
+  const successPrices: number[] = [];
+  const processedCases: ProcesoComparable[] = [];
+  let fallosDetalle = 0;
+  let intentosDetalle = 0;
+  const itemsToProcess = (searchResponse.items || []).slice(0, limit);
+
+  if (itemsToProcess.length > 0) {
+    logger.info(`auditar_compras_desiertas: Analizando detalles de ${itemsToProcess.length} procesos comparables`);
+
+    // En paralelo y con concurrencia adaptativa: los detalles son
+    // independientes y la API tarda 20-25 s por consulta (medido en
+    // septiembre 2026), así que en serie el total superaba el timeout de
+    // cualquier cliente MCP. El limitador vive en el cliente y es
+    // compartido, así que si otra herramienta acaba de chocar con 504,
+    // esta tanda ya sale con menos paralelismo.
+    const detalles = await client.detallesEnParalelo(itemsToProcess.map((i) => i.codigo));
+    const detallados = itemsToProcess.map((item, i) =>
+      detalles[i] ? { item, detail: detalles[i]! } : null
+    );
+
+    intentosDetalle = detallados.length;
+    fallosDetalle = detallados.filter((d) => d === null).length;
+
+    for (const entrada of detallados) {
+      if (!entrada) continue;
+      {
+        const { item, detail } = entrada;
+
+        // Se recolectan TODAS las cotizaciones del proceso, incluidas las
+        // declaradas inadmisibles: en los procesos desiertos casi todas lo son
+        // (por eso quedaron desiertos) y filtrarlas dejaba la muestra vacía.
+        // El precio ofertado sigue siendo señal de mercado.
+        // Antes se buscaba solo al adjudicado, pero la API nunca marca un
+        // ganador (verificado), así que ese camino no encontraba nada.
+        const cotizaciones = detail.proveedores_cotizando ?? [];
+        if (cotizaciones.length === 0) continue;
+        const inadmisibles = cotizaciones.filter((c) => !esAdmisible(c)).length;
+
+        const netos = cotizaciones
+          .map((c) => extraerMontoNeto(c))
+          .filter((n): n is number => n !== null);
+        if (netos.length === 0) continue;
+
+        // Referencia por proceso: la cotización más económica — es el precio
+        // al que ese mercado estuvo dispuesto a atender la necesidad.
+        const menorNeto = Math.min(...netos);
+        successPrices.push(menorNeto);
+
+        let successDuration = 0;
+        if (detail.fechas?.fecha_cierre && detail.fechas?.fecha_publicacion) {
+          const start = new Date(detail.fechas.fecha_publicacion).getTime();
+          const end = new Date(detail.fechas.fecha_cierre).getTime();
+          successDuration = Math.round(((end - start) / (1000 * 60 * 60 * 24)) * 10) / 10;
+          successDurations.push(successDuration);
+        }
+
+        processedCases.push({
+          codigo: item.codigo,
+          estado: detail.estado?.glosa,
+          institucion: item.institucion?.organismo_comprador || 'Desconocido',
+          cotizaciones_recibidas: cotizaciones.length,
+          cotizaciones_inadmisibles: inadmisibles,
+          menor_monto_cotizado: menorNeto,
+          mayor_monto_cotizado: Math.max(...netos),
+          duracion_dias: successDuration,
+          fecha_cierre: item.fechas?.fecha_cierre,
+          motivo_desierta: detail.motivos?.motivo_desierta ?? null,
+        });
+      }
+    }
+  }
+
+  // 4. Calcular métricas estadísticas para el análisis comparativo
+  let avgPrice = 0, minPrice = 0, maxPrice = 0;
+  if (successPrices.length > 0) {
+    successPrices.sort((a, b) => a - b);
+    minPrice = successPrices[0];
+    maxPrice = successPrices[successPrices.length - 1];
+    avgPrice = Math.round(successPrices.reduce((a, b) => a + b, 0) / successPrices.length);
+  }
+
+  let avgDuration = 0, minDuration = 0, maxDuration = 0;
+  if (successDurations.length > 0) {
+    successDurations.sort((a, b) => a - b);
+    minDuration = successDurations[0];
+    maxDuration = successDurations[successDurations.length - 1];
+    avgDuration = Math.round((successDurations.reduce((a, b) => a + b, 0) / successDurations.length) * 10) / 10;
+  }
+
+  // 5. Análisis crítico de brechas
+  const analisis_critico = {
+    presupuesto_insuficiente: false,
+    plazo_insuficiente: false,
+    requisitos_complejos: false,
+    diferencia_presupuesto_porcentaje: 0,
+    diferencia_plazo_dias: 0,
+  };
+
+  if (targetBudget > 0 && avgPrice > 0) {
+    analisis_critico.diferencia_presupuesto_porcentaje = Math.round(((targetBudget - avgPrice) / avgPrice) * 100);
+    if (targetBudget < minPrice || targetBudget < avgPrice * 0.8) {
+      analisis_critico.presupuesto_insuficiente = true;
+    }
+  } else if (targetBudget === 0 && avgPrice > 0) {
+    // Si el presupuesto objetivo es $0 o no especificado, se marca como potencial brecha si el histórico requiere fondos
+    analisis_critico.presupuesto_insuficiente = true;
+  }
+
+  if (targetDuration > 0 && avgDuration > 0) {
+    analisis_critico.diferencia_plazo_dias = Math.round((targetDuration - avgDuration) * 10) / 10;
+    if (targetDuration < 2 || targetDuration < avgDuration * 0.6) {
+      analisis_critico.plazo_insuficiente = true;
+    }
+  } else if (targetDuration > 0 && targetDuration < 2) {
+    // Plazo menor a 2 días siempre se marca como potencialmente insuficiente en Compra Ágil
+    analisis_critico.plazo_insuficiente = true;
+  }
+
+  if (
+    targetDetail.flags?.considera_requisitos_medioambientales ||
+    targetDetail.flags?.considera_requisitos_impacto_social_economico
+  ) {
+    analisis_critico.requisitos_complejos = true;
+  }
+
+  // 6. Generación de recomendaciones accionables
+  const recomendaciones: string[] = [];
+  if (analisis_critico.presupuesto_insuficiente) {
+    if (targetBudget > 0) {
+      recomendaciones.push(
+        `Aumentar el presupuesto disponible. El presupuesto actual de $${targetBudget.toLocaleString('es-CL')} es un ${Math.abs(analisis_critico.diferencia_presupuesto_porcentaje)}% inferior al promedio de lo que el mercado cotizó en procesos similares ($${avgPrice.toLocaleString('es-CL')}). Se sugiere incrementarlo a al menos $${Math.round(avgPrice * 1.05).toLocaleString('es-CL')}.`
+      );
+    } else {
+      recomendaciones.push(
+        `Especificar o incrementar el presupuesto estimado. El promedio de lo cotizado por el mercado para productos similares es de $${avgPrice.toLocaleString('es-CL')}.`
+      );
+    }
+  }
+
+  if (analisis_critico.plazo_insuficiente) {
+    recomendaciones.push(
+      `Extender el plazo de postulación. El proceso actual ofreció ${targetDuration} días entre publicación y cierre, mientras que los procesos comparables promedian ${avgDuration} días. Se recomienda extender el plazo a un mínimo de 3 a 5 días hábiles.`
+    );
+  }
+
+  if (analisis_critico.requisitos_complejos) {
+    recomendaciones.push(
+      `Flexibilizar los requisitos ambientales/sociales exigidos. Aunque promueven buenas prácticas, en procesos rápidos de bajo monto pueden asustar o inhabilitar a microempresas locales si implican adjuntar certificados complejos.`
+    );
+  }
+
+  if (recomendaciones.length === 0) {
+    recomendaciones.push(
+      `No se detectaron discrepancias obvias de presupuesto o plazo respecto al mercado. Se sugiere revisar la redacción de las especificaciones técnicas o los ítems requeridos en "productos_solicitados" para asegurarse de que no estén amarrados a una única marca o sean demasiado específicos.`
+    );
+  }
+
+  const result = {
+    proceso_auditado: {
+      codigo: targetCode,
+      nombre: targetName,
+      region: region ? `Región ${region}` : 'No especificada',
+      estado: targetDetail.estado?.glosa || 'Desconocido',
+      presupuesto_disponible: targetBudget,
+      duracion_dias: targetDuration,
+      items_solicitados: targetDetail.productos_solicitados?.map(p => ({
+        nombre: p.nombre,
+        cantidad: p.cantidad,
+        unidad: p.unidad_medida,
+      })) || [],
+      motivo_desierta: targetDetail.motivos?.motivo_desierta || 'No especificado en el sistema',
+    },
+    busqueda_comparativa: {
+      termino_clave: keyword,
+      procesos_comparables_con_cotizaciones: successPrices.length,
+      // Un comparativo vacío puede deberse a que no hay comparables o a
+      // que la API no respondió, y son cosas muy distintas: la primera
+      // habla del mercado, la segunda solo de la infraestructura.
+      ...(fallosDetalle > 0 && {
+        _aviso_cobertura: `${fallosDetalle} de ${intentosDetalle} consultas de detalle fallaron (la API no respondió). La comparación se basa en menos procesos de los pedidos; no lo interpretes como escasez de datos del rubro.`,
+      }),
+      estadisticas_montos_cotizados: successPrices.length > 0 ? {
+        minimo_cotizado: minPrice,
+        maximo_cotizado: maxPrice,
+        promedio_cotizado: avgPrice,
+      } : null,
+      estadisticas_duracion: successDurations.length > 0 ? {
+        minimo_dias: minDuration,
+        maximo_dias: maxDuration,
+        promedio_dias: avgDuration,
+      } : null,
+    },
+    analisis_de_brechas: analisis_critico,
+    recomendaciones_de_optimizacion: recomendaciones,
+    procesos_comparables_analizados: processedCases,
+    _nota_metodologica: 'La comparación usa el MENOR monto cotizado de cada proceso similar (cerrado o desierto), no montos adjudicados: la API de Mercado Público no expone qué oferta ganó. Revisa también "motivo_desierta": muchas deserciones se explican por incumplimientos formales (garantías, certificados) y no por precio.',
+  };
+
+  return { kind: 'datos', datos: result };
+}
+
 export function registerAuditarDesiertas(server: McpServer, client: CompraAgilClient): void {
   server.registerTool(
     TOOL_NAME,
@@ -32,292 +364,19 @@ export function registerAuditarDesiertas(server: McpServer, client: CompraAgilCl
     },
     async (args) => {
       try {
-        let targetCode = args.codigo_compra || '';
-        let keyword = args.q || '';
-        let region = '';
-
-        // 1. Si no hay código pero hay keyword q, buscar un proceso desierto reciente
-        if (!targetCode && keyword) {
-          logger.info(`auditar_compras_desiertas: Buscando proceso desierto reciente para "${keyword}"`);
-          const desiertasSearch = await client.buscar({
-            q: keyword,
-            estado: 'desierta',
-            tamano_pagina: 10, // API v2 requiere mínimo 10
-            numero_pagina: 1,
-          });
-
-          if (!desiertasSearch.items || desiertasSearch.items.length === 0) {
-            return {
-              content: [{
-                type: 'text' as const,
-                text: `No se encontraron procesos recientes en estado "desierta" para la búsqueda "${keyword}". Por favor intenta con otra palabra clave o ingresa un "codigo_compra" específico.`,
-              }],
-            };
-          }
-          targetCode = desiertasSearch.items[0].codigo;
-        }
-
-        if (!targetCode) {
+        const recoleccion = await recolectarDatosAuditoria(client, args);
+        if (recoleccion.kind === 'mensaje') {
           return {
-            content: [{
-              type: 'text' as const,
-              text: 'Error de validación: Debes proporcionar "codigo_compra" o un término de búsqueda "q" para encontrar un proceso a auditar.',
-            }],
-            isError: true,
+            content: [{ type: 'text' as const, text: recoleccion.texto }],
+            ...(recoleccion.isError ? { isError: true as const } : {}),
           };
         }
-
-        // 2. Obtener el detalle del proceso desierto a auditar
-        logger.info(`auditar_compras_desiertas: Consultando detalle del proceso objetivo ${targetCode}`);
-        const targetDetail = await client.detalle(targetCode);
-
-        // Extraer metadatos clave del proceso objetivo
-        const targetName = targetDetail.nombre || 'Sin nombre';
-        const targetBudget = targetDetail.presupuesto?.monto_disponible_clp || targetDetail.presupuesto?.monto_disponible || 0;
-        
-        let targetDuration = 0;
-        if (targetDetail.fechas?.fecha_cierre && targetDetail.fechas?.fecha_publicacion) {
-          const start = new Date(targetDetail.fechas.fecha_publicacion).getTime();
-          const end = new Date(targetDetail.fechas.fecha_cierre).getTime();
-          targetDuration = Math.round(((end - start) / (1000 * 60 * 60 * 24)) * 10) / 10;
-        }
-
-        if (targetDetail.institucion?.region !== null) {
-          region = String(targetDetail.institucion.region);
-        }
-
-        // Determinar la palabra clave para la comparativa histórica
-        if (!keyword) {
-          if (targetDetail.productos_solicitados && targetDetail.productos_solicitados.length > 0) {
-            keyword = targetDetail.productos_solicitados[0].nombre;
-          } else {
-            keyword = targetDetail.nombre;
-          }
-        }
-
-        // 3. Buscar procesos comparables del mismo rubro que publiquen cotizaciones.
-        //    Solo `desierta`: medido contra la API real, es el único estado que las
-        //    expone (desierta 5/8 procesos con precios; cerrada 0/8).
-        //    `proveedor_seleccionado` devuelve 0 resultados.
-        logger.info(`auditar_compras_desiertas: Buscando procesos comparables para "${keyword}"`);
-        const limit = args.limite_analisis || 3;
-        const searchResponse = await client.buscar({
-          q: keyword,
-          estado: 'desierta',
-          // Solo se examinan los primeros `limit` resultados, así que pedir 50
-          // era desperdicio — y provocaba HTTP 504: medido en producción, esta
-          // misma consulta con tamano_pagina=50 agota los ~30 s de la pasarela,
-          // y con 15 responde en 9,9 s.
-          tamano_pagina: Math.max(10, Math.min(limit, 50)),
-          numero_pagina: 1,
-        });
-
-        const successDurations: number[] = [];
-        const successPrices: number[] = [];
-        const processedCases: any[] = [];
-        let fallosDetalle = 0;
-        let intentosDetalle = 0;
-        const itemsToProcess = (searchResponse.items || []).slice(0, limit);
-
-        if (itemsToProcess.length > 0) {
-          logger.info(`auditar_compras_desiertas: Analizando detalles de ${itemsToProcess.length} procesos comparables`);
-
-          // En paralelo y con concurrencia adaptativa: los detalles son
-          // independientes y la API tarda 20-25 s por consulta (medido en
-          // septiembre 2026), así que en serie el total superaba el timeout de
-          // cualquier cliente MCP. El limitador vive en el cliente y es
-          // compartido, así que si otra herramienta acaba de chocar con 504,
-          // esta tanda ya sale con menos paralelismo.
-          const detalles = await client.detallesEnParalelo(itemsToProcess.map((i) => i.codigo));
-          const detallados = itemsToProcess.map((item, i) =>
-            detalles[i] ? { item, detail: detalles[i]! } : null
-          );
-
-          intentosDetalle = detallados.length;
-          fallosDetalle = detallados.filter((d) => d === null).length;
-
-          for (const entrada of detallados) {
-            if (!entrada) continue;
-            {
-              const { item, detail } = entrada;
-
-              // Se recolectan TODAS las cotizaciones del proceso, incluidas las
-              // declaradas inadmisibles: en los procesos desiertos casi todas lo son
-              // (por eso quedaron desiertos) y filtrarlas dejaba la muestra vacía.
-              // El precio ofertado sigue siendo señal de mercado.
-              // Antes se buscaba solo al adjudicado, pero la API nunca marca un
-              // ganador (verificado), así que ese camino no encontraba nada.
-              const cotizaciones = detail.proveedores_cotizando ?? [];
-              if (cotizaciones.length === 0) continue;
-              const inadmisibles = cotizaciones.filter((c) => !esAdmisible(c)).length;
-
-              const netos = cotizaciones
-                .map((c) => extraerMontoNeto(c))
-                .filter((n): n is number => n !== null);
-              if (netos.length === 0) continue;
-
-              // Referencia por proceso: la cotización más económica — es el precio
-              // al que ese mercado estuvo dispuesto a atender la necesidad.
-              const menorNeto = Math.min(...netos);
-              successPrices.push(menorNeto);
-
-              let successDuration = 0;
-              if (detail.fechas?.fecha_cierre && detail.fechas?.fecha_publicacion) {
-                const start = new Date(detail.fechas.fecha_publicacion).getTime();
-                const end = new Date(detail.fechas.fecha_cierre).getTime();
-                successDuration = Math.round(((end - start) / (1000 * 60 * 60 * 24)) * 10) / 10;
-                successDurations.push(successDuration);
-              }
-
-              processedCases.push({
-                codigo: item.codigo,
-                estado: detail.estado?.glosa,
-                institucion: item.institucion?.organismo_comprador || 'Desconocido',
-                cotizaciones_recibidas: cotizaciones.length,
-                cotizaciones_inadmisibles: inadmisibles,
-                menor_monto_cotizado: menorNeto,
-                mayor_monto_cotizado: Math.max(...netos),
-                duracion_dias: successDuration,
-                fecha_cierre: item.fechas?.fecha_cierre,
-                motivo_desierta: detail.motivos?.motivo_desierta ?? null,
-              });
-            }
-          }
-        }
-
-        // 4. Calcular métricas estadísticas para el análisis comparativo
-        let avgPrice = 0, minPrice = 0, maxPrice = 0;
-        if (successPrices.length > 0) {
-          successPrices.sort((a, b) => a - b);
-          minPrice = successPrices[0];
-          maxPrice = successPrices[successPrices.length - 1];
-          avgPrice = Math.round(successPrices.reduce((a, b) => a + b, 0) / successPrices.length);
-        }
-
-        let avgDuration = 0, minDuration = 0, maxDuration = 0;
-        if (successDurations.length > 0) {
-          successDurations.sort((a, b) => a - b);
-          minDuration = successDurations[0];
-          maxDuration = successDurations[successDurations.length - 1];
-          avgDuration = Math.round((successDurations.reduce((a, b) => a + b, 0) / successDurations.length) * 10) / 10;
-        }
-
-        // 5. Análisis crítico de brechas
-        const analisis_critico = {
-          presupuesto_insuficiente: false,
-          plazo_insuficiente: false,
-          requisitos_complejos: false,
-          diferencia_presupuesto_porcentaje: 0,
-          diferencia_plazo_dias: 0,
-        };
-
-        if (targetBudget > 0 && avgPrice > 0) {
-          analisis_critico.diferencia_presupuesto_porcentaje = Math.round(((targetBudget - avgPrice) / avgPrice) * 100);
-          if (targetBudget < minPrice || targetBudget < avgPrice * 0.8) {
-            analisis_critico.presupuesto_insuficiente = true;
-          }
-        } else if (targetBudget === 0 && avgPrice > 0) {
-          // Si el presupuesto objetivo es $0 o no especificado, se marca como potencial brecha si el histórico requiere fondos
-          analisis_critico.presupuesto_insuficiente = true;
-        }
-
-        if (targetDuration > 0 && avgDuration > 0) {
-          analisis_critico.diferencia_plazo_dias = Math.round((targetDuration - avgDuration) * 10) / 10;
-          if (targetDuration < 2 || targetDuration < avgDuration * 0.6) {
-            analisis_critico.plazo_insuficiente = true;
-          }
-        } else if (targetDuration > 0 && targetDuration < 2) {
-          // Plazo menor a 2 días siempre se marca como potencialmente insuficiente en Compra Ágil
-          analisis_critico.plazo_insuficiente = true;
-        }
-
-        if (
-          targetDetail.flags?.considera_requisitos_medioambientales ||
-          targetDetail.flags?.considera_requisitos_impacto_social_economico
-        ) {
-          analisis_critico.requisitos_complejos = true;
-        }
-
-        // 6. Generación de recomendaciones accionables
-        const recomendaciones: string[] = [];
-        if (analisis_critico.presupuesto_insuficiente) {
-          if (targetBudget > 0) {
-            recomendaciones.push(
-              `Aumentar el presupuesto disponible. El presupuesto actual de $${targetBudget.toLocaleString('es-CL')} es un ${Math.abs(analisis_critico.diferencia_presupuesto_porcentaje)}% inferior al promedio de lo que el mercado cotizó en procesos similares ($${avgPrice.toLocaleString('es-CL')}). Se sugiere incrementarlo a al menos $${Math.round(avgPrice * 1.05).toLocaleString('es-CL')}.`
-            );
-          } else {
-            recomendaciones.push(
-              `Especificar o incrementar el presupuesto estimado. El promedio de lo cotizado por el mercado para productos similares es de $${avgPrice.toLocaleString('es-CL')}.`
-            );
-          }
-        }
-
-        if (analisis_critico.plazo_insuficiente) {
-          recomendaciones.push(
-            `Extender el plazo de postulación. El proceso actual ofreció ${targetDuration} días entre publicación y cierre, mientras que los procesos comparables promedian ${avgDuration} días. Se recomienda extender el plazo a un mínimo de 3 a 5 días hábiles.`
-          );
-        }
-
-        if (analisis_critico.requisitos_complejos) {
-          recomendaciones.push(
-            `Flexibilizar los requisitos ambientales/sociales exigidos. Aunque promueven buenas prácticas, en procesos rápidos de bajo monto pueden asustar o inhabilitar a microempresas locales si implican adjuntar certificados complejos.`
-          );
-        }
-
-        if (recomendaciones.length === 0) {
-          recomendaciones.push(
-            `No se detectaron discrepancias obvias de presupuesto o plazo respecto al mercado. Se sugiere revisar la redacción de las especificaciones técnicas o los ítems requeridos en "productos_solicitados" para asegurarse de que no estén amarrados a una única marca o sean demasiado específicos.`
-          );
-        }
-
-        const result = {
-          proceso_auditado: {
-            codigo: targetCode,
-            nombre: targetName,
-            region: region ? `Región ${region}` : 'No especificada',
-            estado: targetDetail.estado?.glosa || 'Desconocido',
-            presupuesto_disponible: targetBudget,
-            duracion_dias: targetDuration,
-            items_solicitados: targetDetail.productos_solicitados?.map(p => ({
-              nombre: p.nombre,
-              cantidad: p.cantidad,
-              unidad: p.unidad_medida,
-            })) || [],
-            motivo_desierta: targetDetail.motivos?.motivo_desierta || 'No especificado en el sistema',
-          },
-          busqueda_comparativa: {
-            termino_clave: keyword,
-            procesos_comparables_con_cotizaciones: successPrices.length,
-            // Un comparativo vacío puede deberse a que no hay comparables o a
-            // que la API no respondió, y son cosas muy distintas: la primera
-            // habla del mercado, la segunda solo de la infraestructura.
-            ...(fallosDetalle > 0 && {
-              _aviso_cobertura: `${fallosDetalle} de ${intentosDetalle} consultas de detalle fallaron (la API no respondió). La comparación se basa en menos procesos de los pedidos; no lo interpretes como escasez de datos del rubro.`,
-            }),
-            estadisticas_montos_cotizados: successPrices.length > 0 ? {
-              minimo_cotizado: minPrice,
-              maximo_cotizado: maxPrice,
-              promedio_cotizado: avgPrice,
-            } : null,
-            estadisticas_duracion: successDurations.length > 0 ? {
-              minimo_dias: minDuration,
-              maximo_dias: maxDuration,
-              promedio_dias: avgDuration,
-            } : null,
-          },
-          analisis_de_brechas: analisis_critico,
-          recomendaciones_de_optimizacion: recomendaciones,
-          procesos_comparables_analizados: processedCases,
-          _nota_metodologica: 'La comparación usa el MENOR monto cotizado de cada proceso similar (cerrado o desierto), no montos adjudicados: la API de Mercado Público no expone qué oferta ganó. Revisa también "motivo_desierta": muchas deserciones se explican por incumplimientos formales (garantías, certificados) y no por precio.',
-        };
-
         return {
           content: [{
             type: 'text' as const,
-            text: JSON.stringify(result, null, 2),
+            text: JSON.stringify(recoleccion.datos, null, 2),
           }],
         };
-
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
