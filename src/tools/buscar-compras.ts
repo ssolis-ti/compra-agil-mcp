@@ -19,6 +19,7 @@ const TOOL_DESCRIPTION = `Busca procesos de Compra Ágil en Mercado Público de 
 Permite filtrar por palabras clave, estado del proceso, región geográfica y rango de fechas de publicación.
 Retorna un listado resumido con código, nombre, estado, presupuesto e institución compradora.
 La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "fecha_cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.
+Cada resultado trae el RUT del organismo y fecha_ultimo_cambio. motivo_seleccion solo aparece si la API lo envió con texto; un valor presente no prueba que haya un proveedor adjudicado.
 Hay que enviar al menos un filtro de la API: estado, region, q, id, publicado_desde o publicado_hasta. Sin ninguno, la API responde HTTP 500 y esta herramienta no hace la llamada. El orden, la página y las palabras clave locales no cuentan: las palabras se aplican después, sobre la respuesta.
 Nota: los parámetros 'q' (búsqueda por texto) e 'id' (código exacto) son mutuamente excluyentes.
 Estados válidos: publicada, cerrada, desierta, cancelada, proveedor_seleccionado.
@@ -78,7 +79,7 @@ const MENSAJE_SIN_FILTRO = [
 
 /** Listado que ve el modelo. El cierre crudo se conserva; al lado va la hora de Chile bajo la suposición UTC. */
 export function resumirCompraBusqueda(item: CompraAgilItem) {
-  return {
+  const resumen = {
     codigo: item.codigo,
     nombre: item.nombre,
     estado: item.estado.glosa,
@@ -86,12 +87,18 @@ export function resumirCompraBusqueda(item: CompraAgilItem) {
     presupuesto_clp: item.montos.monto_disponible_clp,
     moneda: item.montos.moneda,
     institucion: item.institucion.organismo_comprador,
+    rut_organismo: item.institucion.rut,
     region: item.institucion.nombre_region,
     fecha_publicacion: item.fechas.fecha_publicacion,
     fecha_cierre: item.fechas.fecha_cierre,
     fecha_cierre_hora_chile: enHoraDeChile(item.fechas.fecha_cierre),
+    fecha_ultimo_cambio: item.fechas.fecha_ultimo_cambio,
+    fecha_ultimo_cambio_hora_chile: enHoraDeChile(item.fechas.fecha_ultimo_cambio),
     ofertas_recibidas: item.resumen.total_ofertas_recibidas,
   };
+  const motivo = item.motivos.motivo_seleccion?.trim();
+  if (!motivo) return resumen;
+  return { ...resumen, motivo_seleccion: motivo };
 }
 
 export function registerBuscarCompras(server: McpServer, client: CompraAgilClient): void {
