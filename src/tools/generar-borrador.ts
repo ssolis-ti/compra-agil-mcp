@@ -14,6 +14,11 @@ export interface EstimacionPrecio {
   fuente: string;
   /** `false` ⇒ es el placeholder y el borrador debe advertirlo. */
   sugerido: boolean;
+  /**
+   * `true` solo cuando el monto lo calculó el servidor (mercado o presupuesto).
+   * El precio que escribió el usuario no es una sugerencia automática.
+   */
+  automatico: boolean;
 }
 
 /** Presupuesto del comprador, mirando también el estimado. */
@@ -47,6 +52,7 @@ export async function estimarPrecioUnitario(
       precio: precioPersonalizado,
       fuente: 'Precio neto ingresado por el usuario',
       sugerido: true,
+      automatico: false,
     };
   }
 
@@ -112,6 +118,7 @@ export async function estimarPrecioUnitario(
       precio: percentil(precios, 25),
       fuente: `Sugerencia automática: percentil 25 de ${precios.length} precio(s) cotizado(s) por el mercado en procesos similares (NO son precios adjudicados: la API no los expone)`,
       sugerido: true,
+      automatico: true,
     };
   }
 
@@ -124,6 +131,7 @@ export async function estimarPrecioUnitario(
         ? `Sugerencia automática: presupuesto del comprador descontado 10%. ⚠ NO se pudo consultar el mercado — las ${fallosDetalle} consultas de detalle fallaron (la API no respondió). Esto no significa que no existan comparables: reintenta más tarde para obtener un precio de mercado.`
         : `Sugerencia automática: presupuesto del comprador descontado 10% (no se encontraron cotizaciones de mercado comparables${fallosDetalle > 0 ? `; además ${fallosDetalle} de ${intentosDetalle} consultas fallaron` : ''})`,
       sugerido: true,
+      automatico: true,
     };
   }
 
@@ -131,6 +139,7 @@ export async function estimarPrecioUnitario(
     precio: PRECIO_PLACEHOLDER,
     fuente: `Valor por defecto (placeholder de $${PRECIO_PLACEHOLDER.toLocaleString('es-CL')})`,
     sugerido: false,
+    automatico: false,
   };
 }
 
@@ -263,7 +272,7 @@ export async function construirBorradorCotizacion(
     metadata_estimacion: {
       precio_unitario_utilizado: suggestedPrice,
       fuente_precio_unitario: priceSource,
-      precio_unitario_sugerido_automatico: isPriceSuggested,
+      precio_unitario_sugerido_automatico: estimacion.automatico,
     }
   };
 }
