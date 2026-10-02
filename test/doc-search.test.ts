@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor } from '../src/utils/doc-search.js';
+import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor, recortarArchivos } from '../src/utils/doc-search.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -156,5 +156,63 @@ describe('anteponerManualServidor', () => {
 
     expect(r.manualPrimero).toBe(true);
     expect(r.resultados[0].archivo).toBe('api/manual_servidor_mcp.md');
+  });
+});
+
+describe('recortarArchivos — tope de 3', () => {
+  const corpus = [
+    { archivo: 'api/manual_servidor_mcp.md', mejorPuntaje: 2 },
+    { archivo: 'api/Documentacion_API_Compra_Agil.md', mejorPuntaje: 1 },
+    { archivo: 'guias/multas.pdf', mejorPuntaje: 9 },
+    { archivo: 'guias/actualizaciones.pdf', mejorPuntaje: 8 },
+    { archivo: 'guias/bajo.pdf', mejorPuntaje: 3 },
+  ];
+
+  it('reserva el manual y completa con los dos puntajes más altos', () => {
+    const r = recortarArchivos(corpus, true);
+    expect(r.resultados.map((x) => x.archivo)).toEqual([
+      'api/manual_servidor_mcp.md',
+      'guias/multas.pdf',
+      'guias/actualizaciones.pdf',
+    ]);
+    expect(r.omitidos.map((x) => x.archivo)).toEqual([
+      'guias/bajo.pdf',
+      'api/Documentacion_API_Compra_Agil.md',
+    ]);
+  });
+
+  it('sin manual adelantado, se queda con los tres mayores puntajes', () => {
+    const r = recortarArchivos(corpus, false);
+    expect(r.resultados.map((x) => x.archivo)).toEqual([
+      'guias/multas.pdf',
+      'guias/actualizaciones.pdf',
+      'guias/bajo.pdf',
+    ]);
+    expect(r.omitidos.map((x) => x.archivo)).toEqual([
+      'api/manual_servidor_mcp.md',
+      'api/Documentacion_API_Compra_Agil.md',
+    ]);
+  });
+
+  it('no anuncia omisiones cuando ya caben en el tope', () => {
+    const r = recortarArchivos(corpus.slice(0, 3), true);
+    expect(r.omitidos).toEqual([]);
+    expect(r.resultados.map((x) => x.archivo)).toEqual([
+      'api/manual_servidor_mcp.md',
+      'guias/multas.pdf',
+      'api/Documentacion_API_Compra_Agil.md',
+    ]);
+  });
+
+  it('rompe el empate por el orden en que llegaron', () => {
+    const r = recortarArchivos([
+      { archivo: 'a.pdf', mejorPuntaje: 5 },
+      { archivo: 'b.pdf', mejorPuntaje: 5 },
+      { archivo: 'c.pdf', mejorPuntaje: 5 },
+      { archivo: 'd.pdf', mejorPuntaje: 5 },
+      { archivo: 'e.pdf', mejorPuntaje: 4 },
+    ], false);
+    expect(r.resultados.map((x) => x.archivo)).toEqual(['a.pdf', 'b.pdf', 'c.pdf']);
+    expect(r.omitidos.map((x) => x.archivo)).toEqual(['d.pdf', 'e.pdf']);
   });
 });

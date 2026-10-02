@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
-import { anteponerManualServidor, buscarEnTexto } from '../utils/doc-search.js';
+import { anteponerManualServidor, buscarEnTexto, recortarArchivos } from '../utils/doc-search.js';
 import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
@@ -210,7 +210,7 @@ export function registerDocumentosTools(server: McpServer): void {
     {
       title: "Consultar las guías locales",
       annotations: { readOnlyHint: true, openWorldHint: false },
-      description: 'Busca en los manuales y guías locales de docs/ (.pdf, .txt, .md). Si el manual de este servidor coincide con la consulta, sus fragmentos van primero: describen el comportamiento medido. La guía oficial de ChileCompra describe la API prometida y puede contradecirlo.',
+      description: 'Busca en los manuales y guías locales de docs/ (.pdf, .txt, .md). Devuelve como máximo 3 archivos y nombra los que quedaron fuera. Si el manual de este servidor coincide con la consulta, va primero: describe el comportamiento medido. La guía oficial de ChileCompra describe la API prometida y puede contradecirlo.',
       inputSchema: {
         query: z.string().optional().describe('Qué buscar. Admite tanto un término suelto ("multas", "garantía") como una pregunta en lenguaje natural ("¿qué multas me pueden aplicar?"): la consulta se descompone en términos y se ignoran acentos y palabras vacías. Si se omite, lista los documentos disponibles.'),
         max_caracteres: z.number().min(500).max(15000).default(3000).optional().describe('Cantidad máxima de texto a retornar de cada coincidencia.'),
@@ -293,7 +293,8 @@ export function registerDocumentosTools(server: McpServer): void {
         }
 
         const orden = anteponerManualServidor(coincidencias, terminosConsulta.length);
-        const results = [...orden.resultados.map((r) => r.texto), ...errores];
+        const recorte = recortarArchivos(orden.resultados, orden.manualPrimero);
+        const results = [...recorte.resultados.map((r) => r.texto), ...errores];
 
         if (results.length === 0) {
           const detalle = terminosConsulta.length > 0
@@ -308,13 +309,19 @@ export function registerDocumentosTools(server: McpServer): void {
         }
 
         const aviso = orden.manualPrimero
-          ? '\n\nEl primer archivo es el manual de este servidor. Describe el comportamiento medido. Los archivos que siguen, incluida la guía de ChileCompra, describen la API prometida y pueden contradecirlo.'
+          ? '\n\nEl primer archivo es el manual de este servidor. Describe el comportamiento medido. Los otros archivos describen la API o las guías prometidas y pueden contradecirlo.'
           : '';
+        const nombresOmitidos = recorte.omitidos.map((r) => r.archivo).join(', ');
+        const avisoTope = recorte.omitidos.length === 0
+          ? ''
+          : recorte.omitidos.length === 1
+            ? `\n\nQuedó fuera 1 archivo: ${nombresOmitidos}. Acota la consulta para traerlo.`
+            : `\n\nQuedaron fuera ${recorte.omitidos.length} archivos: ${nombresOmitidos}. Acota la consulta para traer uno de ellos.`;
 
         return {
           content: [{
             type: 'text' as const,
-            text: `Resultados de búsqueda para "${args.query}" en documentos locales:${aviso}\n\n${results.join('\n\n====================\n\n')}`,
+            text: `Resultados de búsqueda para "${args.query}" en documentos locales:${aviso}${avisoTope}\n\n${results.join('\n\n====================\n\n')}`,
           }],
         };
       } catch (error: any) {
