@@ -108,7 +108,7 @@ Una vez que tengas tu ticket alfanumérico copiado, puedes proceder a la instala
 ### Opción A: 🤖 Instalación Automatizada mediante tu Agente/Asistente de IA (Recomendado)
 Si estás utilizando un asistente o agente de IA en tu editor de código con permisos para ejecutar comandos (como Cursor Composer, Roo Code, Cline, Windsurf Agent o Claude Code), puedes delegar la configuración por completo. Simplemente copia y pega el siguiente prompt en el chat de tu IA:
 
-> "Por favor, inicializa y configura este servidor MCP en mi entorno local. Entra a la carpeta `mcp-compra-agil`, ejecuta `npm install` para instalar dependencias y compila el proyecto con `npm run build`. Una vez compilado con éxito, registra el servidor MCP en mis ajustes (Cursor, Roo Code, Cline, Continue o Claude Desktop según corresponda) configurando la herramienta para que se ejecute con `node` apuntando al archivo `dist/index.js` y vinculando el token `COMPRA_AGIL_TICKET` (búscalo en mi archivo `.env` o pídemelo)."
+> "Configura el servidor MCP Compra Ágil en este proyecto. Instala dependencias, compila con `npm run build` y registra un servidor stdio llamado `compra-agil` cuyo comando sea `node` y cuyo argumento sea la ruta absoluta de `dist/index.js`. El ticket ya está en la variable de entorno `COMPRA_AGIL_TICKET`: referénciala, no la leas, no la imprimas y no la copies a un archivo del repositorio. Si falta, detente y pídemela."
 
 ---
 
@@ -215,9 +215,25 @@ npm run inspect
 
 ## 🔌 Integración con Clientes MCP y Agentes
 
-Este servidor se comunica de manera estándar mediante Stdio. A continuación se detallan las instrucciones para integrarlo con los clientes y agentes más comunes del ecosistema:
+Este servidor se comunica de manera estándar mediante Stdio. Al conectar, el `initialize` entrega unas instrucciones de uso: no mostrar el ticket, no declarar un ganador, no descargar adjuntos por la API y no insistir ante un 429. El ticket se toma de la variable de entorno `COMPRA_AGIL_TICKET`. Los ejemplos de abajo usan un texto de relleno. En una instalación real la config debe referenciar la variable, no pegar el valor.
 
-### 1. Claude Desktop
+### 1. Grok
+
+En la carpeta del proyecto, `.grok/config.toml`:
+
+```toml
+[mcp_servers.compra-agil]
+command = "node"
+args = ["C:/ruta/completa/compra-agil-mcp/dist/index.js"]
+cwd = "C:/ruta/completa/compra-agil-mcp"
+env = { COMPRA_AGIL_TICKET = "${COMPRA_AGIL_TICKET}" }
+```
+
+La carpeta tiene que estar en la lista de confianza del cliente (`/hooks-trust` o el arranque con `--trust`). Sin eso, Grok no inicia un servidor definido en el proyecto.
+
+En Hermes el bloque `compra-agil` apunta a `dist/index.js` y no lleva el ticket dentro de `config.yaml`. El proceso hereda `COMPRA_AGIL_TICKET`. Un `.env` junto al servidor también sirve, y ese archivo no se commitea.
+
+### 2. Claude Desktop
 Añade el servidor a tu archivo de configuración global editando `%APPDATA%\Claude\claude_desktop_config.json` (en Windows) o `~/Library/Application Support/Claude/claude_desktop_config.json` (en macOS):
 
 ```json
@@ -234,7 +250,7 @@ Añade el servidor a tu archivo de configuración global editando `%APPDATA%\Cla
 }
 ```
 
-### 2. Claude Code (`claudecode`)
+### 3. Claude Code (`claudecode`)
 Para registrar el servidor de forma global en Claude Code (el agente CLI de Anthropic), ejecuta el siguiente comando en tu terminal **antes** de iniciar tu sesión de `claude`:
 ```bash
 claude mcp add compra-agil --env COMPRA_AGIL_TICKET=tu_ticket_de_chilecompra_aqui -- node C:\ruta\completa\mcp-compra-agil\dist\index.js
@@ -242,7 +258,7 @@ claude mcp add compra-agil --env COMPRA_AGIL_TICKET=tu_ticket_de_chilecompra_aqu
 *Nota: Si estás en un proyecto local, puedes usar rutas relativas o el comando local.*
 Para comprobar que se cargó con éxito, inicia una sesión de `claude` y escribe el comando `/mcp` o ejecuta `claude mcp list` en tu terminal.
 
-### 3. OpenClaw
+### 4. OpenClaw
 Para registrar el servidor en OpenClaw (el cliente de terminal y automatización open source), puedes hacerlo de dos formas:
 
 #### A. Vía CLI (Recomendado)
@@ -266,7 +282,7 @@ Abre tu archivo de configuración de OpenClaw (típicamente localizado en `~/.op
 ```
 *Asegúrate de ajustar los permisos de sandbox de herramientas (`tools.sandbox.tools` o `tools.sandbox.allowlist`) en tu config de OpenClaw para permitir la ejecución del comando `node`.*
 
-### 4. Open-Code / VSCodium / VS Code (Extensiones de Agentes)
+### 5. Open-Code / VSCodium / VS Code (Extensiones de Agentes)
 
 #### Con la extensión **Roo Code (Roo Cline / Cline)**:
 1. Abre los Ajustes de la extensión Roo Code/Cline (`Settings`).
@@ -303,11 +319,11 @@ Abre tu archivo `~/.continue/config.json` y añade la configuración en el bloqu
 ]
 ```
 
-### 5. Cursor / Windsurf
+### 6. Cursor / Windsurf
 * **Cursor:** Dirígete a `Settings` > `Features` > `MCP`. Haz clic en `+ Add New MCP Server`. Escribe el nombre `compra-agil`, selecciona el tipo `Stdio`, escribe en command `node` y en args `C:/ruta/completa/mcp-compra-agil/dist/index.js`. Añade la variable `COMPRA_AGIL_TICKET`.
 * **Windsurf:** Dirígete a la pestaña de MCP en Ajustes e ingresa la misma configuración Stdio.
 
-### 6. Agentes Personalizados (Node.js/Python SDK)
+### 7. Agentes Personalizados (Node.js/Python SDK)
 Si estás construyendo tu propio agente o pipeline automatizado con el SDK oficial de MCP:
 ```typescript
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";

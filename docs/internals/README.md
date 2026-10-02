@@ -16,12 +16,4 @@ Documentación de **ingeniería del servidor MCP**, no del mecanismo Compra Ági
 
 | Documento | Para qué sirve |
 | :--- | :--- |
-| [PENDIENTES.md](PENDIENTES.md) | Trabajo pendiente, priorizado, con contexto suficiente para retomarlo en frío |
 | [hallazgos-api.md](hallazgos-api.md) | Comportamiento **real** de la API medido empíricamente vs. lo que promete la documentación oficial |
-| [decisiones.md](decisiones.md) | Decisiones de arquitectura y por qué se tomaron |
-
-## Convención
-
-Estos documentos se escriben para **alguien que llega en frío** — incluido tú
-mismo dentro de seis meses. Cada pendiente debe decir qué hay que hacer, por qué
-importa y dónde tocar. Un pendiente que solo dice "mejorar X" no sirve.
