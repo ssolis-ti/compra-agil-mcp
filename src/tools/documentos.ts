@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
-import { anteponerManualServidor, buscarEnTexto, recortarArchivos } from '../utils/doc-search.js';
+import { anteponerManualServidor, buscarEnTexto, consultaSensible, deduplicarDocumentos, recortarArchivos } from '../utils/doc-search.js';
 import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
@@ -243,7 +243,7 @@ export function registerDocumentosTools(server: McpServer): void {
           return {
             content: [{
               type: 'text' as const,
-              text: `Documentos locales de ayuda disponibles en "docs/":\n\n${fileList}\n\nPara buscar dentro de ellos, ejecuta esta herramienta especificando el parámetro "query".`,
+              text: `Documentos locales de ayuda disponibles en "docs/":\n\n${fileList}\n\nLas notas de ingeniería en docs/internals/ no se listan. El comportamiento medido está en api/manual_servidor_mcp.md.\n\nPara buscar dentro de ellos, ejecuta esta herramienta especificando el parámetro "query".`,
             }],
           };
         }
@@ -292,7 +292,8 @@ export function registerDocumentosTools(server: McpServer): void {
           }
         }
 
-        const orden = anteponerManualServidor(coincidencias, terminosConsulta.length);
+        const unicos = deduplicarDocumentos(coincidencias);
+        const orden = anteponerManualServidor(unicos, terminosConsulta.length, consultaSensible(args.query));
         const recorte = recortarArchivos(orden.resultados, orden.manualPrimero);
         const results = [...recorte.resultados.map((r) => r.texto), ...errores];
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor, recortarArchivos } from '../src/utils/doc-search.js';
+import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor, consultaSensible, deduplicarDocumentos, recortarArchivos } from '../src/utils/doc-search.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -154,6 +154,30 @@ describe('anteponerManualServidor', () => {
       },
     ], hallazgoManual.terminos.length);
 
+    expect(r.manualPrimero).toBe(true);
+    expect(r.resultados[0].archivo).toBe('api/manual_servidor_mcp.md');
+  });
+});
+
+describe('deduplicarDocumentos', () => {
+  it('deja un solo archivo cuando la guía está en MD y en PDF', () => {
+    const r = deduplicarDocumentos([
+      { archivo: 'api/Documentacion_API_Compra_Agil.md', mejorPuntaje: 4 },
+      { archivo: 'api/Documentacion_API_Compra_Agil.pdf', mejorPuntaje: 4 },
+      { archivo: 'api/manual_servidor_mcp.md', mejorPuntaje: 2 },
+    ]);
+    expect(r.map((x) => x.archivo)).toEqual([
+      'api/Documentacion_API_Compra_Agil.md',
+      'api/manual_servidor_mcp.md',
+    ]);
+  });
+
+  it('una consulta de adjudicación fuerza el manual al frente', () => {
+    expect(consultaSensible('adjudicación proveedor seleccionado')).toBe(true);
+    const r = anteponerManualServidor([
+      { archivo: 'api/Documentacion_API_Compra_Agil.md', mejorPuntaje: 9 },
+      { archivo: 'api/manual_servidor_mcp.md', mejorPuntaje: 1 },
+    ], 4, true);
     expect(r.manualPrimero).toBe(true);
     expect(r.resultados[0].archivo).toBe('api/manual_servidor_mcp.md');
   });
