@@ -60,11 +60,13 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
               type: 'text' as const,
               text: JSON.stringify({
                 codigo: args.codigo,
+                consulto_api: false,
+                detalle_en_cache: false,
                 verificacion_oc: {
                   tiene_orden_compra: null,
+                  significado: 'El detalle de este código no está en caché. No vuelvo a la API. Un 504 reciente tampoco deja el detalle guardado: no llames otra vez a obtener_detalle_compra en ráfaga.',
                   motivo: 'No se consultó la API a propósito, para no gastar cuota en una respuesta que se conoce de antemano: la API de Compra Ágil no publica adjudicaciones ni órdenes de compra (0 de 45 procesos inspeccionados traían id_orden_compra, re-verificado en septiembre de 2026).',
                   como_confirmarlo: `Abre la ficha pública del proceso, que sí muestra el estado real: https://buscador.mercadopublico.cl/ficha?code=${args.codigo}`,
-                  si_quieres_los_datos_del_proceso: 'Llama primero a "obtener_detalle_compra"; después esta herramienta reutiliza ese detalle sin costo adicional y te informa lo que la API sí trae.',
                 },
               }, null, 2),
             }],
@@ -101,6 +103,8 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
           nombre: detalle.nombre,
           estado_actual: detalle.estado.glosa,
           convocatoria: detalle.convocatoria.descripcion,
+          consulto_api: tieneOC,
+          detalle_en_cache: true,
           verificacion_oc: {
             tiene_orden_compra: tieneOC,
             id_orden_compra: idOrdenCompra,
@@ -112,13 +116,14 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
               ? `La OC fue emitida. Código: ${detalleOCInfo?.codigo_oc ?? 'Desconocido'}. Usa la herramienta obtener_detalle_orden_compra para profundizar.`
               : `La API no reporta Orden de Compra para este proceso (id_orden_compra = null). ⚠ Ojo: esto NO prueba que la OC no exista. Se verificó que la API de Compra Ágil no está publicando adjudicaciones (45 procesos inspeccionados, 0 con id_orden_compra). Para confirmarlo consulta la ficha pública: https://buscador.mercadopublico.cl/ficha?code=${detalle.codigo}`,
           },
-          proveedor_seleccionado: detalle.proveedores_cotizando
+          cotizaciones_con_marca: detalle.proveedores_cotizando
             .filter(esGanador)
             .map((p) => ({
               rut: p.rut_proveedor,
               razon_social: p.razon_social,
               monto_total: p.monto_total,
             })),
+          _nota_marca: 'Una marca en la cotización no es un proveedor adjudicado. La API no publica quién ganó.',
           presupuesto_clp: detalle.presupuesto.monto_disponible_clp,
         };
 

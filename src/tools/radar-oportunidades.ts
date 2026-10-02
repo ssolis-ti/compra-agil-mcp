@@ -38,6 +38,8 @@ export interface OportunidadRadar {
   llamado: number;
   puntuacion_caliente: number;
   factores_calificacion: string[];
+  /** El término no está en el título. La API pudo calzar otro campo. */
+  coincidencia_fuera_del_titulo?: boolean;
 }
 
 /**
@@ -49,7 +51,8 @@ export interface OportunidadRadar {
 export function evaluarOportunidad(
   item: CompraAgilItem,
   now: number,
-  minBudget = 0
+  minBudget = 0,
+  q?: string,
 ): OportunidadRadar | null {
   const budget = item.montos?.monto_disponible_clp || item.montos?.monto_disponible || 0;
   if (budget < minBudget) return null;
@@ -74,7 +77,7 @@ export function evaluarOportunidad(
   const bids = item.resumen?.total_ofertas_recibidas ?? 0;
   if (bids === 0) {
     score += 50;
-    factors.push('Sin oferentes activos (+50 pts)');
+    factors.push('El listado informa 0 ofertas (+50 pts)');
   } else if (bids === 1) {
     score += 30;
     factors.push('Baja competencia: solo 1 oferente (+30 pts)');
@@ -86,7 +89,7 @@ export function evaluarOportunidad(
   // Factor 2: Urgencia del Cierre — Máx 30 pts
   if (hoursLeft <= 4) {
     score += 30;
-    factors.push('Urgencia crítica: cierra en menos de 4 horas (+30 pts)');
+    factors.push('Urgencia crítica: cierra en menos de 4 horas según la lectura UTC (+30 pts)');
   } else if (hoursLeft <= 12) {
     score += 20;
     factors.push('Cierre inminente: cierra en menos de 12 horas (+20 pts)');
@@ -114,7 +117,7 @@ export function evaluarOportunidad(
   const docsCount = item.documentos?.length || 0;
   if (docsCount === 0) {
     score += 5;
-    factors.push('Sin documentos adjuntos (postulación rápida sin leer bases) (+5 pts)');
+    factors.push('El listado no informó adjuntos (+5 pts)');
   }
 
   // Factor 5: Segundo Llamado — Máx 10 pts
@@ -131,6 +134,12 @@ export function evaluarOportunidad(
   //   fueron inadmisibles por papeleo, y entonces el segundo atrae a los mismos
   //   interesados y más. Por eso el factor puntúa moderado y la competencia
   //   real la sigue reportando el Factor 1, que es quien la mide de verdad.
+  const termino = q?.trim().toLowerCase();
+  const fueraDelTitulo = Boolean(termino) && !item.nombre.toLowerCase().includes(termino!);
+  if (fueraDelTitulo) {
+    factors.push('El término no está en el título; la API lo calzó en otro campo.');
+  }
+
   const llamado = item.convocatoria?.estado_convocatoria ?? 1;
   if (llamado === 2) {
     score += 10;
@@ -150,6 +159,7 @@ export function evaluarOportunidad(
     llamado,
     puntuacion_caliente: score,
     factores_calificacion: factors,
+    ...(fueraDelTitulo ? { coincidencia_fuera_del_titulo: true } : {}),
   };
 }
 
@@ -166,7 +176,13 @@ export interface RadarDatos {
   oportunidades: OportunidadRadar[];
   /** Total de oportunidades vigentes encontradas antes de aplicar el límite. */
   totalAnalizadas: number;
+  /** Total que declaró la API, antes de recortar por vigencia o por límite. */
+  totalResultadosApi: number;
   limite: number;
+  paginasPedidas: number;
+  paginasLeidas: number;
+  paginasDesdeCache: number;
+  /** Compatibilidad con el informe: páginas pedidas. */
   paginasEscaneadas: number;
 }
 
@@ -186,7 +202,7 @@ export async function recolectarDatosRadar(
   logger.info(`radar: escaneando procesos activos (hasta ${maxPaginas} pág.) region="${params.region || 'Todas'}" q="${params.q || 'Todos'}"`);
 
   // Auto-paginación: escanear varias páginas para no perder oportunidades en páginas 2+
-  const items = await client.buscarTodo({
+  const busqueda = await client.buscarInformado({
     estado: 'publicada',
     region: params.region || undefined,
     q: params.q || undefined,
@@ -198,8 +214,8 @@ export async function recolectarDatosRadar(
 
   const minBudget = params.presupuesto_minimo || 0;
   const opportunities: OportunidadRadar[] = [];
-  for (const item of items) {
-    const evaluada = evaluarOportunidad(item, now, minBudget);
+  for (const item of busqueda.items) {
+    const evaluada = evaluarOportunidad(item, now, minBudget, params.q);
     if (evaluada) opportunities.push(evaluada);
   }
 
@@ -210,7 +226,11 @@ export async function recolectarDatosRadar(
   return {
     oportunidades: opportunities.slice(0, limite),
     totalAnalizadas: opportunities.length,
+    totalResultadosApi: busqueda.totalResultados,
     limite,
+    paginasPedidas: maxPaginas,
+    paginasLeidas: busqueda.paginasLeidas,
+    paginasDesdeCache: busqueda.paginasDesdeCache,
     paginasEscaneadas: maxPaginas,
   };
 }
@@ -244,6 +264,13 @@ export function registerRadarOportunidades(server: McpServer, client: CompraAgil
           // alcanza a cotizar necesita leerlo. `horas_restantes` se calcula
           // sobre esta misma interpretación.
           _nota_horaria: NOTA_ZONA_HORARIA,
+          total_resultados_api: datos.totalResultadosApi,
+          paginas_pedidas: datos.paginasPedidas,
+          paginas_leidas: datos.paginasLeidas,
+          paginas_desde_cache: datos.paginasDesdeCache,
+          ...(datos.paginasDesdeCache > 0 && datos.paginasDesdeCache === datos.paginasLeidas
+            ? { _nota_cache: 'Esta página salió de la caché local. No es una foto nueva del mercado.' }
+            : {}),
           total_oportunidades_analizadas: datos.totalAnalizadas,
           radar_limite_resultados: datos.limite,
           oportunidades_calientes: datos.oportunidades,

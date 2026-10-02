@@ -62,6 +62,12 @@ export class ResponseCache {
     return limpios ? `${path}?${limpios}` : path;
   }
 
+  /** Dice si hay una entrada vigente, sin contarla como acierto ni como fallo. */
+  vigente(clave: string): boolean {
+    const e = this.entradas.get(clave);
+    return Boolean(e && Date.now() < e.expira);
+  }
+
   /** Devuelve el valor vigente, o `undefined` si no está o ya venció. */
   obtener<T>(clave: string): T | undefined {
     const e = this.entradas.get(clave);

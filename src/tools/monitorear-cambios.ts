@@ -173,6 +173,8 @@ export function registerMonitorearCambios(server: McpServer, client: CompraAgilC
         const result = conNotaHoraria({
           ventana_temporal: ventana.descripcion,
           total_resultados: response.paginacion.total_resultados,
+          numero_pagina: response.paginacion.numero_pagina,
+          total_paginas: response.paginacion.total_paginas,
           pagina: textoPagina(response.paginacion.numero_pagina, response.paginacion.total_paginas),
           resultados: summary,
         });

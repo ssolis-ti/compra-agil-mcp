@@ -431,8 +431,8 @@ export class CompraAgilClient {
   /**
    * Buscar Compras Ágiles con filtros y paginación.
    */
-  async buscar(params: BuscarParams): Promise<BuscarResponse> {
-    const queryParams: Record<string, string | number | undefined> = {
+  private paramsDeBusqueda(params: BuscarParams): Record<string, string | number | undefined> {
+    return {
       ttl_cambio_ms: params.ttl_cambio_ms,
       cambio_desde: params.cambio_desde,
       cambio_hasta: params.cambio_hasta,
@@ -446,38 +446,71 @@ export class CompraAgilClient {
       numero_pagina: params.numero_pagina,
       ordenar_por: params.ordenar_por,
     };
+  }
 
-    return this.request<BuscarResponse>('/v2/compra-agil', queryParams);
+  async buscar(params: BuscarParams): Promise<BuscarResponse> {
+    return this.request<BuscarResponse>('/v2/compra-agil', this.paramsDeBusqueda(params));
+  }
+
+  busquedaEnCache(params: BuscarParams): boolean {
+    return this.cache.vigente(ResponseCache.clave('/v2/compra-agil', this.paramsDeBusqueda(params)));
   }
 
   /**
    * Buscar todas las páginas de resultados (auto-paginación).
    * Útil cuando la IA necesita todos los resultados sin gestionar páginas.
    */
-  async buscarTodo(params: BuscarParams, maxPages = 10): Promise<CompraAgilItem[]> {
+  async buscarInformado(params: BuscarParams, maxPages = 10): Promise<{
+    items: CompraAgilItem[];
+    totalResultados: number;
+    totalPaginas: number;
+    paginasLeidas: number;
+    paginasDesdeCache: number;
+  }> {
     const allItems: CompraAgilItem[] = [];
     let currentPage = 1;
+    let totalResultados = 0;
+    let totalPaginas = 0;
+    let paginasLeidas = 0;
+    let paginasDesdeCache = 0;
 
     while (currentPage <= maxPages) {
-      const response = await this.buscar({
+      const pagina = {
         ...params,
         tamano_pagina: params.tamano_pagina || TAMANO_PAGINA_SEGURO,
         numero_pagina: currentPage,
-      });
+      };
+      if (this.busquedaEnCache(pagina)) paginasDesdeCache++;
+      const response = await this.buscar(pagina);
+      paginasLeidas++;
 
       allItems.push(...response.items);
+      totalResultados = response.paginacion.total_resultados;
+      totalPaginas = response.paginacion.total_paginas;
 
       logger.debug(
         `Auto-paginación: página ${response.paginacion.numero_pagina}/${response.paginacion.total_paginas}`
       );
 
-      if (currentPage >= response.paginacion.total_paginas) {
+      // El tope y el fin de resultados cortan aquí. Incrementar la página antes
+      // de salir hacía que paginasLeidas contara una página que no se pidió.
+      if (totalPaginas <= 0 || currentPage >= totalPaginas || currentPage >= maxPages) {
         break;
       }
       currentPage++;
     }
 
-    return allItems;
+    return {
+      items: allItems,
+      totalResultados,
+      totalPaginas,
+      paginasLeidas,
+      paginasDesdeCache,
+    };
+  }
+
+  async buscarTodo(params: BuscarParams, maxPages = 10): Promise<CompraAgilItem[]> {
+    return (await this.buscarInformado(params, maxPages)).items;
   }
 
   /**

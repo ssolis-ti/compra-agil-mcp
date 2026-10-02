@@ -6,7 +6,7 @@ import { CompraAgilClient } from '../src/api/compra-agil-client.js';
 
 describe('textoPagina', () => {
   it('no dice "1 de 0" cuando la API no tiene páginas', () => {
-    expect(textoPagina(1, 0)).toBe('0 de 0');
+    expect(textoPagina(1, 0)).toBe('sin resultados en esta ventana');
   });
 
   it('conserva una página real', () => {

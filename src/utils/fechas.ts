@@ -66,9 +66,10 @@ export function esFechaAmbigua(valor: string | null | undefined): boolean {
  * quien decide si alcanza a cotizar necesita verlo.
  */
 export const NOTA_ZONA_HORARIA =
-  'Las horas provienen de la API sin declarar zona horaria y se interpretan como UTC. ' +
-  'En Chile continental (UTC-3) resta 3 horas: un cierre a las "12:00" corresponde a las 09:00 locales. ' +
-  'Como la API no lo especifica, confirma el plazo exacto en la ficha del proceso antes de comprometerte.';
+  'fecha_cierre y fecha_publicacion llegan sin zona y se interpretan como UTC. ' +
+  'fecha_ultimo_cambio, cuando trae Z, se respeta tal cual. ' +
+  'La hora de Chile usa el desfase de America/Santiago de esa fecha: UTC-3 en horario de verano y UTC-4 en invierno. ' +
+  'Confirma el plazo exacto en la ficha del proceso antes de comprometerte.';
 
 /**
  * Pone la nota al inicio del JSON que ve el modelo. No cambia ninguna fecha:

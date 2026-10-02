@@ -154,7 +154,10 @@ export async function recolectarDatosAuditoria(
   const processedCases: ProcesoComparable[] = [];
   let fallosDetalle = 0;
   let intentosDetalle = 0;
-  const itemsToProcess = (searchResponse.items || []).slice(0, limit);
+  const itemsToProcess = (searchResponse.items || [])
+    .filter((item) => item.codigo !== targetCode)
+    .slice(0, limit);
+  const sinComparablesDistintos = itemsToProcess.length === 0;
 
   if (itemsToProcess.length > 0) {
     logger.info(`auditar_compras_desiertas: Analizando detalles de ${itemsToProcess.length} procesos comparables`);
@@ -301,7 +304,16 @@ export async function recolectarDatosAuditoria(
     );
   }
 
-  if (recomendaciones.length === 0) {
+  if (sinComparablesDistintos) {
+    analisis_critico.presupuesto_insuficiente = false;
+    analisis_critico.plazo_insuficiente = false;
+    analisis_critico.diferencia_presupuesto_porcentaje = 0;
+    analisis_critico.diferencia_plazo_dias = 0;
+    recomendaciones.length = 0;
+    recomendaciones.push(
+      'No hay otro proceso desierto en la muestra. No se compara este proceso consigo mismo, así que no hay brecha de presupuesto ni de plazo contra un mercado distinto.',
+    );
+  } else if (recomendaciones.length === 0) {
     recomendaciones.push(
       `No se detectaron discrepancias obvias de presupuesto o plazo respecto al mercado. Se sugiere revisar la redacción de las especificaciones técnicas o los ítems requeridos en "productos_solicitados" para asegurarse de que no estén amarrados a una única marca o sean demasiado específicos.`
     );
@@ -325,6 +337,7 @@ export async function recolectarDatosAuditoria(
     busqueda_comparativa: {
       termino_clave: keyword,
       procesos_comparables_con_cotizaciones: successPrices.length,
+      sin_comparables_distintos: sinComparablesDistintos,
       // Un comparativo vacío puede deberse a que no hay comparables o a
       // que la API no respondió, y son cosas muy distintas: la primera
       // habla del mercado, la segunda solo de la infraestructura.
