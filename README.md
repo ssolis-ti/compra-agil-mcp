@@ -337,8 +337,8 @@ const resources = await client.listResources();
 
 | Nombre de la Herramienta | Descripción de Entrada / Salida |
 | :--- | :--- |
-| `buscar_compras_agiles` | Busca procesos utilizando palabras clave (con filtros inteligentes locales), región (1-16), estado y ventana temporal. Parámetros `q` e `id` son excluyentes. |
-| `obtener_detalle_compra` | Detalle exhaustivo de una cotización: descripción, ítems y cotizaciones recibidas (confidenciales hasta el estado *Cerrada*). |
+| `buscar_compras_agiles` | Busca procesos utilizando palabras clave (con filtros inteligentes locales), región (1-16), estado y ventana temporal. Parámetros `q` e `id` son excluyentes. Cada resultado trae el RUT del organismo y la fecha del último cambio. |
+| `obtener_detalle_compra` | Detalle exhaustivo de una cotización: descripción, ítems y cotizaciones recibidas (confidenciales hasta el estado *Cerrada*). Incluye el código de estado, el número de llamado y, si la moneda no es CLP, el tipo de cambio. |
 | `monitorear_cambios_recientes` | Sincronización reactiva e incremental por ventana de cambios, con soporte para paginación. Dos modos excluyentes: **relativo** (`minutos`, máx 1440 / 24 h) o **absoluto** (`cambio_desde`/`cambio_hasta` en ISO-8601, sin techo de 24 h) para resincronizar un período arbitrario. |
 | `verificar_orden_compra` | Informa si un proceso tiene OC emitida. **No consulta la API por su cuenta** (gastaba cuota para responder siempre "no puedo saberlo"): reutiliza el detalle si ya está en caché e indica cómo confirmarlo en la ficha pública — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
 | `obtener_detalle_orden_compra` | Desglose de productos y facturación de una OC. ⚠ **El código debe venir de otra fuente** (la OC que te emitieron, un correo, la ficha pública): consulta la API legada de Órdenes de Compra, y la de Compra Ágil no entrega códigos de OC. |

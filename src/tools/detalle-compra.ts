@@ -7,9 +7,10 @@
 
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { CompraAgilClient, CompraAgilDetalle } from '../api/compra-agil-client.js';
+import { CompraAgilClient, CompraAgilDetalle, ProveedorCotizando } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { conNotaHoraria, enHoraDeChile } from '../utils/fechas.js';
+import { esAdmisible } from '../utils/quotation.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'obtener_detalle_compra';
@@ -18,6 +19,7 @@ const TOOL_DESCRIPTION = `Obtiene el detalle completo de una Compra Ágil espec�
 Incluye: descripción del proceso, productos solicitados con cantidades, proveedores que cotizaron con sus montos,
 presupuesto disponible, dirección y plazo de entrega, estado de la Orden de Compra (si fue emitida),
 y flags de sostenibilidad (requisitos medioambientales y de impacto social).
+Incluye estado_codigo, el número de llamado (estado_convocatoria) y fecha_ultimo_cambio. Si la moneda no es CLP, incluye el tipo de cambio. Una cotización inadmisible trae su justificación.
 La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.
 NOTA: Las cotizaciones detalladas de los proveedores solo se muestran desde el estado "Cerrada" en segundo llamado en adelante.`;
 
@@ -35,7 +37,52 @@ export function fechasDeDetalle(detalle: Pick<CompraAgilDetalle, 'fechas' | 'con
     cierre_hora_chile: enHoraDeChile(detalle.fechas.fecha_cierre),
     cierre_primer_llamado: detalle.convocatoria.fecha_cierre_primer_llamado,
     cierre_segundo_llamado: detalle.convocatoria.fecha_cierre_segundo_llamado,
+    ultimo_cambio: detalle.fechas.fecha_ultimo_cambio,
+    ultimo_cambio_hora_chile: enHoraDeChile(detalle.fechas.fecha_ultimo_cambio),
     cancelacion: detalle.fechas.fecha_cancelacion,
+  };
+}
+
+/** El tipo de cambio solo aparece cuando el presupuesto no está en pesos. */
+export function presupuestoDeDetalle(presupuesto: CompraAgilDetalle['presupuesto']) {
+  const visible = {
+    tipo: presupuesto.tipo_presupuesto,
+    monto_disponible_clp: presupuesto.monto_disponible_clp,
+    moneda: presupuesto.moneda,
+    presupuesto_estimado: presupuesto.presupuesto_estimado,
+  };
+  if (presupuesto.moneda.trim().toUpperCase() === 'CLP') return visible;
+  return {
+    ...visible,
+    valor_cambio_moneda: presupuesto.valor_cambio_moneda,
+    fecha_cambio_moneda: presupuesto.fecha_cambio_moneda,
+  };
+}
+
+/** La justificación se omite cuando la cotización es admisible. No afirma una adjudicación. */
+export function resumirCotizante(prov: ProveedorCotizando) {
+  const resumen = {
+    rut: prov.rut_proveedor,
+    razon_social: prov.razon_social,
+    es_empresa_menor_tamano: prov.es_emt,
+    monto_total: prov.monto_total,
+    valor_neto: prov.valor_neto,
+    impuesto: prov.total_impuesto,
+    despacho: prov.monto_despacho,
+    descripcion: prov.descripcion_cotizacion || prov.descripcion,
+    estado_por_comprador: prov.estado_por_comprador,
+    admisible: esAdmisible(prov),
+    productos_cotizados: prov.productos_cotizados?.map((pc) => ({
+      nombre: pc.nombre_producto,
+      cantidad: pc.cantidad,
+      precio_unitario: pc.precio_unitario,
+      total: pc.monto_total_producto,
+    })),
+  };
+  if (resumen.admisible) return resumen;
+  return {
+    ...resumen,
+    justificacion_inadmisibilidad: String(prov.justificacion_inadmisibilidad).trim(),
   };
 }
 
@@ -60,7 +107,9 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
           nombre: detalle.nombre,
           descripcion: detalle.descripcion,
           estado: detalle.estado.glosa,
+          estado_codigo: detalle.estado.codigo,
           convocatoria: detalle.convocatoria.descripcion,
+          estado_convocatoria: detalle.convocatoria.estado_convocatoria,
           institucion: {
             organismo: detalle.institucion.organismo_comprador,
             rut: detalle.institucion.rut,
@@ -68,12 +117,7 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
             region: detalle.institucion.nombre_region,
           },
           fechas: fechasDeDetalle(detalle),
-          presupuesto: {
-            tipo: detalle.presupuesto.tipo_presupuesto,
-            monto_disponible_clp: detalle.presupuesto.monto_disponible_clp,
-            moneda: detalle.presupuesto.moneda,
-            presupuesto_estimado: detalle.presupuesto.presupuesto_estimado,
-          },
+          presupuesto: presupuestoDeDetalle(detalle.presupuesto),
           entrega: {
             direccion: detalle.entrega.direccion_entrega,
             plazo_dias: detalle.entrega.plazo_entrega_dias,
@@ -85,23 +129,7 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
             cantidad: p.cantidad,
             unidad: p.unidad_medida,
           })),
-          proveedores_cotizando: detalle.proveedores_cotizando.map((prov) => ({
-            rut: prov.rut_proveedor,
-            razon_social: prov.razon_social,
-            es_empresa_menor_tamano: prov.es_emt,
-            monto_total: prov.monto_total,
-            valor_neto: prov.valor_neto,
-            impuesto: prov.total_impuesto,
-            despacho: prov.monto_despacho,
-            descripcion: prov.descripcion_cotizacion || prov.descripcion,
-            estado_por_comprador: prov.estado_por_comprador,
-            productos_cotizados: prov.productos_cotizados?.map((pc) => ({
-              nombre: pc.nombre_producto,
-              cantidad: pc.cantidad,
-              precio_unitario: pc.precio_unitario,
-              total: pc.monto_total_producto,
-            })),
-          })),
+          proveedores_cotizando: detalle.proveedores_cotizando.map(resumirCotizante),
           orden_compra: {
             tiene_oc: (detalle.id_orden_compra ?? detalle.orden_compra?.id_orden_compra ?? null) !== null,
             id_orden_compra: detalle.id_orden_compra ?? detalle.orden_compra?.id_orden_compra ?? null,
