@@ -19,6 +19,28 @@ Referencias a hallazgos: [auditoria-2.6.1.md](auditoria-2.6.1.md).
 
 ## Sprint 1 — Rendimiento y calidad (~1 semana)
 
+### Fase 1.0 — Rutas independientes del directorio de trabajo 🟠
+**Problema medido** (5 de octubre, al registrar el servidor en Claude Desktop para la etapa 2): el servidor resuelve sus archivos con `process.cwd()`, y un cliente MCP lo lanza desde **su propio** directorio, no desde el del proyecto. Con la configuración que da el README —solo la ruta a `dist/index.js`— pasa esto:
+
+| Archivo | Dónde se resuelve | Efecto con el cwd del cliente |
+| :--- | :--- | :--- |
+| `.env` | `src/utils/env-loader.ts` | No se encuentra: sin ticket en el bloque `env`, el servidor termina al arrancar. Por eso el README empuja a escribir el ticket en texto plano en la config del cliente |
+| `.api-cache.json` | `src/api/compra-agil-client.ts` | La caché queda en la carpeta del cliente, o falla si no es escribible |
+| `.rate-limit-state.json` | `src/utils/rate-limiter.ts` | Ídem: el conteo de cuota se separa del que ven los scripts del proyecto |
+| `alerts.log`, `.monitor-state.json` | `src/services/monitor.ts` | Ídem para el daemon |
+| `informes/` | `src/reports/export.ts` | Ídem, salvo que se configure `COMPRA_AGIL_INFORMES_DIR` |
+| `docs/` | `src/utils/docs-locator.ts` | ✅ No afectado: ya tiene respaldo relativo al paquete |
+
+Hoy se rodea lanzándolo con `cmd /c cd /d <proyecto> && node dist/index.js` (así quedó registrado en Claude Desktop), pero quien siga el README no lo sabe.
+
+**Hacer:**
+- Un único módulo de rutas que resuelva una **carpeta de datos** en este orden: `COMPRA_AGIL_DATA_DIR` si está definida; si no, la raíz del paquete cuando es escribible (instalación desde el repo); si no, una carpeta de usuario (`%LOCALAPPDATA%\mcp-compra-agil` en Windows, `~/.local/state/mcp-compra-agil` en el resto) para instalaciones con `npx`.
+- `.env`: buscarlo en la carpeta de datos y en la raíz del paquete, además del cwd. Se mantiene la prioridad actual: una variable ya definida en el entorno gana.
+- Caché, estado de cuota, estado del daemon e informes salen de ese módulo; `COMPRA_AGIL_INFORMES_DIR` sigue ganando para los informes.
+- README: configuraciones de cliente que funcionen tal como están escritas, sin pedir el ticket en la config cuando hay `.env`.
+
+**Aceptación:** un test que arranca `dist/index.js` con `cwd` en una carpeta temporal ajena y comprueba que lee el `.env` del proyecto, responde `tools/list` y escribe la caché en la carpeta de datos, no en el cwd. Con eso, la configuración del README funciona en Claude Desktop sin el rodeo de `cmd`.
+
 ### Fase 1.1 — Presupuesto de tiempo por herramienta 🟠
 **Problema medido:** el freno propio de 15 consultas/min (`src/utils/rate-limiter.ts`, `throttle()`) retiene una consulta hasta ~60 s. En la batería de `scripts/qa/` la consulta ~20 del minuto esperó **57 s** antes de salir, y una herramienta con `limite_analisis` alto excede los 60 s del cliente MCP sin entregar nada. Además, las esperas despiertan todas a la vez sin volver a mirar el límite y salen en ráfaga.
 

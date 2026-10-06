@@ -38,5 +38,5 @@ QA_API_REAL=1 node scripts/qa/cliente-mcp.mjs scripts/qa/escenarios-reales.mjs
 
 ### Pendiente
 
-- **Etapa 2** (uso desde un cliente MCP): requiere registrar el servidor en Claude Desktop u otro cliente; hoy no está registrado en ninguno.
+- **Etapa 2** (uso desde un cliente MCP): el servidor quedó registrado en Claude Desktop el 5 de octubre, lanzado con `cmd /c cd /d <proyecto> && node dist/index.js` porque la configuración del README no funciona tal como está escrita (ver la fase 1.0 del [roadmap](roadmap.md)). Falta correr los cinco pasos desde el chat.
 - **Oportunidad para cerrar la duda UTC / hora de Chile:** `1499-607-COT26` cierra a las 17:30 si `fecha_cierre` es UTC y a las 20:30 si es hora de Chile. Revisar su estado el 6 de octubre entre esas dos horas lo resuelve: si a las 18:00 ya no está `publicada`, es UTC.
