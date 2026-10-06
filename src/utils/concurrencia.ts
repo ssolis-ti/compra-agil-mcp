@@ -37,8 +37,10 @@ export interface OpcionesConcurrencia {
 
 /** ¿El fallo habla del servicio saturado o del ítem que se pidió? */
 export function esSenalDeCongestion(error: unknown): boolean {
-  const e = error as { httpStatus?: number; message?: string } | null;
+  const e = error as { httpStatus?: number; message?: string; causa?: string } | null;
   if (!e) return false;
+  // Un timeout o un corte de red propios: el servicio no alcanzó a responder.
+  if (e.causa === 'timeout' || e.causa === 'red') return true;
   if (typeof e.httpStatus === 'number' && CODIGOS_DE_CONGESTION.has(e.httpStatus)) return true;
   // Los cortes de red y timeouts cuentan igual: el servicio no alcanzó a responder.
   return /timeout|ETIMEDOUT|ECONNRESET|socket hang up|fetch failed/i.test(String(e.message ?? ''));

@@ -250,6 +250,39 @@ export const RUTA_CACHE_POR_DEFECTO = path.resolve(process.cwd(), '.api-cache.js
 const TTL_DETALLE_SEG = 15 * 60;
 const TTL_BUSQUEDA_SEG = 5 * 60;
 
+/**
+ * Tiempo máximo de una consulta a la API.
+ *
+ * ⚠ Sin esto una API que no responde dejaba la herramienta colgada para
+ *   siempre: medido en la auditoría QA de octubre 2026, la llamada siguió
+ *   abierta hasta que el cliente MCP se rindió a los 150 s.
+ *
+ *   35 s y no menos: la pasarela de Mercado Público corta a los ~30 s con un
+ *   504 que el servidor ya sabe explicar, y hay consultas legítimas que tardan
+ *   20-30 s. El límite solo debe cortar lo que la pasarela no cortó.
+ */
+export const TIMEOUT_POR_DEFECTO_MS = 35_000;
+
+function timeoutDesdeEntorno(): number {
+  const n = Number(process.env.COMPRA_AGIL_TIMEOUT_MS);
+  return Number.isFinite(n) && n > 0 ? n : TIMEOUT_POR_DEFECTO_MS;
+}
+
+/** Fallo de red antes de recibir respuesta: DNS, conexión rechazada o cortada. */
+function esFalloDeRed(error: unknown): boolean {
+  // undici (el fetch de Node) envuelve todo fallo de red en TypeError('fetch failed').
+  const e = error as { message?: string; cause?: { code?: string } } | null;
+  return /fetch failed|ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|socket hang up/i
+    .test(`${e?.message ?? ''} ${e?.cause?.code ?? ''}`);
+}
+
+function esTimeout(error: unknown): boolean {
+  const nombre = (error as { name?: string } | null)?.name;
+  return nombre === 'TimeoutError' || nombre === 'AbortError';
+}
+
+const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export class CompraAgilClient {
   private readonly baseUrl: string;
   private readonly ticket: string;
@@ -262,6 +295,7 @@ export class CompraAgilClient {
    * volver a intentarlo con el paralelismo máximo.
    */
   private readonly concurrencia: LimitadorConcurrencia;
+  private readonly timeoutMs: number;
 
   /**
    * @param opciones.persistir Rutas en disco para la cuota y la caché.
@@ -273,11 +307,13 @@ export class CompraAgilClient {
    *   en caché de una corrida anterior hacía que `fetch` no se llamara y el
    *   test que vigila que el ticket viaje por header fallaba sin que hubiera
    *   nada roto—.
+   * @param opciones.timeoutMs Corte de cada consulta. Por defecto
+   *   `COMPRA_AGIL_TIMEOUT_MS` o `TIMEOUT_POR_DEFECTO_MS`.
    */
   constructor(
     ticket: string,
     baseUrl?: string,
-    opciones: { persistir?: boolean } = {}
+    opciones: { persistir?: boolean; timeoutMs?: number } = {}
   ) {
     this.ticket = ticket;
     this.baseUrl = baseUrl || 'https://api2.mercadopublico.cl';
@@ -287,6 +323,7 @@ export class CompraAgilClient {
     this.rateLimiter = new RateLimiter(15, persistir ? RUTA_ESTADO_POR_DEFECTO : null);
     this.cache = new ResponseCache({ rutaEstado: persistir ? RUTA_CACHE_POR_DEFECTO : null });
     this.concurrencia = new LimitadorConcurrencia({ maximo: 5 });
+    this.timeoutMs = opciones.timeoutMs ?? timeoutDesdeEntorno();
     // El cliente se auto-protege: cualquier consumidor (servidor MCP, daemon,
     // scripts, tests) queda cubierto sin tener que acordarse de registrarlo.
     registrarSecreto(ticket);
@@ -337,14 +374,10 @@ export class CompraAgilClient {
     if (sanitizedUrl.searchParams.has('ticket')) {
       sanitizedUrl.searchParams.set('ticket', 'REDACTED');
     }
+    const consulta = `GET ${sanitizedUrl.pathname}${sanitizedUrl.search}`;
     logger.debug(`API Request: GET ${sanitizedUrl.toString()}`);
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'ticket': this.ticket,
-      },
-    });
+    const response = await this.enviar(url.toString(), consulta);
 
     if (response.status === 429) {
       // La guía (§7) indica esperar lo que diga Retry-After; si no viene, el
@@ -360,8 +393,7 @@ export class CompraAgilClient {
       payload = await handleApiResponse(response);
     } catch (error) {
       if (error instanceof CompraAgilApiError) {
-        const consulta = `GET ${sanitizedUrl.pathname}${sanitizedUrl.search}`;
-        throw new CompraAgilApiError(error.httpStatus, error.apiErrors, consulta);
+        throw new CompraAgilApiError(error.httpStatus, error.apiErrors, consulta, error.local);
       }
       throw error;
     }
@@ -371,6 +403,41 @@ export class CompraAgilClient {
     this.cache.guardar(claveCache, payload, ttl);
 
     return payload as T;
+  }
+
+  /**
+   * Envía el GET con tiempo límite y UN reintento solo ante fallo de red.
+   *
+   * ⚠ No se reintenta un timeout ni un 5xx: la pasarela ya esperó ~30 s, y
+   *   repetir llevaría la herramienta por sobre los 60 s que espera un cliente
+   *   MCP, gastando cuota en una consulta que acaba de fallar por lenta. Un
+   *   fallo de red (conexión cortada, DNS) es inmediato y suele ser
+   *   transitorio, así que un segundo intento es barato.
+   */
+  private async enviar(url: string, consulta: string): Promise<Response> {
+    for (let intento = 1; ; intento++) {
+      try {
+        return await fetch(url, {
+          method: 'GET',
+          headers: { 'ticket': this.ticket },
+          signal: AbortSignal.timeout(this.timeoutMs),
+        });
+      } catch (error) {
+        if (esTimeout(error)) {
+          // La consulta salió: la API pudo contarla contra la cuota.
+          this.rateLimiter.recordRequest();
+          throw new CompraAgilApiError(0, [], consulta, { causa: 'timeout', timeoutMs: this.timeoutMs });
+        }
+        if (!esFalloDeRed(error)) throw error;
+        if (intento >= 2) {
+          throw new CompraAgilApiError(0, [], consulta, { causa: 'red', origen: error });
+        }
+        logger.warn(`Fallo de red en ${consulta}; se reintenta una vez.`);
+        // Espera con jitter para no sincronizar el reintento de varias tareas.
+        await esperar(250 + Math.random() * 500);
+        await this.rateLimiter.throttle();
+      }
+    }
   }
 
   /**

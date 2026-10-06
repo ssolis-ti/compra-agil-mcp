@@ -160,6 +160,9 @@ COMPRA_AGIL_TICKET=tu_ticket_aqui
 # URL Base para las llamadas a la API v2 (por defecto api2.mercadopublico.cl)
 COMPRA_AGIL_BASE_URL=https://api2.mercadopublico.cl
 
+# Corte de cada consulta en ms (por defecto 35000, sobre los ~30 s de la pasarela)
+# COMPRA_AGIL_TIMEOUT_MS=35000
+
 # Nivel de log: debug | info | warn | error
 LOG_LEVEL=info
 

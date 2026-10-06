@@ -6,6 +6,13 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a producción.
+
+### Corregido
+* **Una API que no respondía colgaba la herramienta para siempre.** Ninguna consulta tenía tiempo límite: en la auditoría la llamada siguió abierta hasta que el cliente MCP se rindió a los 150 s. Ahora cada consulta se corta a los 35 s (`COMPRA_AGIL_TIMEOUT_MS`), por encima de los ~30 s en que la pasarela ya responde 504, y el mensaje dice cuánto se esperó y qué llamada fue. El timeout cuenta como congestión para el limitador de concurrencia y no queda en caché. La descarga de adjuntos se corta a los 30 s y rechaza archivos de más de 20 MB.
+* **Un corte de red salía como `Error inesperado: fetch failed`.** Ahora se reintenta una vez, con espera aleatoria, y si vuelve a fallar se explica como fallo de conexión. No se reintentan ni el timeout ni los 5xx: la pasarela ya esperó ~30 s y repetir llevaría la herramienta por sobre los 60 s que espera un cliente MCP.
+* **Un 200 con cuerpo cortado salía como `Unexpected token…`, texto crudo de JavaScript.** Ahora se explica como respuesta inválida de la API, nombra la llamada y no queda en caché.
+
 ## [2.6.1] - 2026-10-02
 
 Respuestas que dejan de contradecir lo ya medido. No hubo llamada nueva a la API.
