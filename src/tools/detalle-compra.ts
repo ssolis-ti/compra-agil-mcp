@@ -21,7 +21,7 @@ presupuesto disponible, dirección y plazo de entrega, estado de la Orden de Com
 y flags de sostenibilidad (requisitos medioambientales y de impacto social).
 Incluye estado_codigo, el número de llamado (estado_convocatoria) y fecha_ultimo_cambio. Si la moneda no es CLP, incluye el tipo de cambio. Una cotización inadmisible trae su justificación.
 La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.
-NOTA: Las cotizaciones detalladas de los proveedores solo se muestran desde el estado "Cerrada" en segundo llamado en adelante.`;
+NOTA: medido contra la API real (45 procesos), las cotizaciones con sus precios vienen en los procesos "desierta" (5 de 8 los traían) y no en los "cerrada" de primer llamado (0 de 8). La guía oficial dice que se muestran desde "Cerrada" en segundo llamado, pero no se pudo confirmar. Una lista de proveedores vacía en un proceso publicado o cerrado no significa que no haya ofertas: mira "total_ofertas".`;
 
 const inputSchema = {
   codigo: z.string().describe(
