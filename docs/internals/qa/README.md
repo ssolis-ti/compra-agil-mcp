@@ -17,7 +17,7 @@ sesión local.
 | Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #13 |
 | Versión 2.7.0 | ✅ Publicada en npm el 6-oct (`latest`); probada instalándola con `npx` desde una carpeta vacía. Tag `v2.7.0` y release en GitHub |
 | Publicación automática en npm | ✅ `publicar.yml`: un tag `v*` publica (requiere el secreto `NPM_TOKEN`); si la versión ya se publicó a mano, solo crea la release |
-| Resto del Sprint 1, fase 1.9 y Sprint 2 | ⏳ Pendientes — [roadmap.md](roadmap.md) |
+| Versión 2.8.0 (cerrada) | ⏳ Planificada — [Plan 2.8.0](roadmap.md#plan-280--versión-cerrada): arreglos E1–E11 y S10–S18, fase 1.10 (hora de Chile), fases 1.2–1.7, 2.2 y 2.4 |
 
 Todo lo de la 2.7.0 se probó contra una API **simulada** con fallas
 inyectadas: el entorno en la nube donde se hizo no tenía acceso a
@@ -38,8 +38,8 @@ npm test            # todos deben pasar (458 en la 2.7.0)
 
 Después, en este orden:
 
-1. **Fase 1.10, la hora de Chile** → [roadmap.md](roadmap.md). Va antes que todo: afecta a todas las herramientas con fechas.
-2. **Resto del Sprint 1**, fase por fase (quedan 1.2–1.7 y la 1.9).
+1. **Plan 2.8.0** → [roadmap.md](roadmap.md#plan-280--versión-cerrada), bloque por bloque (A a H). Empieza por el bloque A, la hora de Chile: afecta a todas las herramientas con fechas.
+2. La 2.8.0 se publica solo cuando cumple su «Definición de cerrada».
 3. **Etapa 2 de la validación real** (uso desde un cliente MCP) → [validacion-api-real.md](validacion-api-real.md).
 4. Cada versión nueva se publica según la sección 6 de `CONTRIBUTING.md`.
 

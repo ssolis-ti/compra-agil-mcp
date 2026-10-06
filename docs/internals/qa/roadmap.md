@@ -9,6 +9,87 @@ Referencias a hallazgos: [auditoria-2.6.1.md](auditoria-2.6.1.md).
 
 ---
 
+## Plan 2.8.0 — versión cerrada
+
+La 2.8.0 reemplaza a la 2.7.1: junta todos los arreglos pendientes, las
+mejoras de calidad del Sprint 1 y la operación mínima para dejar una versión
+**cerrada** — sin defectos conocidos de severidad media o alta, con cobertura
+medida y validada contra la API real. Fuentes: [resultado-enjambre-api-real.md](resultado-enjambre-api-real.md)
+(E1–E11), [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md)
+(S10, S12–S18) y las fases de este roadmap.
+
+Los bloques van en orden: cada uno se apoya en el anterior. Cada ítem se cierra
+como dice el encabezado de este documento (test de regresión, `tsc`, suite
+verde, CHANGELOG, commit propio).
+
+### Bloque A — Hora de Chile 🔴 · L
+- **Fase 1.10** completa (ver abajo). Incluye `cierre_segundo_llamado` con su hora de Chile y `ultimo_cambio_hora_chile` en el monitoreo.
+- Al cerrarlo, comprobar contra la API real que `monitorear_cambios_recientes` con `minutos: 60` trae resultados en horario hábil.
+
+### Bloque B — Conclusiones correctas 🟠 · M
+| Ítem | Arreglo | Dónde |
+| :--- | :--- | :--- |
+| E1 | La auditoría no infiere «requisitos complejos» si las inadmisibilidades son por precio; el motivo oficial manda | `auditar-desiertas.ts:494` |
+| E2 | El precio por defecto del borrador cabe en el presupuesto **con IVA** | `generar-borrador.ts:134` |
+| S12 | Análisis y auditoría por código entregan resultado parcial con la evidencia propia si falla un paso inicial | `analizar-precios-mercado.ts`, `auditar-desiertas.ts` |
+| E3 + S14 | Comparables de procesos cerrados y desiertos, término más amplio que el primer ítem, sugerencia cuando no hay | `auditar-desiertas.ts:249`, `:300` |
+| S13 | Advertencia con un solo comparable; neto frente a IVA explícito | `auditar-desiertas.ts` |
+| Verificar | El borrador reduce un pedido de varios productos a uno sin avisar del adjunto. Reproducir; si se confirma, advertirlo | `generar-borrador.ts` |
+
+### Bloque C — Cuota y errores 🟡 · M
+| Ítem | Arreglo | Dónde |
+| :--- | :--- | :--- |
+| E4 | Validación local del código de compra y de OC; error 400 específico | `detalle-compra.ts`, `detalle-oc.ts`, `error-handler.ts:129` |
+| E5 + S17 | Un solo formato de error, en español, con «se consultó la API: sí/no»; sin JSON de Zod en inglés | esquemas, `error-handler.ts` |
+| S18 | `tiene_oc: null` sin dato; ficha en el 504 del detalle; procedencia del precio del borrador | varias |
+| E10 | Ruta relativa en el rechazo de `ruta_salida` | `reports/export.ts:39` |
+| E11 | 404 que distingue compra de OC | `error-handler.ts:135` |
+
+### Bloque D — Documentos, textos y privacidad 🟡 · M
+| Ítem | Arreglo | Dónde |
+| :--- | :--- | :--- |
+| E6 | Guías antes que el manual en preguntas de negocio; fragmentos sin solapes; aviso cuando no hay respuesta directa | `utils/doc-search.ts` |
+| E8 | El informe de competencia no copia contactos personales de la descripción libre | `templates/competencia.ts:58` |
+| E9 | Marca en la fila cuando `motivo_seleccion` aparece en un proceso no adjudicado | `buscar-compras.ts:111` |
+| S10 | Carta sin «Cumplimiento garantizado»; región por nombre en todas partes; notas largas una vez por respuesta; nombre de archivo en hora de Chile | varias |
+| — | `presupuesto_clp` aclara que ya viene en pesos; el listado de documentos no menciona `docs/internals/` | `buscar-compras.ts:91`, `documentos.ts:285` |
+| Verificar | Aviso de cobertura de la auditoría distinto entre corridas sobre los mismos códigos | `auditar-desiertas.ts` |
+
+### Bloque E — Mejoras de análisis 🟢 · S
+- **E7:** `palabras_clave_requeridas` y `palabras_clave_excluidas` en `analizar_precios_mercado`, `auditar_compras_desiertas` y el borrador, con la misma semántica que en `buscar_compras_agiles`.
+
+### Bloque F — Rendimiento · M
+- Fases **1.2** (escritura diferida y atómica de la caché), **1.3** (caché del texto de los PDF) y **1.7** (poda del estado del daemon).
+
+### Bloque G — Calidad · L
+- **Fase 1.4** (tipos honestos) y **1.5** (ESLint en la CI; nombres de herramientas derivados del servidor, sin la lista a mano de `src/index.ts`).
+- **Fase 1.6:** cobertura con umbral en la CI — herramientas ≥ 80 %, global ≥ 75 %.
+- Tests de los **recursos MCP** (`glosario`, `estados`, `regiones`, documentación): ningún agente pudo leerlos.
+
+### Bloque H — Operación · M
+- **Fase 2.2:** métricas por herramienta (latencia, caché, 429/504/timeouts) en `obtener_estadisticas_uso`. Es lo que permite medir latencias desde el servidor y no desde fuera.
+- **Fase 2.4:** decisiones como ADRs, incluida la de la hora de Chile y por qué la 2.7.0 concluyó lo contrario.
+
+### Fuera de la 2.8.0
+| Qué | Por qué |
+| :--- | :--- |
+| Fase 2.1 (prueba diaria contra la API real) | Requiere guardar un ticket en los secretos de GitHub: decisión del dueño del repositorio |
+| Fase 2.5 (contraste con graphify) | El grafo vive solo en el equipo local |
+| Rotar el ticket | Expuesto en el historial público desde junio; lo hace el dueño en chilecompra.cl |
+
+### Definición de cerrada
+La 2.8.0 se publica cuando se cumple todo esto:
+1. `tsc`, ESLint y la suite en verde; la suite pasa con `TZ` en UTC, `America/Santiago` y `Asia/Tokyo`.
+2. Cobertura sobre los umbrales del bloque G, verificada en la CI.
+3. Ningún defecto conocido de severidad media o alta abierto en este roadmap.
+4. Contra la API real: `scripts/qa/escenarios-reales.mjs` sin errores atribuibles al servidor; monitoreo de 60 min con resultados en horario hábil.
+5. Enjambre de agentes repetido con presupuesto ≤ 60 consultas: 0 fugas del ticket, 0 hallazgos altos nuevos, y las estadísticas de precios recalculadas a mano sobre datos reales.
+6. Etapa 2 hecha desde Claude Desktop.
+7. README, `docs/api/manual_servidor_mcp.md`, glosario, instrucciones al conectar, `CLAUDE.md`, CHANGELOG y este punto de retome al día.
+8. Publicada en npm con tag `v2.8.0` y release en GitHub.
+
+---
+
 ## Fase 0 — Cerrar el Sprint 0 ✅
 
 PR #8 a #17 fusionados; la 2.7.0 se validó contra la API real
@@ -152,7 +233,7 @@ Workflow programado (`schedule`) con un ticket de pruebas en los secrets del rep
 ### Fase 2.2 — Métricas por herramienta
 Latencia, aciertos de caché, 429/504 y timeouts por herramienta, expuestos en `obtener_estadisticas_uso`. Con eso se calibra el timeout y el presupuesto de tiempo con datos y no con supuestos.
 
-### Fase 2.3 — Documentación que viaja con el paquete
+### Fase 2.3 — Documentación que viaja con el paquete ✅ (2.7.0: `docs/api`, `docs/guias` y `docs/README.md` van en `files`)
 `docs/` no está en `files` de `package.json`: quien instala con `npx` no tiene las guías. Opciones: incluir `docs/api` y `docs/guias` (~15 MB de PDF) o descargarlas al primer uso.
 
 ### Fase 2.4 — Decisiones como ADRs
