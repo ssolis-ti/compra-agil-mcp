@@ -25,6 +25,7 @@ import { CompraAgilClient } from './api/compra-agil-client.js';
 import { logger, setMcpServer } from './utils/logger.js';
 import { registrarSecreto, pista } from './utils/redact.js';
 import { iniciarRelojOficial } from './utils/reloj.js';
+import { instalarFormatoDeErrores } from './utils/validacion.js';
 
 // Tools
 import { registerBuscarCompras } from './tools/buscar-compras.js';
@@ -110,6 +111,12 @@ async function main() {
       instructions: INSTRUCCIONES,
     }
   );
+
+  // Un solo formato para todo rechazo de una entrada, con o sin consulta a la
+  // API (E5). Debe ir antes de registrar las herramientas.
+  if (!instalarFormatoDeErrores(server)) {
+    logger.warn('El SDK de MCP cambió: los rechazos del esquema quedan en su formato propio, no en el del servidor.');
+  }
 
   // 3. Registrar herramientas (Tools). Cada llamada corre con un presupuesto
   //    de tiempo bajo el corte del cliente MCP (ver utils/presupuesto.ts).

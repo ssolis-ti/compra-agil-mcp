@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilDetalle, ProveedorCotizando } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -24,7 +25,7 @@ Las fechas de la API están en hora de Chile: la respuesta trae "cierre_hora_chi
 NOTA: medido contra la API real (45 procesos), las cotizaciones con sus precios vienen en los procesos "desierta" (5 de 8 los traían) y no en los "cerrada" de primer llamado (0 de 8). La guía oficial dice que se muestran desde "Cerrada" en segundo llamado, pero no se pudo confirmar. Una lista de proveedores vacía en un proceso publicado o cerrado no significa que no haya ofertas: mira "total_ofertas".`;
 
 const inputSchema = {
-  codigo: z.string().describe(
+  codigo: esquemaCodigoCompra().describe(
     'Código único de la Compra Ágil. Formato: XXXXXX-YYY-COTXX. Ej: "1057539-228-COT26".'
   ),
 };
@@ -46,6 +47,22 @@ export function fechasDeDetalle(detalle: Pick<CompraAgilDetalle, 'fechas' | 'con
     ultimo_cambio: detalle.fechas.fecha_ultimo_cambio,
     ultimo_cambio_hora_chile: enHoraDeChile(detalle.fechas.fecha_ultimo_cambio),
     cancelacion: detalle.fechas.fecha_cancelacion,
+  };
+}
+
+/**
+ * Orden de compra del detalle. S18: sin id de OC la API no informa, no niega:
+ * `tiene_oc` es `null` («no informado»), no `false`. La API de Compra Ágil no
+ * publica adjudicaciones (0 de 45 procesos con id_orden_compra).
+ */
+export function ordenCompraDeDetalle(detalle: Pick<CompraAgilDetalle, 'id_orden_compra' | 'orden_compra'>) {
+  const id = detalle.id_orden_compra ?? detalle.orden_compra?.id_orden_compra ?? null;
+  return {
+    tiene_oc: id !== null ? true : null,
+    id_orden_compra: id,
+    id_oc: detalle.orden_compra?.id_oc ?? null,
+    codigo_oc: detalle.orden_compra?.codigo_orden_compra ?? null,
+    estado_oc: detalle.orden_compra?.estado_orden_compra ?? null,
   };
 }
 
@@ -136,13 +153,7 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
             unidad: p.unidad_medida,
           })),
           proveedores_cotizando: detalle.proveedores_cotizando.map(resumirCotizante),
-          orden_compra: {
-            tiene_oc: (detalle.id_orden_compra ?? detalle.orden_compra?.id_orden_compra ?? null) !== null,
-            id_orden_compra: detalle.id_orden_compra ?? detalle.orden_compra?.id_orden_compra ?? null,
-            id_oc: detalle.orden_compra?.id_oc ?? null,
-            codigo_oc: detalle.orden_compra?.codigo_orden_compra ?? null,
-            estado_oc: detalle.orden_compra?.estado_orden_compra ?? null,
-          },
+          orden_compra: ordenCompraDeDetalle(detalle),
           resumen: {
             total_ofertas: detalle.resumen.total_ofertas_recibidas,
             total_demandas: detalle.resumen.total_demandas,

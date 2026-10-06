@@ -29,7 +29,7 @@ verde, CHANGELOG, commit propio).
 - **Evidencia:** durante las pruebas del 6-oct el SHOA confirmó el reloj de la máquina con 102–121 ms de desfase, así que las 3 horas venían de la API y no del reloj. La aceptación del bloque usa la hora del SHOA como referencia del «ahora».
 - Al cerrarlo, comprobar contra la API real que `monitorear_cambios_recientes` con `minutos: 60` trae resultados en horario hábil.
 
-### Bloque B — Conclusiones correctas 🟠 · M
+### Bloque B — Conclusiones correctas 🟠 · M · ✅ (`5b6934c`)
 | Ítem | Arreglo | Dónde |
 | :--- | :--- | :--- |
 | ✅ E1 | La auditoría no infiere «requisitos complejos» si las inadmisibilidades son por precio; el motivo oficial manda | `auditar-desiertas.ts:494` |
@@ -42,11 +42,11 @@ verde, CHANGELOG, commit propio).
 ### Bloque C — Cuota y errores 🟡 · M
 | Ítem | Arreglo | Dónde |
 | :--- | :--- | :--- |
-| E4 | Validación local del código de compra y de OC; error 400 específico | `detalle-compra.ts`, `detalle-oc.ts`, `error-handler.ts:129` |
-| E5 + S17 | Un solo formato de error, en español, con «se consultó la API: sí/no»; sin JSON de Zod en inglés | esquemas, `error-handler.ts` |
-| S18 | `tiene_oc: null` sin dato; ficha en el 504 del detalle; procedencia del precio del borrador | varias |
-| E10 | Ruta relativa en el rechazo de `ruta_salida` | `reports/export.ts:39` |
-| E11 | 404 que distingue compra de OC | `error-handler.ts:135` |
+| ✅ E4 | Validación local del código de compra y de OC; error 400 específico | `detalle-compra.ts`, `detalle-oc.ts`, `error-handler.ts:129` |
+| ✅ E5 + S17 | Un solo formato de error, en español, con «se consultó la API: sí/no»; sin JSON de Zod en inglés | esquemas, `error-handler.ts` |
+| ✅ S18 | `tiene_oc: null` sin dato; ficha en el 504 del detalle; procedencia del precio del borrador | varias |
+| ✅ E10 | Nombre de la carpeta, sin ruta absoluta, en el rechazo de `ruta_salida` | `reports/export.ts:39` |
+| ✅ E11 | 404 que distingue compra de OC | `error-handler.ts:135` |
 
 ### Bloque D — Documentos, textos y privacidad 🟡 · M
 | Ítem | Arreglo | Dónde |
@@ -56,7 +56,7 @@ verde, CHANGELOG, commit propio).
 | E9 | Marca en la fila cuando `motivo_seleccion` aparece en un proceso no adjudicado | `buscar-compras.ts:111` |
 | S10 | Carta sin «Cumplimiento garantizado»; región por nombre en todas partes; notas largas una vez por respuesta; nombre de archivo en hora de Chile | varias |
 | — | `presupuesto_clp` aclara que ya viene en pesos; el listado de documentos no menciona `docs/internals/` | `buscar-compras.ts:91`, `documentos.ts:285` |
-| Verificar | Aviso de cobertura de la auditoría distinto entre corridas sobre los mismos códigos | `auditar-desiertas.ts` |
+| ✅ Descartado | Aviso de cobertura distinto entre corridas: el texto refleja la causa real de cada una (detalles omitidos por el presupuesto de tiempo, sin cuota, frente a detalles que fallaron) | `auditar-desiertas.ts` |
 
 ### Bloque E — Mejoras de análisis 🟢 · S
 - **E7:** `palabras_clave_requeridas` y `palabras_clave_excluidas` en `analizar_precios_mercado`, `auditar_compras_desiertas` y el borrador, con la misma semántica que en `buscar_compras_agiles`.

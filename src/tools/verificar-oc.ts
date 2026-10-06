@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -29,7 +30,7 @@ const TOOL_DESCRIPTION = `Informa si una Compra Ágil tiene Orden de Compra emit
 Un "sin OC" NO prueba que la OC no exista: significa que la API no la expone.`;
 
 const inputSchema = {
-  codigo: z.string().describe(
+  codigo: esquemaCodigoCompra().describe(
     'Código único de la Compra Ágil a verificar. Formato: XXXXXX-YYY-COTXX. Ej: "1057539-228-COT26".'
   ),
 };
@@ -111,7 +112,9 @@ export function registerVerificarOC(server: McpServer, client: CompraAgilClient)
           consulto_api: tieneOC,
           detalle_en_cache: true,
           verificacion_oc: {
-            tiene_orden_compra: tieneOC,
+            // S18: `false` contradecía la nota de abajo («no prueba que la OC no
+            // exista»). Sin dato de la API es `null`: no informado.
+            tiene_orden_compra: tieneOC ? true : null,
             id_orden_compra: idOrdenCompra,
             id_oc: idOc,
             codigo_orden_compra: detalleOCInfo?.codigo_oc ?? detalle.orden_compra?.codigo_orden_compra ?? null,

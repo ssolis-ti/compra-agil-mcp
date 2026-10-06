@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { CompraAgilDetalle, CompraAgilItem, ProveedorCotizando } from '../src/api/compra-agil-client.js';
 import { resumirCompraBusqueda } from '../src/tools/buscar-compras.js';
-import { fechasDeDetalle, presupuestoDeDetalle, resumirCotizante } from '../src/tools/detalle-compra.js';
+import { fechasDeDetalle, presupuestoDeDetalle, resumirCotizante, ordenCompraDeDetalle } from '../src/tools/detalle-compra.js';
 
 function item(motivo: string | null = null): CompraAgilItem {
   return {
@@ -122,5 +122,16 @@ describe('detalle expone estado, llamado, tipo de cambio e inadmisibilidad', () 
     expect(r.admisible).toBe(false);
     expect(r.justificacion_inadmisibilidad).toBe('no acompaña garantía');
     expect(r).not.toHaveProperty('proveedor_seleccionado');
+  });
+});
+
+describe('orden de compra en el detalle (S18)', () => {
+  it('sin id de OC es null —no informado—, no false', () => {
+    expect(ordenCompraDeDetalle({ id_orden_compra: null, orden_compra: undefined } as never).tiene_oc).toBeNull();
+  });
+
+  it('con id de OC es true', () => {
+    const oc = ordenCompraDeDetalle({ id_orden_compra: 123, orden_compra: undefined } as never);
+    expect(oc).toMatchObject({ tiene_oc: true, id_orden_compra: 123 });
   });
 });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import fs from 'fs';
 import path from 'path';
@@ -34,7 +35,7 @@ export function registerDocumentosTools(server: McpServer): void {
       description: 'Entrega la ficha pública del proceso, que es donde se abre el adjunto. No hay un enlace de descarga que funcione: el enlace heredado responde 404. No requiere iniciar sesión para ver la ficha.',
       inputSchema: {
         id_documento: z.string().describe('ID único del documento. Ej: "123456" o un UUID como "5f47e991-c525-40a0-b36c-44d53e538ae5".'),
-        codigo_compra: z.string().describe('Código de la Compra Ágil asociada (Ej: "2494-141-COT26"). Requerido para generar el enlace de la ficha pública.'),
+        codigo_compra: esquemaCodigoCompra().describe('Código de la Compra Ágil asociada (Ej: "2494-141-COT26"). Requerido para generar el enlace de la ficha pública.'),
       },
     },
     async (args) => {
@@ -71,7 +72,7 @@ export function registerDocumentosTools(server: McpServer): void {
 ⚠ IMPORTANTE: para los IDs numéricos —que son los que entrega esta API— el portal ya NO sirve el archivo, así que la herramienta responde de inmediato con el enlace a la ficha pública en vez de intentar una descarga que se sabe fallida. Si necesitas las especificaciones para cotizar, tendrás que abrir esa ficha en un navegador: el enlace del adjunto lo genera JavaScript y no existe una URL que un programa pueda pedir.`,
       inputSchema: {
         id_documento: z.string().describe('ID único del documento. Ej: "123456" o un UUID.'),
-        codigo_compra: z.string().optional().describe('Código de la Compra Ágil asociada (Ej: "2494-141-COT26"). Permite guiar al usuario a la ficha pública en caso de fallar la descarga.'),
+        codigo_compra: esquemaCodigoCompra().optional().describe('Código de la Compra Ágil asociada (Ej: "2494-141-COT26"). Permite guiar al usuario a la ficha pública en caso de fallar la descarga.'),
         query: z.string().optional().describe('Si se proporciona, busca y retorna solo fragmentos que contengan este término (case-insensitive).'),
         max_caracteres: z.number().min(500).max(15000).default(5000).optional().describe('Límite de caracteres a retornar (default 5000) para evitar saturar el contexto de la IA.'),
       },

@@ -9,6 +9,7 @@
  */
 
 import { z } from 'zod';
+import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { esquemaRegion } from '../utils/region.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
@@ -56,7 +57,7 @@ const inputSchema = {
   presupuesto_minimo: z.number().optional().describe('Solo "radar". Filtrar procesos con presupuesto disponible mayor o igual a este monto en CLP.'),
   limite_resultados: z.number().min(1).max(50).default(20).optional().describe('Solo "radar". Cantidad máxima de oportunidades a incluir en el informe (1-50, default 20).'),
   max_paginas: z.number().min(1).max(10).default(3).optional().describe('Solo "radar". Cuántas páginas de 10 resultados escanear (1-10, default 3). Cada página es una consulta de unos 8 s. Una página de 50 del mismo filtro responde HTTP 504.'),
-  codigo_compra: z.string().optional().describe('Código de la Compra Ágil. Obligatorio en "cotizacion" y "competencia". En "precio" y "auditoria" arma la búsqueda si no viene "q".'),
+  codigo_compra: esquemaCodigoCompra().optional().describe('Código de la Compra Ágil. Obligatorio en "cotizacion" y "competencia". En "precio" y "auditoria" arma la búsqueda si no viene "q".'),
   rut_proveedor: z.string().optional().describe('Solo "cotizacion". RUT del proveedor. Si se omite, el borrador marca un placeholder.'),
   razon_social: z.string().optional().describe('Solo "cotizacion". Razón social. Si se omite, el borrador marca un placeholder.'),
   precio_unitario_personalizado: z.number().optional().describe('Solo "cotizacion". Precio unitario neto. Si se omite, se estima con el mismo criterio del borrador JSON.'),

@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { esquemaCodigoOC } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -17,7 +18,7 @@ const TOOL_DESCRIPTION = `Obtiene el detalle completo de una Orden de Compra (OC
 ⚠ EL CÓDIGO DEBE VENIR DE OTRA FUENTE. Consulta la API legada de Órdenes de Compra, que es independiente de la de Compra Ágil — y esta última NO entrega códigos de OC (verificado: id_orden_compra viene null en el 100% de los procesos). Úsala cuando ya tengas el código por otra vía: la OC que te emitieron como proveedor, un correo de Mercado Público o la ficha pública del proceso. No esperes obtenerlo con las demás herramientas de este servidor.`;
 
 const inputSchema = {
-  codigo_oc: z.string().describe(
+  codigo_oc: esquemaCodigoOC().describe(
     'Código alfanumérico (ej: "1057532-156-AG26") o ID numérico (ej: "54909627") de la Orden de Compra.'
   ),
 };

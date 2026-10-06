@@ -105,6 +105,35 @@ describe('servidor MCP por stdio', () => {
     }
   });
 
+  // E5 (enjambre, 6-oct): cuatro formatos de error distintos. Este test fija el
+  // formato que de verdad recibe un cliente: si una versión del SDK cambia
+  // cómo rechaza argumentos, falla aquí.
+  it('todo rechazo de una entrada llega en el mismo formato y dice que no se consultó la API', async () => {
+    const casos: Array<[string, Record<string, unknown>]> = [
+      ['obtener_detalle_compra', { codigo: 'ABC' }],                               // E4: esquema del código
+      ['obtener_enlace_documento', { id_documento: '1855508' }],                  // falta un obligatorio
+      ['buscar_compras_agiles', { region: '17' }],                                 // región inexistente
+      ['buscar_compras_agiles', {}],                                               // sin filtros (handler)
+      ['monitorear_cambios_recientes', { cambio_desde: '2026-10-06T09:00:00' }],   // fecha sin zona (handler)
+      ['buscar_compras_agiles', { tamano_pagina: 500 }],                           // rango
+    ];
+    for (const [nombre, args] of casos) {
+      const r = await cliente.callTool({ name: nombre, arguments: args });
+      const texto = (r.content as Array<{ text: string }>)[0].text;
+      expect(r.isError, nombre).toBe(true);
+      expect(texto, `${nombre} ${JSON.stringify(args)}`).toMatch(/^Error de validación: .+ No se consultó la API.$/s);
+      expect(texto, nombre).not.toMatch(/MCP error|Input validation error|Invalid input|expected string/);
+    }
+  });
+
+  it('E4: un código con formato imposible no sale a la API', async () => {
+    // La API apunta a un puerto cerrado: si la llamada saliera, el error sería de red.
+    const r = await cliente.callTool({ name: 'obtener_detalle_compra', arguments: { codigo: 'ABC' } });
+    const texto = (r.content as Array<{ text: string }>)[0].text;
+    expect(texto).toMatch(/"ABC" no tiene el formato de un código de Compra Ágil/);
+    expect(texto).not.toMatch(/conectar|red/i);
+  });
+
   it('el ticket no aparece en los logs del proceso', () => {
     expect(stderr.length).toBeGreaterThan(0);
     expect(stderr).not.toContain(TICKET);

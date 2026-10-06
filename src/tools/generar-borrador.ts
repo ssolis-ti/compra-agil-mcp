@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -121,7 +122,8 @@ export async function estimarPrecioUnitario(
     // sin regalar margen, y resiste valores atípicos mejor que un promedio.
     return {
       precio: percentil(precios, 25),
-      fuente: `Sugerencia automática: percentil 25 de ${precios.length} precio(s) cotizado(s) por el mercado en procesos similares (NO son precios adjudicados: la API no los expone)`,
+      // S18: decía «procesos similares» sin decir cuáles: ahora nombra el término.
+      fuente: `Sugerencia automática: percentil 25 de ${precios.length} precio(s) cotizado(s) en procesos desiertos que coinciden con «${keyword}» (NO son precios adjudicados: la API no los expone). Si el término no describe bien tu producto, ingresa "precio_unitario_personalizado".`,
       sugerido: true,
       automatico: true,
     };
@@ -372,7 +374,7 @@ const TOOL_DESCRIPTION = `Genera un borrador estructurado en formato JSON para p
 Calcula automáticamente los valores netos, impuestos (19% IVA de Chile) y montos brutos, sugiriendo un precio unitario de mercado si no se ingresa uno personalizado.`;
 
 const inputSchema = {
-  codigo_compra: z.string().describe('Código de la Compra Ágil activa a cotizar (ej: "1057539-228-COT26").'),
+  codigo_compra: esquemaCodigoCompra().describe('Código de la Compra Ágil activa a cotizar (ej: "1057539-228-COT26").'),
   rut_proveedor: z.string().optional().describe('RUT del proveedor que realiza la cotización (ej: "76.123.456-7").'),
   razon_social: z.string().optional().describe('Razón social/Nombre de fantasía de la empresa (ej: "Mi Pyme SpA").'),
   precio_unitario_personalizado: z.number().optional().describe('Precio unitario neto personalizado para aplicar a los ítems. Si se omite, se buscará un precio estimado de mercado.'),

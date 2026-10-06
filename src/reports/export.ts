@@ -35,8 +35,10 @@ export function raizInformes(): string {
 /** `ruta_salida` apunta fuera de la raíz de informes. */
 export class RutaSalidaError extends Error {
   constructor(public readonly pedida: string, public readonly raiz: string) {
+    // E10 (enjambre, 6-oct): el mensaje mostraba la ruta absoluta de la raíz,
+    // con el usuario del sistema incluido. Al modelo le basta el nombre.
     super(
-      `La carpeta "${pedida}" queda fuera de la carpeta de informes (${raiz}). ` +
+      `La carpeta "${pedida}" queda fuera de la carpeta de informes ("${path.basename(raiz)}"). ` +
       `"ruta_salida" solo acepta una subcarpeta dentro de ella, por ejemplo "radar/octubre". ` +
       `Para guardar en otra parte, configura la variable de entorno COMPRA_AGIL_INFORMES_DIR.`
     );

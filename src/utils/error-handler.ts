@@ -98,6 +98,18 @@ function esDetallePorCodigo(consulta: string): boolean {
   return /\/v2\/compra-agil\/[^/?\s]+/.test(consulta);
 }
 
+/** Código del proceso de una llamada de detalle, para enlazar su ficha. */
+function codigoDelDetalle(consulta: string): string | null {
+  const m = /\/v2\/compra-agil\/([^/?\s]+)/.exec(consulta);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+function esOrdenDeCompra(consulta: string): boolean {
+  return /OrdenCompra\.json/i.test(consulta);
+}
+
+const fichaDe = (codigo: string) => `https://buscador.mercadopublico.cl/ficha?code=${encodeURIComponent(codigo)}`;
+
 function esTextoSobreDesierta(consulta: string): boolean {
   const separador = consulta.indexOf('?');
   if (separador < 0) return false;
@@ -125,14 +137,34 @@ function getActionableMessage(httpStatus: number, apiErrors: ApiError[], consult
   const llamada = consulta ? ` La llamada que falló: ${redact(consulta)}.` : '';
 
   switch (httpStatus) {
-    case 400:
+    // ⚠ E4 y E11 (enjambre, 6-oct): el 400 hablaba siempre de fechas, de q/id y
+    //   de regiones, también cuando lo rechazado era un código de proceso; y el
+    //   404 no decía si se buscaba una compra o una OC. Se distingue por la
+    //   llamada que falló.
+    case 400: {
+      const codigo = codigoDelDetalle(consulta);
+      if (codigo) {
+        return `La API rechazó el código "${codigo}". Un código de Compra Ágil tiene la forma "1057539-228-COT26".${detail}`;
+      }
+      if (esOrdenDeCompra(consulta)) {
+        return `La API de Órdenes de Compra rechazó la consulta. Revisa el código de la OC (ej: "1057539-1234-SE26").${detail}`;
+      }
       return `Parámetros inválidos enviados a la API de Compra Ágil. Verifica el formato de fechas (ISO-8601), que 'q' e 'id' no se usen juntos, y que los códigos de región estén entre 1 y 16.${detail}`;
+    }
     case 401:
       return `Ticket de acceso no proporcionado. Configura la variable de entorno COMPRA_AGIL_TICKET con un ticket válido obtenido en https://www.chilecompra.cl/api/.${detail}`;
     case 403:
       return `Ticket de acceso inválido, inactivo o bloqueado. Verifica que el ticket sea correcto y esté vigente. Si fue bloqueado, solicita uno nuevo en https://www.chilecompra.cl/api/.${detail}`;
-    case 404:
+    case 404: {
+      const codigo = codigoDelDetalle(consulta);
+      if (codigo) {
+        return `No existe una Compra Ágil pública con el código "${codigo}". Verifica el código; si lo copiaste del portal, confírmalo en la ficha: ${fichaDe(codigo)}${detail}`;
+      }
+      if (esOrdenDeCompra(consulta)) {
+        return `No se encontró la Orden de Compra con ese código, o no es pública. Verifica el código de la OC.${detail}`;
+      }
       return `No se encontró el recurso solicitado (Compra Ágil u Orden de Compra) con el código proporcionado. Verifica que el código sea correcto, que exista y sea público.${detail}`;
+    }
     case 429:
       return formatRateLimitMessage(detail);
     case 500:
@@ -146,7 +178,9 @@ function getActionableMessage(httpStatus: number, apiErrors: ApiError[], consult
     case 502:
     case 504: {
       if (esDetallePorCodigo(consulta)) {
-        return `La pasarela de Mercado Público cortó el detalle por código (HTTP ${httpStatus}).${llamada} Esta llamada no tiene tamaño de página ni otro parámetro que bajar. No reintentes en ráfaga. Espera y, si se repite, confirma el proceso en la ficha pública. Este fallo no dejó el detalle en caché.${detail}`;
+        // S18: el aviso remitía a «la ficha pública» sin dar el enlace.
+        const codigo = codigoDelDetalle(consulta);
+        return `La pasarela de Mercado Público cortó el detalle por código (HTTP ${httpStatus}).${llamada} Esta llamada no tiene tamaño de página ni otro parámetro que bajar. No reintentes en ráfaga. Espera y, si se repite, confirma el proceso en la ficha pública${codigo ? `: ${fichaDe(codigo)}` : ''}. Este fallo no dejó el detalle en caché.${detail}`;
       }
       const pistaLenta = esTextoSobreDesierta(consulta)
         ? ' Esta llamada combina búsqueda de texto y estado=desierta, la combinación más lenta medida.'

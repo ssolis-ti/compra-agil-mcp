@@ -116,3 +116,12 @@ describe('generar_informe con ruta_salida fuera de la raíz', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
+
+describe('mensaje de ruta_salida rechazada (E10)', () => {
+  it('no muestra la ruta absoluta de la carpeta de informes', () => {
+    const e = new RutaSalidaError('../fuera', path.join('home', 'funcionario', 'proyecto', 'informes'));
+    expect(e.message).toContain('"informes"');
+    expect(e.message).not.toContain('funcionario');
+    expect(e.message).toContain('COMPRA_AGIL_INFORMES_DIR');
+  });
+});
