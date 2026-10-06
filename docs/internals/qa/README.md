@@ -14,7 +14,7 @@ sesión local.
 | Validación contra la API real | ✅ Etapa 1 de la 2.7.0 hecha (6-oct), sin bloqueantes; `fecha_cierre` confirmada como UTC — [resultado-api-real.md](resultado-api-real.md). Falta la etapa 2 (uso desde un cliente MCP) |
 | Simulación de uso con 3 agentes (API simulada) | ✅ Dos corridas — [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md): la primera halló S1–S9 (corregidos en los PR #9 y #10); la segunda no los reprodujo y halló S1b y S11–S18 (fase 1.9) |
 | Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #13 |
-| Versión 2.7.0 | 🟡 En `main`; **sin publicar en npm** (npm sigue en la 2.5.0). Falta la validación real y el tag `v2.7.0` |
+| Versión 2.7.0 | 🟡 En `main` y validada contra la API real; **sin publicar en npm** (npm sigue en la 2.5.0). Falta cargar `NPM_TOKEN` y empujar el tag `v2.7.0` |
 | Publicación automática en npm | 🟡 PR [#14](https://github.com/ssolis-ti/compra-agil-mcp/pull/14): `publicar.yml` publica al empujar un tag `v*`; requiere el secreto `NPM_TOKEN` |
 | Resto del Sprint 1, fase 1.9 y Sprint 2 | ⏳ Pendientes — [roadmap.md](roadmap.md) |
 
