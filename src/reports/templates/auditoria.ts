@@ -46,7 +46,8 @@ ${portada({
 ${kpiRow([
   { label: 'Presupuesto', valor: clp(p.presupuesto_disponible), nota: p.region },
   { label: 'Plazo', valor: `${numero(p.duracion_dias, 1)} días`, nota: 'publicación a cierre' },
-  { label: 'Comparables', valor: numero(b.procesos_comparables_con_cotizaciones), nota: b.termino_clave },
+  // Segundo enjambre: el término aparecía como un rótulo suelto; ahora dice qué es.
+  { label: 'Comparables', valor: numero(b.procesos_comparables_con_cotizaciones), nota: `buscados con «${b.termino_clave}»` },
   { label: 'Promedio cotizado', valor: clp(montos?.promedio_cotizado), nota: 'menor monto de cada uno' },
 ])}
 

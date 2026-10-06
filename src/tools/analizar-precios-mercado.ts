@@ -476,7 +476,7 @@ export async function recolectarDatosPrecios(
       'La muestra proviene de procesos declarados DESIERTOS, los únicos que publican sus cotizaciones (medido: desierta 5/8 procesos con precios; cerrada 0/8).',
       // ⚠ Antes decía «en los procesos desiertos casi todas lo son» sin mirar
       //   la muestra; en la simulación del 6-oct eran 2 de 7. Ahora cuenta.
-      `Las cotizaciones declaradas inadmisibles SÍ se incluyen en estas estadísticas (en esta muestra, ${inadmisibles.length} de ${cotizaciones.length}): el precio ofertado sigue siendo señal de mercado aunque se haya rechazado el papeleo, y excluirlas puede dejar la muestra vacía. "estadisticas_precio_unitario_solo_admisibles" trae la distribución sin ellas. Revisa "motivos_de_inadmisibilidad": si predomina "sobrepasa el monto máximo", la muestra está sesgada hacia arriba; si predominan motivos formales (garantías, certificados), los precios son representativos.`,
+      `Las cotizaciones declaradas inadmisibles SÍ se incluyen en estas estadísticas (en esta muestra, ${inadmisibles.length} de ${cotizaciones.length}): el precio ofertado sigue siendo señal de mercado aunque se haya rechazado el papeleo, y excluirlas puede dejar la muestra vacía. ${preciosUnitariosAdmisibles.length > 0 ? '"estadisticas_precio_unitario_solo_admisibles" trae la distribución sin ellas' : 'Aquí todas son inadmisibles, así que no hay distribución sin ellas'}. Revisa "motivos_de_inadmisibilidad": si predomina "sobrepasa el monto máximo", la muestra está sesgada hacia arriba; si predominan motivos formales (garantías, certificados), los precios son representativos.`,
     ].join(' '),
     contexto: contextoProceso || undefined,
     termino_busqueda: keyword,

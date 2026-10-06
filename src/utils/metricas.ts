@@ -20,6 +20,8 @@ const VENTANA_LATENCIAS = 100;
 interface MetricaHerramienta {
   llamadas: number;
   errores: number;
+  /** Rechazos del esquema: el SDK los resuelve antes de llamar a la herramienta. */
+  rechazos: number;
   maximoMs: number;
   totalMs: number;
   recientes: number[];
@@ -29,8 +31,23 @@ const herramientas = new Map<string, MetricaHerramienta>();
 const api = { enviadas: 0, desdeCache: 0, omitidasPorTiempo: 0, porResultado: new Map<string, number>() };
 let inicio = Date.now();
 
+function metricaDe(nombre: string): MetricaHerramienta {
+  const m = herramientas.get(nombre) ?? { llamadas: 0, errores: 0, rechazos: 0, maximoMs: 0, totalMs: 0, recientes: [] };
+  herramientas.set(nombre, m);
+  return m;
+}
+
+/**
+ * Un argumento rechazado por el esquema. Segundo enjambre (6-oct): las
+ * métricas no los veían, porque el SDK rechaza antes de llamar a la herramienta,
+ * y una herramienta solo rechazada ni aparecía.
+ */
+export function registrarRechazoValidacion(nombre: string): void {
+  metricaDe(nombre).rechazos++;
+}
+
 export function registrarLlamadaHerramienta(nombre: string, ms: number, esError: boolean): void {
-  const m = herramientas.get(nombre) ?? { llamadas: 0, errores: 0, maximoMs: 0, totalMs: 0, recientes: [] };
+  const m = metricaDe(nombre);
   m.llamadas++;
   if (esError) m.errores++;
   m.totalMs += ms;
@@ -68,8 +85,9 @@ export function resumenMetricas() {
     porHerramienta[nombre] = {
       llamadas: m.llamadas,
       errores: m.errores,
+      rechazos_de_validacion: m.rechazos,
       latencia_ms: {
-        media: Math.round(m.totalMs / m.llamadas),
+        media: m.llamadas === 0 ? 0 : Math.round(m.totalMs / m.llamadas),
         mediana: Math.round(percentil(ordenados, 50)),
         p95: Math.round(percentil(ordenados, 95)),
         maxima: Math.round(m.maximoMs),

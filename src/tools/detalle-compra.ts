@@ -157,7 +157,12 @@ export function registerDetalleCompra(server: McpServer, client: CompraAgilClien
             total_ofertas: detalle.resumen.total_ofertas_recibidas,
             total_demandas: detalle.resumen.total_demandas,
             multa_sancion: detalle.resumen.multa_sancion,
+            // Segundo enjambre: «multa_sancion: 1» sin contexto hacía pensar en
+            // una multa aplicada. La guía no define el campo.
+            _nota_resumen: 'total_ofertas es el dato de la ficha y puede diferir del "ofertas_recibidas" del listado. multa_sancion y total_demandas no están definidos en la guía oficial: no los leas como una multa aplicada ni como demandas sin revisar la ficha.',
           },
+          // Segundo enjambre: el detalle era la única herramienta sin el enlace a la ficha.
+          ficha: `https://buscador.mercadopublico.cl/ficha?code=${encodeURIComponent(detalle.codigo)}`,
           motivos: detalle.motivos,
           sostenibilidad: {
             medioambientales: detalle.flags.considera_requisitos_medioambientales,

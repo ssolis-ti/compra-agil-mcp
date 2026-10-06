@@ -40,9 +40,13 @@ export function renderPrecioInforme(data: PrecioInformeData): string {
   // ⚠ S16 (segunda simulación, 6-oct): el informe no mostraba suficiencia,
   //   cobertura ni la distribución sin inadmisibles, y su nota remitía a un
   //   campo JSON que quien lee el papel no ve. Se remite a la tabla de aquí.
+  // Segundo enjambre: si todas son inadmisibles no hay tabla que comparar, y el
+  // informe remitía a una tabla que no aparecía.
   const nota = d._nota_metodologica.replace(
     '"estadisticas_precio_unitario_solo_admisibles" trae la distribución sin ellas',
-    'la tabla «Con y sin inadmisibles» compara ambas distribuciones',
+    hayInadmisibles && d.estadisticas_precio_unitario && soloAdmisibles
+      ? 'la tabla «Con y sin inadmisibles» compara ambas distribuciones'
+      : 'aquí todas las cotizaciones son inadmisibles, así que no hay distribución sin ellas',
   );
 
   const cuerpo = `

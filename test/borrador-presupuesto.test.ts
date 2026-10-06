@@ -133,3 +133,24 @@ describe('producto sin cantidad (fase 1.4, lo destapó el compilador)', () => {
     expect(b._campos_a_revisar.join(' ')).toMatch(/no informa la cantidad de: Kit de aseo\. Se asumió 1/);
   });
 });
+
+describe('precio sugerido implausiblemente bajo (segundo enjambre, 6-oct)', () => {
+  // 3826-329-COT26: pack de aseo de $500.000; el borrador sugirió $4.898 (p25 de
+  // «mopas húmedas») y el informe dijo que el total cabía en el presupuesto.
+  it('advierte cuando el total neto es menos del 10 % del presupuesto', async () => {
+    const d = { ...proceso(500_000, 1) };
+    const barato = { ...d, codigo: '9-9-COT26', proveedores_cotizando: [{ rut_proveedor: '1-9', razon_social: 'X', valor_neto: 4_898, productos_cotizados: [{ nombre_producto: 'Mopas húmedas', cantidad: 1, precio_unitario: 4_898 }] }] };
+    const cliente = {
+      detalle: async () => d,
+      buscar: async () => ({ items: [{ codigo: '9-9-COT26', nombre: 'Mopas', institucion: {}, fechas: {} }] }),
+      detallesEnParalelo: async () => [barato],
+    };
+    const b = await construirBorradorCotizacion(cliente as never, { codigo_compra: d.codigo, rut_proveedor: '76.123.456-0', razon_social: 'Comercial Ejemplo SpA' });
+    expect(b._campos_a_revisar.join(' ')).toMatch(/es menos del 10 % del presupuesto del comprador.*«[^»]+»/);
+  });
+
+  it('no advierte cuando el precio lo fijó el usuario', async () => {
+    const b = await construirBorradorCotizacion(clienteCon(proceso(500_000, 1)) as never, { ...argsUsuaria, precio_unitario_personalizado: 1_000 });
+    expect(b._campos_a_revisar.join(' ')).not.toMatch(/menos del 10 %/);
+  });
+});

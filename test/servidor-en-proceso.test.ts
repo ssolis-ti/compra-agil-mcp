@@ -243,6 +243,14 @@ describe('servidor en proceso — recursos y prompts', () => {
     expect(compra.contents[0]?.text).toMatch(/cierre_hora_chile/);
   });
 
+  it('las métricas cuentan los rechazos del esquema, que ocurren antes de la herramienta', async () => {
+    await llamar('obtener_detalle_compra', { codigo: 'ABC' });
+    await llamar('obtener_enlace_documento', { id_documento: '1' });
+    const { metricas } = JSON.parse((await llamar('obtener_estadisticas_uso')).t);
+    expect(metricas.herramientas.obtener_detalle_compra.rechazos_de_validacion).toBeGreaterThanOrEqual(1);
+    expect(metricas.herramientas.obtener_enlace_documento.rechazos_de_validacion).toBe(1);
+  });
+
   it('obtener_estadisticas_uso refleja las llamadas de esta sesión (fase 2.2)', async () => {
     const { t } = await llamar('obtener_estadisticas_uso');
     const { metricas } = JSON.parse(t);

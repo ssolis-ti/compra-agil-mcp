@@ -19,6 +19,7 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registrarRechazoValidacion } from './metricas.js';
 
 export const PREFIJO_VALIDACION = 'Error de validación:';
 export const SIN_CONSULTA = 'No se consultó la API.';
@@ -168,6 +169,8 @@ export function instalarFormatoDeErrores(server: McpServer): boolean {
       return await original.apply(server, a);
     } catch (error) {
       if (error instanceof McpError && error.code === ErrorCode.InvalidParams && /Input validation error/.test(error.message)) {
+        // validateToolInput(tool, args, toolName): el nombre es el tercer argumento.
+        if (typeof a[2] === 'string') registrarRechazoValidacion(a[2]);
         throw new Error(traducirRechazoDelEsquema(error.message), { cause: error });
       }
       throw error;

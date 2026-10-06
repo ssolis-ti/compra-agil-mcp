@@ -28,6 +28,7 @@ import { renderPrecioInforme } from '../reports/templates/precio.js';
 import { renderAuditoriaInforme } from '../reports/templates/auditoria.js';
 import { renderCompetenciaInforme } from '../reports/templates/competencia.js';
 import { escribirInforme, slug, stamp, RutaSalidaError, resolverDirectorioSalida } from '../reports/export.js';
+import { errorDeValidacion } from '../utils/validacion.js';
 import path from 'path';
 import { clp } from '../reports/format.js';
 import { PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../reports/theme.js';
@@ -285,7 +286,7 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
           : error instanceof RutaSalidaError
-            ? error.message
+            ? errorDeValidacion(error.message)
             : `Error inesperado al generar el informe: ${safeError(error)}`;
         return {
           content: [{ type: 'text' as const, text: message }],

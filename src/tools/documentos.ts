@@ -247,7 +247,7 @@ export function registerDocumentosTools(server: McpServer): void {
     {
       title: "Consultar las guías locales",
       annotations: { readOnlyHint: true, openWorldHint: false },
-      description: 'Busca en los manuales y guías locales de docs/ (.pdf, .txt, .md). Devuelve como máximo 3 archivos y nombra los que quedaron fuera. En preguntas sobre este servidor o la API, el manual del servidor va primero: describe el comportamiento medido. En preguntas de negocio (plazos, multas, requisitos) mandan las guías. La guía oficial de ChileCompra describe la API prometida y puede contradecir al manual. Si ningún fragmento reúne todos los términos, lo advierte.',
+      description: 'Busca en los manuales y guías locales de docs/ (.pdf, .txt, .md). Devuelve como máximo 3 archivos y nombra los que quedaron fuera. En preguntas sobre este servidor o la API, el manual del servidor va primero: describe el comportamiento medido. En preguntas de negocio (plazos, multas, requisitos) mandan las guías. La guía oficial de ChileCompra describe la API prometida y puede contradecir al manual. Si ningún fragmento reúne al menos la mitad de los términos buscados, lo advierte.',
       inputSchema: {
         query: z.string().optional().describe('Qué buscar. Admite tanto un término suelto ("multas", "garantía") como una pregunta en lenguaje natural ("¿qué multas me pueden aplicar?"): la consulta se descompone en términos y se ignoran acentos y palabras vacías. Si se omite, lista los documentos disponibles.'),
         max_caracteres: z.number().min(500).max(15000).default(3000).optional().describe('Cantidad máxima de texto a retornar de cada coincidencia.'),

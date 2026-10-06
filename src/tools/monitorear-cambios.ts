@@ -28,6 +28,7 @@ La ventana se define de UNA de dos formas, mutuamente excluyentes:
   • Absoluta: 'cambio_desde' + 'cambio_hasta' (rango ISO-8601 arbitrario), para resincronizar un período pasado
     o retomar desde el último timestamp procesado, sin el techo de 24 horas.
 Puede combinarse con filtros de estado y región para acotar los resultados.
+La API no entrega los resultados ordenados por último cambio (los agrupa, por ejemplo, por estado): para no perder el cambio más reciente, revisa todas las páginas o acota la ventana.
 Las fechas de la API están en hora de Chile: la respuesta trae "fecha_cierre_hora_chile" y "ultimo_cambio_hora_chile". Confirma el plazo en la ficha del proceso.
 Las fechas que indiques en "cambio_desde"/"cambio_hasta" deben declarar su zona; para hora de Chile usa el desfase vigente (ej. "-03:00").`;
 

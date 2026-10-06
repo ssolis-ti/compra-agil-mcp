@@ -181,7 +181,9 @@ export function buscarEnTexto(
     if (elegidos.length >= maxFragmentos) break;
     const i = c.linea ?? -10;
     const clave = normalizadas[i]?.trim() ?? c.texto;
-    if (lineasTomadas.has(i) || lineasTomadas.has(i - 1) || lineasTomadas.has(i + 1) || textosTomados.has(clave)) continue;
+    // ±2: con una línea de distancia, el [Siguiente] de uno es el [Anterior]
+    // del otro, y esa línea salía dos veces (segundo enjambre, 6-oct).
+    if ([-2, -1, 0, 1, 2].some((d) => lineasTomadas.has(i + d)) || textosTomados.has(clave)) continue;
     elegidos.push(c);
     lineasTomadas.add(i);
     textosTomados.add(clave);

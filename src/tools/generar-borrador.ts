@@ -333,6 +333,18 @@ export async function construirBorradorCotizacion(
   const frentePresupuesto = compararConPresupuesto(presupuestoDelComprador(targetDetail), valorNeto, montoTotal, cantidadTotal);
   if (frentePresupuesto?.advertencia) advertencias.push(frentePresupuesto.advertencia);
 
+  // ⚠ Segundo enjambre (6-oct): para un pack de «variados materiales de aseo»
+  //   de $500.000, el borrador sugirió $4.898 (p25 de «mopas húmedas») y el
+  //   informe dijo «el total cabe en el presupuesto»: un total del 1 %. Que
+  //   quepa no significa que sea razonable.
+  const presupuestoComprador = presupuestoDelComprador(targetDetail);
+  if (estimacion.automatico && presupuestoComprador > 0 && valorNeto < presupuestoComprador * 0.1) {
+    advertencias.push(
+      `El total neto (${'$'}${valorNeto.toLocaleString('es-CL')}) es menos del 10 % del presupuesto del comprador (${'$'}${presupuestoComprador.toLocaleString('es-CL')}). ` +
+      `El precio sugerido sale de ${estimacion.fuente.includes('«') ? estimacion.fuente.slice(estimacion.fuente.indexOf('«'), estimacion.fuente.indexOf('»') + 1) : 'una estimación automática'}, y puede no corresponder a lo que se pide (un pack, varios productos o una unidad distinta). Revisa la ficha y fija "precio_unitario_personalizado".`,
+    );
+  }
+
   // ⚠ Enjambre contra la API real (6-oct): en 5796-33-COT26 la API listaba un
   //   solo producto («Toallas de papel» × 100) y el pedido real —jabón,
   //   lavaloza, desinfectante, papel higiénico— estaba en la descripción y en

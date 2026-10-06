@@ -45,7 +45,9 @@ ${kpiRow([
   },
 ])}
 
-<p><small>${esc(d.estado)} · ${esc(d.region)} · presupuesto ${clp(d.presupuesto_clp)} ${esc(d.moneda)}</small></p>
+<p><small>${esc(d.estado)} · ${esc(d.region)} · presupuesto ${clp(d.presupuesto_clp)} ${esc(d.moneda)}${s.duplicadas > 0 ? ` · ${numero(s.duplicadas)} cotización(es) repetida(s) (mismo RUT y monto)` : ''}</small></p>
+
+${d._aviso_brecha ? callout('Brecha entre ofertas rechazadas', `<p style="margin:0">${esc(d._aviso_brecha)}</p>`, 'alerta') : ''}
 
 ${d.cotizantes.length === 0
   ? callout('Sin cotizaciones', '<p style="margin:0">Este proceso no trae proveedores cotizando. La API no publica un adjudicado en su lugar.</p>', 'alerta')
@@ -61,12 +63,18 @@ ${d.cotizantes.length === 0
         return `<b>${esc(c.razon_social)}</b><br><span class="mono">${esc(rut(c.rut))}</span>${desc}${extra}`;
       },
     },
-    { header: 'Neto', ancho: '24mm', numerica: true, celda: (c) => clp(c.valor_neto) },
+    {
+      header: 'Neto',
+      ancho: '24mm',
+      numerica: true,
+      // Segundo enjambre: el neto incluía despacho sin decirlo.
+      celda: (c) => clp(c.valor_neto) + (c.despacho && c.despacho > 0 ? `<br><small>incl. despacho ${clp(c.despacho)}</small>` : ''),
+    },
     { header: 'Total', ancho: '24mm', numerica: true, celda: (c) => clp(c.monto_total) },
     {
       header: 'EMT',
       ancho: '14mm',
-      celda: (c) => badge(c.es_empresa_menor_tamano ? 'Sí' : 'No', 'neutro'),
+      celda: (c) => badge(c.es_empresa_menor_tamano === null ? 'Sin dato' : c.es_empresa_menor_tamano ? 'Sí' : 'No', 'neutro'),
     },
     {
       header: 'Estado',

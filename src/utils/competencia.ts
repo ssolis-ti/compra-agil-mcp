@@ -39,7 +39,11 @@ export interface DatosCompetencia {
     neto_maximo: number | null;
     brecha_neto: number | null;
     brecha_porcentaje: number | null;
+    /** Cotizaciones repetidas: mismo RUT y mismo neto que otra anterior. */
+    duplicadas: number;
   };
+  /** Presente si la brecha compara solo ofertas rechazadas (segundo enjambre). */
+  _aviso_brecha?: string;
   _nota: string;
 }
 
@@ -92,6 +96,19 @@ export function compararCotizantes(detalle: CompraAgilDetalle): DatosCompetencia
       ? `Región ${detalle.institucion.region}`
       : 'No especificada');
 
+  // Segundo enjambre (6-oct): un proveedor aparecía tres veces, dos idénticas.
+  const vistas = new Set<string>();
+  let duplicadas = 0;
+  for (const par of pares) {
+    const clave = `${par.fila.rut}|${par.neto}`;
+    if (vistas.has(clave)) duplicadas++;
+    vistas.add(clave);
+  }
+  const admisibles = pares.filter((x) => x.fila.admisible).length;
+  const avisoBrecha = brecha !== null && admisibles === 0
+    ? 'Todas las cotizaciones fueron declaradas inadmisibles: la brecha compara ofertas que el comprador rechazó, no precios que habría aceptado.'
+    : undefined;
+
   return {
     codigo: detalle.codigo,
     nombre: detalle.nombre,
@@ -103,13 +120,15 @@ export function compararCotizantes(detalle: CompraAgilDetalle): DatosCompetencia
     cotizantes: pares.map((p) => p.fila),
     spread: {
       cotizaciones: pares.length,
-      admisibles: pares.filter((p) => p.fila.admisible).length,
+      admisibles,
       inadmisibles: pares.filter((p) => !p.fila.admisible).length,
       neto_minimo: minimo,
       neto_maximo: maximo,
       brecha_neto: brecha,
       brecha_porcentaje: porcentaje,
+      duplicadas,
     },
+    ...(avisoBrecha && { _aviso_brecha: avisoBrecha }),
     _nota: NOTA_COMPETENCIA,
   };
 }

@@ -22,6 +22,7 @@ Permite filtrar por palabras clave, estado del proceso, región geográfica y ra
 Retorna un listado resumido con código, nombre, estado, presupuesto e institución compradora.
 Las fechas de la API están en hora de Chile: la respuesta trae "fecha_cierre_hora_chile". Confirma el plazo en la ficha del proceso.
 Cada resultado trae el RUT del organismo y fecha_ultimo_cambio. motivo_seleccion solo aparece si la API lo envió con texto; un valor presente no prueba que haya un proveedor adjudicado.
+"ofertas_recibidas" es el dato del listado: la ficha (obtener_detalle_compra) puede informar otro número, y es la que vale. La búsqueda de texto de la API es amplia y puede traer procesos de otro rubro: acota con "palabras_clave_requeridas"/"palabras_clave_excluidas".
 Hay que enviar al menos un filtro de la API: estado, region, q, id, publicado_desde o publicado_hasta. Sin ninguno, esta herramienta no hace la llamada. El orden, la página y las palabras clave locales no cuentan: las palabras se aplican después, sobre la respuesta.
 Nota: los parámetros 'q' (búsqueda por texto) e 'id' (código exacto) son mutuamente excluyentes.
 Estados que devuelven filas: publicada, cerrada, desierta, cancelada. proveedor_seleccionado devuelve 0 filas y oc_emitida responde HTTP 400.
