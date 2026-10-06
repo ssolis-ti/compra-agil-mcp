@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Corregido
+* **`npm publish` fallaba en el equipo del desarrollador** por un test que no estaba aislado de su `.env`: `test/rutas.test.ts` arranca el servidor y este también lee el `.env` de la raíz del paquete, donde está el ticket real y, como trae `.env.example`, `COMPRA_AGIL_BASE_URL` de la API real. El test consultaba la API real con el ticket real (gastando cuota) y se cortaba a los 5 s. En la CI no hay `.env` y pasaba. Ahora el servidor del test corre desde una copia del paquete sin `.env`.
+
 ## [2.7.0] - 2026-10-06
 
 Auditoría QA de la 2.6.1, dos simulaciones de uso con agentes y la validación contra la API real (etapa 1). Lo que impedía llevar el servidor a producción y lo que llevaba a un modelo a dar un consejo equivocado. 463 tests (eran 345), CI en Ubuntu y Windows con Node 20 y 22.

@@ -78,6 +78,17 @@ describe('servidor lanzado desde otra carpeta (como lo hace un cliente MCP)', ()
     fs.mkdirSync(cwdAjeno);
     fs.mkdirSync(datos);
 
+    // El servidor corre desde una copia del paquete SIN `.env`: el servidor
+    // también lee el `.env` de la raíz del paquete, y con el del desarrollador
+    // (ticket real y COMPRA_AGIL_BASE_URL de la API real, como trae
+    // .env.example) este test consultaba la API real con el ticket real y se
+    // cortaba a los 5 s. Pasó al publicar la 2.7.0 en Windows.
+    const paquete = path.join(base, 'paquete');
+    fs.mkdirSync(paquete);
+    fs.cpSync(path.join(RAIZ, 'src'), path.join(paquete, 'src'), { recursive: true });
+    fs.copyFileSync(path.join(RAIZ, 'package.json'), path.join(paquete, 'package.json'));
+    fs.symlinkSync(path.join(RAIZ, 'node_modules'), path.join(paquete, 'node_modules'), 'junction');
+
     api = http.createServer((req, res) => {
       ticketRecibido = String(req.headers.ticket ?? '');
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -97,7 +108,7 @@ describe('servidor lanzado desde otra carpeta (como lo hace un cliente MCP)', ()
 
     const transporte = new StdioClientTransport({
       command: process.execPath,
-      args: [path.join(RAIZ, 'node_modules', 'tsx', 'dist', 'cli.mjs'), path.join(RAIZ, 'src', 'index.ts')],
+      args: [path.join(RAIZ, 'node_modules', 'tsx', 'dist', 'cli.mjs'), path.join(paquete, 'src', 'index.ts')],
       cwd: cwdAjeno,
       env,
       stderr: 'pipe',
@@ -109,12 +120,15 @@ describe('servidor lanzado desde otra carpeta (como lo hace un cliente MCP)', ()
   afterAll(async () => {
     await cliente?.close();
     await new Promise<void>((ok) => api.close(() => ok()));
+    // Primero el enlace a node_modules, para que el borrado recursivo nunca
+    // pueda entrar en el del proyecto.
+    try { fs.unlinkSync(path.join(base, 'paquete', 'node_modules')); } catch { /* no se creó */ }
     fs.rmSync(base, { recursive: true, force: true });
   });
 
   it('arranca y responde tools/list sin el ticket en el entorno', async () => {
     expect((await cliente.listTools()).tools).toHaveLength(16);
-  });
+  }, 30_000);
 
   it('usa el ticket del .env de la carpeta de datos y guarda la caché ahí, no en el cwd', async () => {
     const r = await cliente.callTool({ name: 'buscar_compras_agiles', arguments: { q: 'resmas' } });
@@ -123,5 +137,5 @@ describe('servidor lanzado desde otra carpeta (como lo hace un cliente MCP)', ()
     expect(fs.existsSync(path.join(datos, '.api-cache.json'))).toBe(true);
     expect(fs.existsSync(path.join(datos, '.rate-limit-state.json'))).toBe(true);
     expect(fs.readdirSync(cwdAjeno)).toEqual([]);
-  });
+  }, 30_000);
 });
