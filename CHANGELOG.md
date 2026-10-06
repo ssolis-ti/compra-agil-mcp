@@ -14,6 +14,7 @@ Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a 
 * **Un 200 con cuerpo cortado salía como `Unexpected token…`, texto crudo de JavaScript.** Ahora se explica como respuesta inválida de la API, nombra la llamada y no queda en caché.
 * **Un listado con `montos: null` hacía caer `buscar_compras_agiles` con `Cannot read properties of null`.** Las respuestas se normalizan una sola vez en el cliente (`src/api/normalizar.ts`): un sub-objeto ausente pasa a `{}`, una lista ausente a `[]`, y los textos que se manipulan (`nombre`, `codigo`, `estado.codigo`) a `''`. No se inventan montos: un presupuesto ausente sigue ausente, no en 0. Los campos no documentados pasan intactos. Un listado sin `items` no se lee como «sin resultados»: se explica como respuesta con forma inesperada y no queda en caché.
 * **El daemon de monitoreo habría caído con un proceso sin monto publicado.** Ahora no lo alerta.
+* **Los informes HTML imprimían el cierre en la hora del servidor.** `fecha()` leía el valor sin zona como hora local y lo mostraba en hora local: el mismo cierre salía 12:00 en Chile, 15:00 en un servidor UTC y 17:00 en Madrid, y contradecía el `fecha_cierre_hora_chile` de la herramienta JSON. Ahora usa el mismo parser que el resto del servidor (sin zona = UTC) y muestra la hora de Chile; el radar lo rotula. `fechaLarga()` usa el calendario de Chile.
 
 ## [2.6.1] - 2026-10-02
 
