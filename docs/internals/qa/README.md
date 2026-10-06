@@ -10,7 +10,7 @@ de su Sprint 0. Empieza aquí para retomar el trabajo en una sesión local.
 | Auditoría QA de la 2.6.1 | ✅ Hecha — [auditoria-2.6.1.md](auditoria-2.6.1.md) |
 | Sprint 0 (bloqueantes para producción) | ✅ Hecho — [sprint-0.md](sprint-0.md) |
 | PR [#8](https://github.com/ssolis-ti/compra-agil-mcp/pull/8) (rama `claude/great-bardeen-784fao`) | 🟡 Abierto, CI en verde, **sin fusionar** |
-| Validación contra la API real | ⏳ Pendiente — [validacion-api-real.md](validacion-api-real.md) |
+| Validación contra la API real | 🟡 Etapa 1 hecha — [resultado-api-real.md](resultado-api-real.md); falta la etapa 2 |
 | Sprint 1 y Sprint 2 | ⏳ Pendientes — [roadmap.md](roadmap.md) |
 
 El Sprint 0 se probó contra una API **simulada** con fallas inyectadas: el
