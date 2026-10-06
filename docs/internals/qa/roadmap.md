@@ -9,13 +9,11 @@ Referencias a hallazgos: [auditoria-2.6.1.md](auditoria-2.6.1.md).
 
 ---
 
-## Fase 0 — Cerrar el Sprint 0 (antes de todo)
+## Fase 0 — Cerrar el Sprint 0 ✅
 
-PR #8 a #13 fusionados en `main` el 6-oct; `package.json` y el CHANGELOG ya
-están en la 2.7.0.
-
-1. **Validar contra la API real** → [validacion-api-real.md](validacion-api-real.md), incluida la comprobación UTC/hora de Chile. Si aparece un problema, se corrige en un PR antes de publicar.
-2. **Publicar la 2.7.0**: cargar el secreto `NPM_TOKEN`, fusionar el PR #14 (`publicar.yml`) y empujar el tag `v2.7.0`; el workflow verifica versión y CHANGELOG, publica en npm y crea el release. Es minor y no patch por el cambio de comportamiento de `ruta_salida`. Hasta entonces npm sirve la 2.5.0.
+PR #8 a #17 fusionados; la 2.7.0 se validó contra la API real
+([resultado-api-real.md](resultado-api-real.md)) y se publicó en npm el 6 de
+octubre, con tag `v2.7.0` y release en GitHub.
 
 ---
 
