@@ -88,6 +88,21 @@ Hoy (aprox.): `documentos.ts` 5 %, `generar-informe.ts`, `detalle-oc.ts`, `verif
 ### Fase 1.7 — Daemon de monitoreo 🟡
 - `.monitor-state.json` crece sin límite: guardar el código con su fecha y podar los de más de 30 días.
 
+### Fase 1.8 — Lo que encontró la simulación con agentes 🔴
+Defectos confirmados contra el código en la simulación del 6-oct ([resultado-simulacion-agentes.md](resultado-simulacion-agentes.md)). Van antes que la cobertura (1.6) porque S1–S3 hacen que un modelo dé un consejo equivocado.
+
+- **S1 🔴** `auditar_compras_desiertas`: usar el `motivo_desierta` oficial y las cotizaciones del propio proceso frente a su presupuesto antes que los comparables; no emitir la recomendación genérica de «especificaciones amarradas a una marca» cuando la evidencia apunta a otra causa.
+- **S2 🟠** `generar_borrador_cotizacion` / informe `cotizacion`: comparar el total con el presupuesto del comprador, advertir en `_campos_a_revisar` y mostrar presupuesto y cierre en el informe impreso.
+- **S3 🟠** `analizar_precios_mercado` con `codigo_compra`: no imponer la región del comprador sin decirlo (buscar en todo el país, o regional con respaldo nacional, y decir cuál se usó), alineado con el borrador.
+- **S4 🟠** Descripción de `analizar_precios_mercado`: decir que las inadmisibles **se incluyen**; ofrecer también las estadísticas solo de admisibles.
+- **S5 🟠** `auditar_compras_desiertas`: sin comparables → `null` / «no evaluable», no `false`/0; normalizar por unidad antes de comparar presupuestos.
+- **S6 🟡** `consultar_documentos_locales`: tratar «compra», «ágil» (y términos presentes en todo el corpus) como vacías o ponderarlas por frecuencia de documento.
+- **S7 🟡** Validar `region` 1-16 localmente; que «sin resultados» no hable de una ventana que no se pidió.
+- **S8 🟡** `ruta_salida`: rechazar rutas con letra de unidad o `\` en cualquier sistema.
+- **S9 🟡** Precios: nombrar los procesos cuyo detalle falló, indicar suficiencia de muestra (procesos y compradores distintos) y la antigüedad de lo servido desde caché.
+
+**Aceptación:** cada punto con su test de regresión y una nueva corrida de la simulación (mismos tres perfiles) sin esos hallazgos.
+
 ---
 
 ## Sprint 2 — Operación

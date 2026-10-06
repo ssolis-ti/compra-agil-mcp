@@ -57,10 +57,15 @@ export function crearCatalogo(ahora = Date.now()) {
     const tipo = i % 3 === 0 ? 'desierta' : i % 7 === 0 ? 'cerrada' : 'publicada';
     const cantidad = rubro.precio > 300000 ? entre(1, 12) : entre(20, 400);
     const presupuesto = Math.round(rubro.precio * cantidad * (0.8 + azar() * 0.5) / 1000) * 1000;
-    const publicada = new Date(ahora - entre(1, 5) * 86_400_000);
+    // La publicación siempre antecede al cierre: un proceso ya cerrado se
+    // publicó 1-5 días antes de su cierre (antes salían cierres anteriores a
+    // la publicación, y la simulación del 6-oct los leyó como plazos negativos).
     const cierre = tipo === 'publicada'
       ? new Date(ahora + entre(2, 96) * 3_600_000)
       : new Date(ahora - entre(1, 40) * 86_400_000);
+    const publicada = tipo === 'publicada'
+      ? new Date(ahora - entre(1, 5) * 86_400_000)
+      : new Date(cierre.getTime() - entre(1, 5) * 86_400_000);
     const codigo = `${entre(1000, 5999)}-${correlativo++}-COT26`;
     const segundoLlamado = tipo === 'publicada' && i % 5 === 0;
     const ofertas = tipo === 'publicada' ? (azar() < 0.35 ? 0 : entre(1, 6)) : tipo === 'desierta' ? entre(2, 5) : entre(1, 4);

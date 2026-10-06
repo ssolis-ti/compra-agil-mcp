@@ -11,7 +11,8 @@ de su Sprint 0. Empieza aquí para retomar el trabajo en una sesión local.
 | Sprint 0 (bloqueantes para producción) | ✅ Hecho — [sprint-0.md](sprint-0.md) |
 | PR [#8](https://github.com/ssolis-ti/compra-agil-mcp/pull/8) (rama `claude/great-bardeen-784fao`) | 🟡 Abierto, CI en verde, **sin fusionar** |
 | Validación contra la API real | 🟡 Etapa 1 hecha — [resultado-api-real.md](resultado-api-real.md); falta la etapa 2 |
-| Sprint 1 y Sprint 2 | ⏳ Pendientes — [roadmap.md](roadmap.md) |
+| Simulación de uso con 3 agentes (API simulada) | ✅ Hecha — [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md): 9 defectos confirmados, 3 de severidad alta |
+| Sprint 1 y Sprint 2 | ⏳ Pendientes — [roadmap.md](roadmap.md) (la fase 1.8 recoge la simulación) |
 
 El Sprint 0 se probó contra una API **simulada** con fallas inyectadas: el
 entorno en la nube donde se hizo no tenía acceso a `mercadopublico.cl` ni el

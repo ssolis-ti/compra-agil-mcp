@@ -49,6 +49,9 @@ prompts.
 | 8 | 🟡 Baja | 6 vulnerabilidades de producción | ✅ Sprint 0, fase 5 (quedan 2 moderadas en `vitest`, dev) |
 | 9 | 🟠 Media | El servidor resuelve `.env`, caché, estado de cuota, daemon e informes contra el cwd: lanzado por un cliente MCP como indica el README, no encuentra el `.env` y reparte su estado en la carpeta del cliente. Hallado al preparar la validación local (etapa 2) | ⏳ Sprint 1, fase 1.0 |
 
+Hallazgos posteriores de la simulación de uso con agentes (S1–S10): ver
+[resultado-simulacion-agentes.md](resultado-simulacion-agentes.md).
+
 ## Hallazgo de proceso
 
 El repositorio no guarda ni las especificaciones ni el grafo de graphify, y la
