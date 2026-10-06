@@ -143,6 +143,17 @@ export function evidenciaDelProceso(detalle: CompraAgilDetalle, presupuesto: num
 }
 
 const pct = (valor: number, base: number) => Math.round(((valor - base) / base) * 100);
+
+/** Ninguna cotización cabe con IVA (la menor con IVA supera el presupuesto). */
+function noCabeConIva(e: EvidenciaProceso, presupuesto: number): boolean {
+  return presupuesto > 0 && e.menor_monto_neto !== null && e.menor_monto_total !== null && e.menor_monto_total > presupuesto;
+}
+
+/** Más de la mitad de las cotizaciones supera el presupuesto ya en neto. */
+function mayoriaSobrePresupuesto(e: EvidenciaProceso): boolean {
+  const sobre = e.cotizaciones_sobre_presupuesto;
+  return sobre !== null && e.cotizaciones_recibidas > 0 && sobre * 2 > e.cotizaciones_recibidas;
+}
 const pesos = (n: number) => `$${n.toLocaleString('es-CL')}`;
 
 /**
@@ -166,13 +177,24 @@ function recomendacionesPropias(e: EvidenciaProceso, presupuesto: number, motivo
       `La menor fue ${pesos(e.menor_monto_neto)} neto, ${pct(e.menor_monto_neto, presupuesto)} % por sobre él. ` +
       `Para un nuevo llamado, el presupuesto debería cubrir al menos ese monto (más IVA si el presupuesto lo incluye), o hay que reducir cantidades.`,
     );
-  } else if (
-    presupuesto > 0 && e.menor_monto_neto !== null && e.menor_monto_total !== null &&
-    e.menor_monto_total > presupuesto && e.causa_segun_motivo_oficial === 'presupuesto'
-  ) {
+  } else if (noCabeConIva(e, presupuesto)) {
+    // ⚠ S1b (segunda simulación, 6-oct): esto solo se avisaba si el motivo
+    //   oficial era presupuesto. Una desierta por «requisitos técnicos» cuyas
+    //   cuatro ofertas no cabían con IVA salía «presupuesto suficiente».
+    const sobreNeto = e.cotizaciones_sobre_presupuesto ?? 0;
     r.push(
-      `Presupuesto: la menor cotización cabe en neto (${pesos(e.menor_monto_neto)}) pero no con IVA (${pesos(e.menor_monto_total)}) frente a ${pesos(presupuesto)}, y el motivo oficial habla de presupuesto${motivoCitado}. ` +
-      `Probablemente el presupuesto incluye IVA: en un nuevo llamado conviene declararlo explícitamente o subirlo al menos a ${pesos(e.menor_monto_total)}.`,
+      `Presupuesto: ninguna cotización cabe con IVA — la menor es ${pesos(e.menor_monto_neto!)} neto y ${pesos(e.menor_monto_total!)} con IVA frente a ${pesos(presupuesto)}` +
+      (sobreNeto > 0 ? `, y ${sobreNeto} de ${n} lo superan ya en neto` : '') + '. ' +
+      (e.causa_segun_motivo_oficial === 'presupuesto'
+        ? `El motivo oficial habla de presupuesto${motivoCitado}: probablemente el presupuesto incluye IVA.`
+        : `Aunque el motivo oficial es otro${motivoCitado}, si el presupuesto incluye IVA (la API no lo informa) ninguna oferta era adjudicable por precio.`) +
+      ` En un nuevo llamado conviene declarar si incluye IVA y cubrir al menos ${pesos(e.menor_monto_total!)}.`,
+    );
+  } else if (mayoriaSobrePresupuesto(e)) {
+    r.push(
+      `Presupuesto: ${e.cotizaciones_sobre_presupuesto} de ${n} cotizaciones de este proceso superan en neto los ${pesos(presupuesto)} disponibles` +
+      (e.causa_segun_motivo_oficial === 'presupuesto' ? `, como señala el motivo oficial${motivoCitado}.` : `; el motivo oficial es otro${motivoCitado}, pero el presupuesto dejó fuera a la mayoría.`) +
+      ` Contrasta con los montos cotizados en procesos comparables antes de fijar el presupuesto del nuevo llamado.`,
     );
   } else if (e.causa_segun_motivo_oficial === 'presupuesto') {
     const sobre = e.cotizaciones_sobre_presupuesto;
@@ -398,7 +420,8 @@ export async function recolectarDatosAuditoria(
   const evidencia = evidenciaDelProceso(targetDetail, targetBudget);
   const causa = evidencia.causa_segun_motivo_oficial;
   const presupuestoPorEvidencia = causa === 'presupuesto' ||
-    (targetBudget > 0 && evidencia.menor_monto_neto !== null && evidencia.menor_monto_neto > targetBudget);
+    (targetBudget > 0 && evidencia.menor_monto_neto !== null && evidencia.menor_monto_neto > targetBudget) ||
+    noCabeConIva(evidencia, targetBudget) || mayoriaSobrePresupuesto(evidencia);
 
   // ⚠ Se compara por unidad cuando se puede. Comparar montos totales de
   //   procesos con cantidades distintas daba cifras sin sentido: en la
