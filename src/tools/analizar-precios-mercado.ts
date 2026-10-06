@@ -38,7 +38,7 @@ Retorna la distribución de precios unitarios cotizados (mínimo, percentil 25, 
 LIMITACIONES IMPORTANTES, verificadas contra la API real (julio 2026):
 1. Analiza precios COTIZADOS, no adjudicados. La API no expone qué oferta ganó (el estado "proveedor_seleccionado" devuelve 0 resultados y ninguna cotización viene marcada como seleccionada). La referencia es lo que ofertó la competencia.
 2. Los precios provienen de procesos declarados DESIERTOS, porque son los únicos que publican sus cotizaciones (medido: desierta 5/8 procesos con precios, cerrada 0/8). Muchas deserciones se deben a incumplimientos formales (garantías, certificados) y no a que el precio fuera malo, por lo que siguen siendo señal de mercado válida — pero conviene interpretarlas con ese contexto.
-3. Las cotizaciones declaradas inadmisibles por el comprador se reportan aparte y se excluyen de las estadísticas.`;
+3. Las cotizaciones declaradas inadmisibles por el comprador SÍ entran en las estadísticas principales: en los procesos desiertos suelen ser muchas y excluirlas puede dejar la muestra vacía. Cada una viene marcada con su motivo, y "estadisticas_precio_unitario_solo_admisibles" trae la misma distribución sin ellas para comparar.`;
 
 const inputSchema = {
   codigo_compra: z.string().optional().describe('Código de una Compra Ágil para extraer sus palabras clave automáticamente (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
@@ -84,6 +84,8 @@ export interface DatosPreciosMercado {
     adjudicaciones_detectadas: number;
   };
   estadisticas_precio_unitario: EstadisticasPrecio | null;
+  /** La misma distribución sin las cotizaciones inadmisibles. */
+  estadisticas_precio_unitario_solo_admisibles: EstadisticasPrecio | null;
   estadisticas_monto_neto: EstadisticasPrecio | null;
   base_de_la_sugerencia: 'precio_unitario' | 'monto_neto_total';
   _advertencia_dispersion?: string;
@@ -187,6 +189,7 @@ export async function recolectarDatosPrecios(
 
   // 3. Recolectar cotizaciones de los detalles
   const preciosUnitarios: number[] = [];
+  const preciosUnitariosAdmisibles: number[] = [];
   const montosNetos: number[] = [];
   const cotizaciones: CotizacionObservada[] = [];
   const inadmisibles: CotizacionObservada[] = [];
@@ -258,6 +261,7 @@ export async function recolectarDatosPrecios(
         };
 
         if (unitario !== null) preciosUnitarios.push(unitario);
+        if (unitario !== null && admisible) preciosUnitariosAdmisibles.push(unitario);
         if (neto !== null) montosNetos.push(neto);
         cotizaciones.push(registro);
         if (!admisible) inadmisibles.push(registro);
@@ -297,7 +301,7 @@ export async function recolectarDatosPrecios(
         `Se revisaron ${consultasOk} procesos históricos que coinciden con "${keyword}", y ninguno expuso cotizaciones con precios.`,
         '',
         'Esto es habitual: la API de Mercado Público solo publica las cotizaciones de algunos procesos.',
-        'Sugerencias: usa un término más general, amplía "limite_analisis", o quita el filtro de región.' + aviso,
+        `Sugerencias: usa un término más general o amplía "limite_analisis"${region ? ', o quita el parámetro "region"' : ''}.` + aviso,
       ].join('\n'),
     };
   }
@@ -327,7 +331,9 @@ export async function recolectarDatosPrecios(
     _nota_metodologica: [
       'Precios COTIZADOS por proveedores, NO adjudicados: la API de Mercado Público no expone qué oferta ganó (el estado "proveedor_seleccionado" devuelve 0 resultados y ninguna cotización viene marcada como seleccionada).',
       'La muestra proviene de procesos declarados DESIERTOS, los únicos que publican sus cotizaciones (medido: desierta 5/8 procesos con precios; cerrada 0/8).',
-      'Las cotizaciones declaradas inadmisibles SÍ se incluyen en las estadísticas: en los procesos desiertos casi todas lo son, y el precio ofertado sigue siendo señal de mercado aunque se haya rechazado el papeleo. Revisa "motivos_de_inadmisibilidad": si predomina "sobrepasa el monto máximo", la muestra está sesgada hacia arriba; si predominan motivos formales (garantías, certificados), los precios son representativos.',
+      // ⚠ Antes decía «en los procesos desiertos casi todas lo son» sin mirar
+      //   la muestra; en la simulación del 6-oct eran 2 de 7. Ahora cuenta.
+      `Las cotizaciones declaradas inadmisibles SÍ se incluyen en estas estadísticas (en esta muestra, ${inadmisibles.length} de ${cotizaciones.length}): el precio ofertado sigue siendo señal de mercado aunque se haya rechazado el papeleo, y excluirlas puede dejar la muestra vacía. "estadisticas_precio_unitario_solo_admisibles" trae la distribución sin ellas. Revisa "motivos_de_inadmisibilidad": si predomina "sobrepasa el monto máximo", la muestra está sesgada hacia arriba; si predominan motivos formales (garantías, certificados), los precios son representativos.`,
     ].join(' '),
     contexto: contextoProceso || undefined,
     termino_busqueda: keyword,
@@ -352,6 +358,7 @@ export async function recolectarDatosPrecios(
       adjudicaciones_detectadas: adjudicacionesDetectadas,
     },
     estadisticas_precio_unitario: statsUnitario,
+    estadisticas_precio_unitario_solo_admisibles: inadmisibles.length > 0 ? calcularEstadisticas(preciosUnitariosAdmisibles) : statsUnitario,
     estadisticas_monto_neto: statsNeto,
     base_de_la_sugerencia: tipoBase,
     _advertencia_dispersion: advertenciaDispersion,
