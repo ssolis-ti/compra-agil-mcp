@@ -84,3 +84,16 @@ Antes de enviar tus cambios para revisión, verifica que:
 3. [ ] Se han actualizado los archivos de documentación correspondientes si cambiaste o agregaste alguna herramienta o parámetro.
 4. [ ] No has expuesto de forma accidental credenciales ni tokens de la API (`.env`) en el historial de Git.
 5. [ ] El formateador y linter no reportan conflictos estéticos.
+
+---
+
+## 6. Publicar una versión
+
+La publicación en npm la hace GitHub Actions (`.github/workflows/publicar.yml`) al empujar un tag de versión. Requiere una sola vez el secret `NPM_TOKEN` en el repositorio (Settings → Secrets and variables → Actions), con un token de npm de tipo *Automation*.
+
+1. En un PR: subir la versión con `npm version X.Y.Z --no-git-tag-version` y mover `[Unreleased]` del CHANGELOG a `[X.Y.Z] - fecha`.
+2. Fusionar ese PR en `main`.
+3. Crear y empujar el tag sobre `main`: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+
+El workflow se detiene antes de publicar si falta el token, si el tag no coincide con `package.json`, si la versión ya existe en npm o si el CHANGELOG no tiene su sección. Publicar es irreversible: npm no permite reutilizar un número de versión.
+

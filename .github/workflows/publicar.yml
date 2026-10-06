@@ -1,0 +1,68 @@
+name: Publicar en npm
+
+# Se publica al empujar un tag de versión (v2.7.0, v2.8.0…), nunca en cada
+# push: publicar es irreversible (npm no deja reusar un número de versión).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # crear la release de GitHub
+  id-token: write   # procedencia firmada del paquete (npm provenance)
+
+jobs:
+  publicar:
+    name: Publicar ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Hay token de npm
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::error::Falta el secret NPM_TOKEN (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
+      - name: El tag coincide con package.json
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::El tag $GITHUB_REF_NAME no coincide con package.json ($VERSION)."
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: La versión no está publicada
+        run: |
+          if npm view "@ssolis-ti/mcp-compra-agil@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::@ssolis-ti/mcp-compra-agil@$VERSION ya está en npm."
+            exit 1
+          fi
+
+      - name: El CHANGELOG tiene la sección de la versión
+        run: node scripts/notas-version.mjs "$VERSION" > notas.md
+
+      - run: npm ci
+
+      - name: Auditoría de dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
+
+      # prepublishOnly corre build y tests antes de subir nada.
+      - name: Publicar
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public ${{ github.event.repository.private == false && '--provenance' || '' }}
+
+      - name: Release de GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notas.md --verify-tag
