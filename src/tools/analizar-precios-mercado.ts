@@ -32,7 +32,7 @@ import type { CompraAgilDetalle, CompraAgilItem } from '../api/compra-agil-clien
 const mensajeDeError = (error: unknown) =>
   error instanceof CompraAgilApiError ? error.actionableMessage : safeError(error);
 import {
-  esGanador, esAdmisible, extraerPrecioUnitario, extraerMontoNeto,
+  esGanador, esAdmisible, extraerLineaCotizada, extraerMontoNeto,
   calcularEstadisticas,
   type EstadisticasPrecio,
 } from '../utils/quotation.js';
@@ -65,6 +65,8 @@ export interface ArgsPreciosMercado extends FiltroPalabras {
 
 export interface CotizacionObservada {
   codigo_proceso: string;
+  /** Línea cotizada de donde sale el precio unitario: deja ver QUÉ se promedia. */
+  producto_cotizado?: string | null;
   estado_proceso: string;
   institucion: string;
   proveedor: string;
@@ -103,6 +105,12 @@ export interface DatosPreciosMercado {
   estadisticas_monto_neto: EstadisticasPrecio | null;
   base_de_la_sugerencia: 'precio_unitario' | 'monto_neto_total';
   _advertencia_dispersion?: string;
+  /** La muestra mezcla productos distintos (segundo enjambre, 6-oct). */
+  _advertencia_productos?: string;
+  /** La mayoría fue rechazada por sobrepasar el presupuesto: el sugerido sobrestima. */
+  _advertencia_sesgo?: string;
+  /** Cuántos precios unitarios hay de cada producto cotizado. */
+  productos_en_la_muestra?: Record<string, number>;
   muestra_homogenea: boolean;
   /**
    * Si la muestra alcanza para usar el precio sugerido como referencia.
@@ -320,7 +328,7 @@ export async function recolectarDatosPrecios(
       procesosConDatos++;
 
       for (const prov of provs) {
-        const unitario = extraerPrecioUnitario(prov, keyword);
+        const { precio: unitario, producto } = extraerLineaCotizada(prov, keyword);
         const neto = extraerMontoNeto(prov);
         const admisible = esAdmisible(prov);
         // Si la API alguna vez publica adjudicaciones, lo reportamos.
@@ -340,6 +348,7 @@ export async function recolectarDatosPrecios(
           institucion: det.institucion.organismo_comprador ?? 'No informado',
           proveedor: prov.razon_social,
           es_emt: prov.es_emt ?? null,
+          producto_cotizado: producto,
           precio_unitario: unitario,
           monto_neto: neto,
           monto_total: prov.monto_total ?? null,
@@ -420,7 +429,31 @@ export async function recolectarDatosPrecios(
   // correcto pero engañoso, y hay que decirlo en vez de entregar un número
   // con falsa precisión.
   const dispersion = base.mediana > 0 ? base.maximo / base.mediana : 0;
-  const muestraHeterogenea = dispersion > 10;
+
+  // ⚠ Segundo enjambre contra la API real (6-oct): «nitrilo» trajo precios de
+  //   «Carpas» (un proceso cuyo nombre listaba carpa, cuerda y guantes) junto a
+  //   guantes, y la muestra se declaraba homogénea porque solo se miraba la
+  //   dispersión. Ahora se cuentan los productos cotizados de donde salen los
+  //   precios unitarios, y si son varios se dice cuáles.
+  const productosEnMuestra: Record<string, number> = {};
+  for (const c of cotizaciones) {
+    if (c.precio_unitario === null) continue;
+    const nombre = (c.producto_cotizado ?? 'sin nombre').trim();
+    productosEnMuestra[nombre] = (productosEnMuestra[nombre] ?? 0) + 1;
+  }
+  const productosDistintos = Object.keys(productosEnMuestra);
+  const mezclaProductos = tipoBase === 'precio_unitario' && productosDistintos.length > 1;
+  const advertenciaProductos = mezclaProductos
+    ? `⚠ LA MUESTRA MEZCLA PRODUCTOS: los precios unitarios salen de ${productosDistintos.map((p) => `«${p}» (${productosEnMuestra[p]})`).join(', ')}. Si alguno no es lo que buscas, repite con "palabras_clave_requeridas" o "palabras_clave_excluidas", o revisa las fichas: el promedio y el sugerido mezclan precios que no son comparables.`
+    : undefined;
+
+  // Rechazos por precio: si predominan, la muestra está sesgada hacia arriba.
+  const porPrecio = inadmisibles.filter((c) => /presupuest|monto m[aá]ximo|monto disponible|sobrepas|exced/i.test(c.motivo_inadmisibilidad ?? '')).length;
+  const advertenciaSesgo = cotizaciones.length > 0 && porPrecio * 2 >= cotizaciones.length
+    ? `⚠ ${porPrecio} de ${cotizaciones.length} cotizaciones fueron rechazadas por sobrepasar el presupuesto del comprador: la muestra está sesgada hacia arriba y el precio sugerido tiende a sobrestimar lo que el comprador puede pagar. Tómalo como un techo, no como el precio a ofertar.`
+    : undefined;
+
+  const muestraHeterogenea = dispersion > 10 || mezclaProductos;
   const advertenciaDispersion = muestraHeterogenea
     ? `⚠ MUESTRA MUY DISPERSA: el precio máximo (${base.maximo.toLocaleString('es-CL')}) es ${Math.round(dispersion)} veces la mediana (${base.mediana.toLocaleString('es-CL')}). El término "${keyword}" probablemente está mezclando productos o servicios de naturaleza distinta, así que este precio sugerido tiene poco valor. Acota la búsqueda con un término más específico o usa "codigo_compra" para partir del producto exacto.`
     : undefined;
@@ -468,8 +501,9 @@ export async function recolectarDatosPrecios(
       procesos_con_cotizaciones: procesosConDatos,
       cotizaciones_totales: cotizaciones.length,
       cotizaciones_declaradas_inadmisibles: inadmisibles.length,
+      // Sin duplicados por espacios: «Memorándum…» y «Memorándum… » salían dos veces.
       motivos_de_inadmisibilidad: inadmisibles.length > 0
-        ? [...new Set(inadmisibles.map((c) => c.motivo_inadmisibilidad).filter((m): m is string => Boolean(m)))]
+        ? [...new Set(inadmisibles.map((c) => c.motivo_inadmisibilidad?.trim()).filter((m): m is string => Boolean(m)))]
         : [],
       adjudicaciones_detectadas: adjudicacionesDetectadas,
     },
@@ -478,6 +512,9 @@ export async function recolectarDatosPrecios(
     estadisticas_monto_neto: statsNeto,
     base_de_la_sugerencia: tipoBase,
     _advertencia_dispersion: advertenciaDispersion,
+    ...(advertenciaProductos && { _advertencia_productos: advertenciaProductos }),
+    ...(advertenciaSesgo && { _advertencia_sesgo: advertenciaSesgo }),
+    ...(productosDistintos.length > 0 && { productos_en_la_muestra: productosEnMuestra }),
     muestra_homogenea: !muestraHeterogenea,
     suficiencia_muestra: {
       nivel,
@@ -491,6 +528,8 @@ export async function recolectarDatosPrecios(
     }),
     precio_sugerido_competitivo: sugerido,
     criterio_sugerencia: (nivel === 'baja' ? '⚠ Muestra chica: tómalo como indicativo. ' : '') +
+      (mezclaProductos ? '⚠ Mezcla productos distintos (ver _advertencia_productos). ' : '') +
+      (advertenciaSesgo ? '⚠ Sesgado hacia arriba (ver _advertencia_sesgo). ' : '') +
       'Percentil 25 de la distribución cotizada: te ubica en el cuarto más económico sin regalar margen. Resiste valores atípicos mejor que el promedio.',
     rango_competitivo: { desde: base.minimo, hasta: base.mediana },
     cotizaciones_observadas: cotizaciones,

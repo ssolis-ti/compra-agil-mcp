@@ -25,6 +25,7 @@
  */
 
 import type { ProveedorCotizando } from '../api/compra-agil-client.js';
+import { normalizar, tokenizar } from './doc-search.js';
 
 /**
  * Determina si un proveedor fue el adjudicado.
@@ -75,33 +76,55 @@ export function extraerPrecioUnitario(
   prov: ProveedorCotizando,
   keyword?: string
 ): number | null {
+  return extraerLineaCotizada(prov, keyword).precio;
+}
+
+/** Raíz simple para comparar sin plurales: "guantes" → "guant", "resmas" → "resma". */
+const raiz = (t: string) => normalizar(t).replace(/(es|s)$/, '');
+
+/**
+ * La línea cotizada que corresponde a la búsqueda: su precio unitario y el
+ * nombre del producto, para que quien lea vea QUÉ se está promediando.
+ *
+ * ⚠ Segundo enjambre contra la API real (6-oct): en una búsqueda de «nitrilo»,
+ *   un proceso cotizaba «Depósitos de productos químicos» y «Guantes médicos»;
+ *   ninguna línea decía «nitrilo» y la regla de respaldo tomaba la primera, los
+ *   depósitos ($129.700–$195.094), como si fueran guantes. Ahora, entre varias
+ *   líneas, la coincidencia ignora tildes y plurales y, si ninguna coincide, no
+ *   se toma ninguna: no se sabe cuál es.
+ *
+ * Con una sola línea se toma esa, coincida o no con el término: los nombres de
+ * producto de la API son genéricos («Papel para fotocopiadora o impresora» en
+ * una compra de resmas) y exigir la coincidencia vaciaría muestras válidas. Por
+ * eso el nombre viaja con el precio, y el análisis advierte si la muestra mezcla
+ * productos distintos.
+ */
+export function extraerLineaCotizada(
+  prov: ProveedorCotizando,
+  keyword?: string,
+): { precio: number | null; producto: string | null } {
   const productos = prov.productos_cotizados;
-  if (!productos || productos.length === 0) {
-    return null;
-  }
+  if (!productos || productos.length === 0) return { precio: null, producto: null };
 
-  // Un solo producto → su precio unitario
-  if (productos.length === 1) {
-    return normalizarPrecio(productos[0].precio_unitario);
-  }
+  const linea = (p: (typeof productos)[number]) => ({ precio: normalizarPrecio(p.precio_unitario), producto: p.nombre_producto ?? null });
 
-  // Varios productos → intentar casar con la keyword
+  if (productos.length === 1) return linea(productos[0]);
+
   if (keyword) {
-    const kw = keyword.toLowerCase();
-    const matched = productos.find((p) =>
-      (p.nombre_producto || '').toLowerCase().includes(kw)
-    );
-    if (matched) {
-      return normalizarPrecio(matched.precio_unitario);
-    }
+    const raices = tokenizar(keyword).map(raiz).filter((r) => r.length >= 3);
+    const coincide = productos.find((p) => {
+      const nombre = normalizar(p.nombre_producto ?? '');
+      return raices.some((r) => nombre.includes(r));
+    });
+    return coincide ? linea(coincide) : { precio: null, producto: null };
   }
 
-  // Fallback: primer producto con precio unitario válido
+  // Sin término: primer producto con precio unitario válido.
   for (const p of productos) {
-    const precio = normalizarPrecio(p.precio_unitario);
-    if (precio !== null) return precio;
+    const l = linea(p);
+    if (l.precio !== null) return l;
   }
-  return null;
+  return { precio: null, producto: null };
 }
 
 /**

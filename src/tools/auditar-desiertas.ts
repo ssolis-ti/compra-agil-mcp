@@ -80,6 +80,33 @@ export interface EvidenciaProceso {
   menor_monto_total: number | null;
   /** null si el proceso no informa presupuesto: no se puede comparar. */
   cotizaciones_sobre_presupuesto: number | null;
+  /** Igual, pero con el monto total (con IVA). */
+  cotizaciones_sobre_presupuesto_con_iva: number | null;
+  /**
+   * true si la evidencia muestra que el comprador aplicó el presupuesto CON IVA:
+   * una cotización que cabía en neto fue rechazada por sobrepasar el monto.
+   * null si no hay cómo saberlo.
+   */
+  presupuesto_aplicado_con_iva: boolean | null;
+  /** Inadmisibilidades agrupadas por tipo de motivo. */
+  inadmisibilidad_por_categoria: Record<CategoriaInadmisibilidad, number>;
+}
+
+export type CategoriaInadmisibilidad = 'precio' | 'especificaciones' | 'entrega' | 'documentos' | 'otra';
+
+/**
+ * Agrupa una justificación de inadmisibilidad. Segundo enjambre (6-oct): la
+ * auditoría recomendaba revisar «certificaciones difíciles de obtener» en un
+ * proceso cuyas inadmisibilidades eran de especificaciones (procesador, disco,
+ * licencia), de precio y por cobrar despacho: ninguna hablaba de certificados.
+ */
+export function categoriaInadmisibilidad(texto: string | null | undefined): CategoriaInadmisibilidad {
+  const t = sinTildes(texto ?? '');
+  if (/presupuest|monto maximo|monto disponible|sobrepas|exced/.test(t)) return 'precio';
+  if (/despacho|flete|entrega|plazo/.test(t)) return 'entrega';
+  if (/garantia|certific|document|adjunt|antecedente|boleta|declaracion/.test(t)) return 'documentos';
+  if (/especificac|tecnic|modelo|no corresponde|no cumple|requerid|requisit|licencia|marca|caracteristic/.test(t)) return 'especificaciones';
+  return 'otra';
 }
 
 export interface DatosAuditoria {
@@ -140,7 +167,7 @@ export function clasificarMotivo(motivo: string | null | undefined): CausaMotivo
   const m = sinTildes(motivo);
   if (/sin ofertas|no se recibieron|no hubo ofertas|ninguna oferta|no se presentaron/.test(m)) return 'sin_ofertas';
   if (/presupuest|monto maximo|monto disponible|sobrepas|exced|sobre el monto/.test(m)) return 'presupuesto';
-  if (/requisit|tecnic|especificac|garantia|certific|document|antecedente|adjunt|inadmisib|bases/.test(m)) return 'requisitos';
+  if (/requisit|requerid|no cumple|tecnic|especificac|garantia|certific|document|antecedente|adjunt|inadmisib|bases/.test(m)) return 'requisitos';
   if (/plazo/.test(m)) return 'plazo';
   return 'otra';
 }
@@ -152,6 +179,17 @@ export function evidenciaDelProceso(detalle: CompraAgilDetalle, presupuesto: num
     .map((c) => c.monto_total)
     .filter((n): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0);
   const inadmisibles = cotizaciones.filter((c) => !esAdmisible(c));
+  const porCategoria: Record<CategoriaInadmisibilidad, number> = { precio: 0, especificaciones: 0, entrega: 0, documentos: 0, otra: 0 };
+  for (const c of inadmisibles) porCategoria[categoriaInadmisibilidad(c.justificacion_inadmisibilidad)]++;
+  // Si una cotización que cabía en neto fue rechazada por precio, el comprador
+  // comparó con IVA (segundo enjambre: $957.980 neto, $1.139.996 con IVA,
+  // rechazada contra un presupuesto de $1.000.000).
+  const conIva = presupuesto > 0 && inadmisibles.some((c) => {
+    const neto = extraerMontoNeto(c);
+    const total = c.monto_total;
+    return categoriaInadmisibilidad(c.justificacion_inadmisibilidad) === 'precio' &&
+      neto !== null && typeof total === 'number' && neto <= presupuesto && total > presupuesto;
+  });
   return {
     causa_segun_motivo_oficial: clasificarMotivo(detalle.motivos?.motivo_desierta),
     cotizaciones_recibidas: cotizaciones.length,
@@ -162,6 +200,9 @@ export function evidenciaDelProceso(detalle: CompraAgilDetalle, presupuesto: num
     menor_monto_neto: netos.length > 0 ? Math.min(...netos) : null,
     menor_monto_total: totales.length > 0 ? Math.min(...totales) : null,
     cotizaciones_sobre_presupuesto: presupuesto > 0 ? netos.filter((n) => n > presupuesto).length : null,
+    cotizaciones_sobre_presupuesto_con_iva: presupuesto > 0 ? totales.filter((n) => n > presupuesto).length : null,
+    presupuesto_aplicado_con_iva: presupuesto > 0 ? (conIva ? true : null) : null,
+    inadmisibilidad_por_categoria: porCategoria,
   };
 }
 
@@ -239,6 +280,16 @@ function recomendacionesPropias(e: EvidenciaProceso, presupuesto: number, motivo
       (e.causa_segun_motivo_oficial === 'presupuesto' ? `, como señala el motivo oficial${motivoCitado}.` : `; el motivo oficial es otro${motivoCitado}, pero el presupuesto dejó fuera a la mayoría.`) +
       ` Contrasta con los montos cotizados en procesos comparables antes de fijar el presupuesto del nuevo llamado.`,
     );
+  } else if (e.inadmisibilidad_por_categoria.precio > 0) {
+    // Segundo enjambre: «Presupuesto en rango» con 4 de 11 rechazadas por precio.
+    const conIva = e.cotizaciones_sobre_presupuesto_con_iva;
+    r.push(
+      `Presupuesto: ${e.inadmisibilidad_por_categoria.precio} de ${n} cotizaciones fueron rechazadas por sobrepasar el monto disponible (${pesos(presupuesto)}).` +
+      (e.presupuesto_aplicado_con_iva
+        ? ` Al menos una cabía en neto y no con IVA, así que el comprador aplicó el presupuesto con IVA: con IVA, ${conIva} de ${n} lo superan.`
+        : conIva !== null ? ` Con IVA, ${conIva} de ${n} lo superan.` : '') +
+      ` En un nuevo llamado conviene declarar si el presupuesto incluye IVA y contrastarlo con lo cotizado.`,
+    );
   } else if (e.causa_segun_motivo_oficial === 'presupuesto') {
     const sobre = e.cotizaciones_sobre_presupuesto;
     r.push(
@@ -252,10 +303,24 @@ function recomendacionesPropias(e: EvidenciaProceso, presupuesto: number, motivo
     const motivos = e.motivos_de_inadmisibilidad.length > 0
       ? ` Motivos de inadmisibilidad declarados: ${e.motivos_de_inadmisibilidad.map((m) => `«${m}»`).join(', ')}.`
       : '';
+    const cat = e.inadmisibilidad_por_categoria;
+    const NOMBRES: Record<CategoriaInadmisibilidad, string> = {
+      especificaciones: 'por especificaciones', documentos: 'por documentos o garantías', entrega: 'por condiciones de entrega o despacho',
+      precio: 'por precio', otra: 'por otros motivos',
+    };
+    const desglose = (Object.keys(NOMBRES) as CategoriaInadmisibilidad[])
+      .filter((k) => cat[k] > 0).map((k) => `${cat[k]} ${NOMBRES[k]}`).join(', ');
+    // Consejos solo para lo que pasó: antes se recomendaba revisar
+    // certificaciones aunque ningún motivo hablara de certificados.
+    const consejos = [
+      cat.especificaciones > 0 ? 'que las especificaciones sean claras y no excluyan productos equivalentes' : '',
+      cat.documentos > 0 ? 'que los documentos y garantías exigidos estén listados de forma explícita y se puedan reunir en el plazo' : '',
+      cat.entrega > 0 ? 'que las condiciones de entrega (por ejemplo, si el despacho va incluido) estén declaradas en las bases' : '',
+    ].filter(Boolean);
     r.push(
       `Requisitos: ${e.causa_segun_motivo_oficial === 'requisitos' ? `el motivo oficial apunta a incumplimientos${motivoCitado}` : 'todas las cotizaciones fueron declaradas inadmisibles'}` +
-      `${n > 0 ? ` (${e.cotizaciones_inadmisibles} de ${n} inadmisibles)` : ''}.${motivos}` +
-      ` Revisa que las bases pidan solo lo necesario, que los documentos exigidos estén listados de forma explícita y que no requieran certificaciones difíciles de obtener en el plazo.`,
+      `${n > 0 ? ` (${e.cotizaciones_inadmisibles} de ${n} inadmisibles${desglose ? `: ${desglose}` : ''})` : ''}.${motivos}` +
+      (consejos.length > 0 ? ` Revisa ${consejos.join('; ')}.` : ' Revisa en la ficha qué se exigió: los motivos declarados no indican un requisito en particular.'),
     );
   }
 
@@ -479,7 +544,8 @@ export async function recolectarDatosAuditoria(
   const causa = evidencia.causa_segun_motivo_oficial;
   const presupuestoPorEvidencia = causa === 'presupuesto' ||
     (targetBudget > 0 && evidencia.menor_monto_neto !== null && evidencia.menor_monto_neto > targetBudget) ||
-    noCabeConIva(evidencia, targetBudget) || mayoriaSobrePresupuesto(evidencia);
+    noCabeConIva(evidencia, targetBudget) || mayoriaSobrePresupuesto(evidencia) ||
+    evidencia.inadmisibilidad_por_categoria.precio > 0;
 
   // ⚠ Se compara por unidad cuando se puede. Comparar montos totales de
   //   procesos con cantidades distintas daba cifras sin sentido: en la

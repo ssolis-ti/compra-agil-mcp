@@ -1,0 +1,1326 @@
+{
+ "_origen": "Respuestas reales de la API de Compra Ágil (detalle por código), capturadas en el segundo enjambre contra la API real del 6-oct-2026. Datos públicos.",
+ "detalles": {
+  "744835-588-COT26": {
+   "codigo": "744835-588-COT26",
+   "nombre": "CARPA DE LONA - ROLLO DE CUERDA - GUANTES DE NITRILO ( DIRECC. AMBIENTAL - Dpto. Aseo)",
+   "estado": {
+    "codigo": "desierta",
+    "glosa": "Desierta",
+    "id_estado": 6
+   },
+   "convocatoria": {
+    "estado_convocatoria": 1,
+    "descripcion": "Primer llamado",
+    "fecha_cierre_primer_llamado": "2026-09-30 13:15",
+    "fecha_cierre_segundo_llamado": "2026-10-05 13:19"
+   },
+   "documentos": [
+    {
+     "id": 1925965,
+     "nombre": "Solicitud N 1000-A 15-76-2026.pdf"
+    }
+   ],
+   "fechas": {
+    "fecha_publicacion": "2026-09-25 13:10",
+    "fecha_cierre": "2026-09-30 13:15",
+    "fecha_ultimo_cambio": "2026-10-01 11:10",
+    "fecha_cancelacion": null
+   },
+   "institucion": {
+    "organismo_comprador": "I MUNICIPALIDAD DE LO ESPEJO",
+    "rut": "69.255.100-1",
+    "unidad_compra": "Departamento de Adquisiciones",
+    "region": 13,
+    "nombre_region": "Región Metropolitana de Santiago"
+   },
+   "resumen": {
+    "multa_sancion": 0,
+    "total_ofertas_recibidas": 5,
+    "total_demandas": 0
+   },
+   "motivos": {
+    "motivo_cancelacion": null,
+    "motivo_desierta": "Memorándum Nº1000/A-254/1218/2026 de fecha 28-09-2026 la Dirección de Desarrollo Ambiental, indica que hubo una modificación presupuestaria que se vio afectada el presupuesto estimado con un monto menor al estimado en esta cotización, por lo que se declarar desierta esta Compra Ágil."
+   },
+   "entrega": {
+    "direccion_entrega": "Avda. Cardenal Raúl Silva Henríquez # 8321, Comuna Lo Espejo ",
+    "plazo_entrega_dias": 3
+   },
+   "presupuesto": {
+    "moneda": "CLP",
+    "tipo_presupuesto": "Disponible",
+    "presupuesto_estimado": 998592,
+    "monto_disponible": 998592,
+    "monto_disponible_clp": 998592,
+    "valor_cambio_moneda": null,
+    "fecha_cambio_moneda": null
+   },
+   "productos_solicitados": [
+    {
+     "nombre": "Carpas",
+     "codigo_producto": 30221001,
+     "descripcion": "* Revisar Solicitud N° 1000/A-15/76/2026, anexada.\n* Revisar y cumplir con el detalle del documento adjunto\n* Revisar y acatar los antecedentes del requerimiento \n",
+     "cantidad": 1,
+     "unidad_medida": "000"
+    }
+   ],
+   "proveedores_cotizando": [
+    {
+     "rut_proveedor": "78.496.521-K",
+     "razon_social": "ZIMAX SOLUCIONES SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 30221001,
+       "nombre_producto": "Carpas",
+       "descripcion": "* Revisar Solicitud N° 1000/A-15/76/2026, anexada.\n* Revisar y cumplir con el detalle del documento adjunto\n* Revisar y acatar los antecedentes del requerimiento \n",
+       "cantidad": 1,
+       "precio_unitario": 547800,
+       "monto_total_producto": 547800
+      }
+     ],
+     "id_cotizacion": 575954233,
+     "codigo_sucursal_empresa": "1550554",
+     "codigo_empresa": "2129240",
+     "es_emt": 1,
+     "descripcion": "Se adjunta cotización formal con detalles técnicos e imagen de los productos solicitados. Plazo de entrega 3 días hábil(es). Costo de despacho a cargo de nuestra empresa. Teléfono: +56 972981862  E-mail: Info@zimax.cl",
+     "fecha_vigencia": "2026-10-28T21:47:48Z",
+     "fecha_creacion": "2026-09-28T22:59:22.800Z",
+     "valor_neto": 547800,
+     "total_impuesto": 104082,
+     "monto_despacho": 0,
+     "monto_total": 651882,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Se adjunta cotización formal con detalles técnicos e imagen de los productos solicitados. Plazo de entrega 3 días hábil(es). Costo de despacho a cargo de nuestra empresa. Teléfono: +56 972981862  E-mail: Info@zimax.cl",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "Memorándum Nº 1000/A-254/13218/2026 de fecha 28-09-2026, existe una modificación presupuestaria",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "78.035.995-1",
+     "razon_social": "COMERCIAL 1 TECH SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 30221001,
+       "nombre_producto": "Carpas",
+       "descripcion": "* Revisar Solicitud N° 1000/A-15/76/2026, anexada.\n* Revisar y cumplir con el detalle del documento adjunto\n* Revisar y acatar los antecedentes del requerimiento \n",
+       "cantidad": 1,
+       "precio_unitario": 783045,
+       "monto_total_producto": 783045
+      }
+     ],
+     "id_cotizacion": 575980993,
+     "codigo_sucursal_empresa": "1412532",
+     "codigo_empresa": "1993732",
+     "es_emt": 1,
+     "descripcion": "Entrega 2 días hábiles, cualquier consulta contactarse a comercial1tech.spa@gmail.com o al 9 5910 0996",
+     "fecha_vigencia": "2026-10-29T22:21:39Z",
+     "fecha_creacion": "2026-09-29T22:25:46.263Z",
+     "valor_neto": 783045,
+     "total_impuesto": 148779,
+     "monto_despacho": 0,
+     "monto_total": 931824,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Entrega 2 días hábiles, cualquier consulta contactarse a comercial1tech.spa@gmail.com o al 9 5910 0996",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "Memorándum Nº 1000/A-254/13218/2026 de fecha 28-09-2026, existe una modificación presupuestaria",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "77.988.303-5",
+     "razon_social": "F Y R SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 30221001,
+       "nombre_producto": "Carpas",
+       "descripcion": "* Revisar Solicitud N° 1000/A-15/76/2026, anexada.\n* Revisar y cumplir con el detalle del documento adjunto\n* Revisar y acatar los antecedentes del requerimiento \n",
+       "cantidad": 1,
+       "precio_unitario": 792000,
+       "monto_total_producto": 792000
+      }
+     ],
+     "id_cotizacion": 575953439,
+     "codigo_sucursal_empresa": "1393076",
+     "codigo_empresa": "1975684",
+     "es_emt": 1,
+     "descripcion": "Incluye despacho en 24 a 72 hrs, Mauricio Mendoza García, +56985230109, m.mendoza.g94@gmail.com, adjunto cotización e imagenes de los productos los cuales son de alta calidad\n",
+     "fecha_vigencia": "2026-10-28T22:09:22Z",
+     "fecha_creacion": "2026-09-28T22:11:06.397Z",
+     "valor_neto": 792000,
+     "total_impuesto": 150480,
+     "monto_despacho": 0,
+     "monto_total": 942480,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Incluye despacho en 24 a 72 hrs, Mauricio Mendoza García, +56985230109, m.mendoza.g94@gmail.com, adjunto cotización e imagenes de los productos los cuales son de alta calidad\n",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "Memorándum Nº 1000/A-254/13218/2026 de fecha 28-09-2026, existe una modificación presupuestaria",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "78.037.793-3",
+     "razon_social": "DISTRIBUIDORA NACIONAL LIMITADA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 30221001,
+       "nombre_producto": "Carpas",
+       "descripcion": "* Revisar Solicitud N° 1000/A-15/76/2026, anexada.\n* Revisar y cumplir con el detalle del documento adjunto\n* Revisar y acatar los antecedentes del requerimiento \n",
+       "cantidad": 1,
+       "precio_unitario": 862794,
+       "monto_total_producto": 862794
+      }
+     ],
+     "id_cotizacion": 575945515,
+     "codigo_sucursal_empresa": "1409698",
+     "codigo_empresa": "1990936",
+     "es_emt": 1,
+     "descripcion": "Se incluye todo lo cotizado en la compra. Despacho incluido, consultas a contacto@distribuidora-nacional.cl",
+     "fecha_vigencia": "2026-10-28T14:43:35Z",
+     "fecha_creacion": "2026-09-28T14:43:44.713Z",
+     "valor_neto": 862794,
+     "total_impuesto": 163931,
+     "monto_despacho": 0,
+     "monto_total": 1026725,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Se incluye todo lo cotizado en la compra. Despacho incluido, consultas a contacto@distribuidora-nacional.cl",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "Memorándum Nº 1000/A-254/13218/2026 de fecha 28-09-2026, existe una modificación presupuestaria",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "78.026.692-9",
+     "razon_social": "PROVEPRO SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 30221001,
+       "nombre_producto": "Carpas",
+       "descripcion": "* Revisar Solicitud N° 1000/A-15/76/2026, anexada.\n* Revisar y cumplir con el detalle del documento adjunto\n* Revisar y acatar los antecedentes del requerimiento \n",
+       "cantidad": 1,
+       "precio_unitario": 1029553,
+       "monto_total_producto": 1029553
+      }
+     ],
+     "id_cotizacion": 575984135,
+     "codigo_sucursal_empresa": "1408612",
+     "codigo_empresa": "1989891",
+     "es_emt": 1,
+     "descripcion": "-Productos en stock.\n-Despacho incluido.\n-3 días hábiles ( opción de priorizar). \n-Revisar adjunto. \n-Wsp+569 61985601.\n-pprovepro@gmail.com.",
+     "fecha_vigencia": "2026-10-30T07:28:54Z",
+     "fecha_creacion": "2026-09-30T07:30:14.643Z",
+     "valor_neto": 1029553,
+     "total_impuesto": 195615,
+     "monto_despacho": 0,
+     "monto_total": 1225168,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "-Productos en stock.\n-Despacho incluido.\n-3 días hábiles ( opción de priorizar). \n-Revisar adjunto. \n-Wsp+569 61985601.\n-pprovepro@gmail.com.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "Memorándum Nº 1000/A-254/13218/2026 de fecha 28-09-2026, existe una modificación presupuestaria ",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    }
+   ],
+   "flags": {
+    "considera_requisitos_medioambientales": false,
+    "considera_requisitos_impacto_social_economico": false
+   },
+   "descripcion": "* Revisar Solicitud de Materiales N° 1000/A-15/76/2026 anexada, donde indica cantidades y características de lo requerido\n* Subir cotización detallada al Portal Mercado Público en formato Word o Excell\n* NO se considerarán los oferentes que no coticen la totalidad de los productos\n* El oferente NO podrá sobrepasar presupuesto disponible\n* De preferencia se seleccionará al oferente que cumpla con el detalle de los productos solicitados o en su defecto que se aproxime\n* Se permite re adjudicar \n",
+   "id_orden_compra": null
+  },
+  "2048-540-COT26": {
+   "codigo": "2048-540-COT26",
+   "nombre": " KIT MALETÍN PARA DERRAMES UNIVERSAL Y GUANTES NITRILO INSOPORTADO",
+   "estado": {
+    "codigo": "desierta",
+    "glosa": "Desierta",
+    "id_estado": 6
+   },
+   "convocatoria": {
+    "estado_convocatoria": 1,
+    "descripcion": "Primer llamado",
+    "fecha_cierre_primer_llamado": "2026-09-22 13:00",
+    "fecha_cierre_segundo_llamado": "2026-09-23 14:22"
+   },
+   "documentos": [
+    {
+     "id": 1904566,
+     "nombre": "300950730098-FT-GUANTES-STEELPRO-NITRILO-INSOPORTADO (1).pdf"
+    },
+    {
+     "id": 1904567,
+     "nombre": "Ficha-SYS-SKIT-001G_L4 (1).pdf"
+    }
+   ],
+   "fechas": {
+    "fecha_publicacion": "2026-09-21 11:37",
+    "fecha_cierre": "2026-09-22 13:00",
+    "fecha_ultimo_cambio": "2026-09-23 12:40",
+    "fecha_cancelacion": null
+   },
+   "institucion": {
+    "organismo_comprador": "Hospital de Ancud",
+    "rut": "61.975.800-5",
+    "unidad_compra": "Hospital de Ancud",
+    "region": 10,
+    "nombre_region": "Región de los Lagos "
+   },
+   "resumen": {
+    "multa_sancion": 1,
+    "total_ofertas_recibidas": 3,
+    "total_demandas": 0
+   },
+   "motivos": {
+    "motivo_cancelacion": null,
+    "motivo_desierta": "ERROR ADMINISTRATIVO EN ADJUDICACIÓN"
+   },
+   "entrega": {
+    "direccion_entrega": "ALMIRANTE LATORRE 301",
+    "plazo_entrega_dias": 4
+   },
+   "presupuesto": {
+    "moneda": "CLP",
+    "tipo_presupuesto": "Disponible",
+    "presupuesto_estimado": 350000,
+    "monto_disponible": 350000,
+    "monto_disponible_clp": 350000,
+    "valor_cambio_moneda": null,
+    "fecha_cambio_moneda": null
+   },
+   "productos_solicitados": [
+    {
+     "nombre": "Depósitos de productos químicos",
+     "codigo_producto": 24111805,
+     "descripcion": "KIT MALETÍN PARA DERRAMES UNIVERSAL, CAPACIDAD DERRAME 43 LITROS, MATERIAL POLIETILENO, LENTES Y GUANTES DE SEGURIDAD, BOLSA PARA ELIMINAR RESIDUOS PELIGROSOS, ALMOHADILLAS ABSORBENTES. (imagen referencial en adjunto).",
+     "cantidad": 1,
+     "unidad_medida": "EA"
+    },
+    {
+     "nombre": "Guantes médicos de examen o para usos no quirúrgicos",
+     "codigo_producto": 42132203,
+     "descripcion": "Guante de Nitrilo de 13”, no soportado especialmente diseñado para proveer protección química, resistencia y versatilidad. Los Guantes son resistentes a productos cáusticos, grasas de animales, aceites, hidrocarburos y proveen protección extra contra abrasión, punción y cortes.USOS\n• Protección mecánica y Química, interior flocado, recomendado para alta protección química como desengrasado, solventes, aceites, pinturas y barnices. También usado para la manipulación de alimentos. TALLA L. ",
+     "cantidad": 20,
+     "unidad_medida": "PR"
+    }
+   ],
+   "proveedores_cotizando": [
+    {
+     "rut_proveedor": "78.270.666-7",
+     "razon_social": "SAFETY SOLUTIONS INDUSTRIAL SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 24111805,
+       "nombre_producto": "Depósitos de productos químicos",
+       "descripcion": "KIT MALETÍN PARA DERRAMES UNIVERSAL, CAPACIDAD DERRAME 43 LITROS, MATERIAL POLIETILENO, LENTES Y GUANTES DE SEGURIDAD, BOLSA PARA ELIMINAR RESIDUOS PELIGROSOS, ALMOHADILLAS ABSORBENTES. (imagen referencial en adjunto).",
+       "cantidad": 1,
+       "precio_unitario": 158795,
+       "monto_total_producto": 158795
+      },
+      {
+       "codigo_producto": 42132203,
+       "nombre_producto": "Guantes médicos de examen o para usos no quirúrgicos",
+       "descripcion": "Guante de Nitrilo de 13”, no soportado especialmente diseñado para proveer protección química, resistencia y versatilidad. Los Guantes son resistentes a productos cáusticos, grasas de animales, aceites, hidrocarburos y proveen protección extra contra abrasión, punción y cortes.USOS\n• Protección mecánica y Química, interior flocado, recomendado para alta protección química como desengrasado, solventes, aceites, pinturas y barnices. También usado para la manipulación de alimentos. TALLA L. ",
+       "cantidad": 20,
+       "precio_unitario": 1970,
+       "monto_total_producto": 39400
+      }
+     ],
+     "id_cotizacion": 575821061,
+     "codigo_sucursal_empresa": "1525786",
+     "codigo_empresa": "2104867",
+     "es_emt": 1,
+     "descripcion": "Se cotizan los productos de acuerdo con los requerimientos y especificaciones solicitadas.",
+     "fecha_vigencia": "2026-10-22T11:09:13Z",
+     "fecha_creacion": "2026-09-22T11:13:11.990Z",
+     "valor_neto": 198195,
+     "total_impuesto": 37657,
+     "monto_despacho": 0,
+     "monto_total": 235852,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Se cotizan los productos de acuerdo con los requerimientos y especificaciones solicitadas.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El producto o servicio ofertado no cumple con las especificaciones solicitadas.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "77.506.165-0",
+     "razon_social": "BC SOLUCIONES SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 24111805,
+       "nombre_producto": "Depósitos de productos químicos",
+       "descripcion": "KIT MALETÍN PARA DERRAMES UNIVERSAL, CAPACIDAD DERRAME 43 LITROS, MATERIAL POLIETILENO, LENTES Y GUANTES DE SEGURIDAD, BOLSA PARA ELIMINAR RESIDUOS PELIGROSOS, ALMOHADILLAS ABSORBENTES. (imagen referencial en adjunto).",
+       "cantidad": 1,
+       "precio_unitario": 129700,
+       "monto_total_producto": 129700
+      },
+      {
+       "codigo_producto": 42132203,
+       "nombre_producto": "Guantes médicos de examen o para usos no quirúrgicos",
+       "descripcion": "Guante de Nitrilo de 13”, no soportado especialmente diseñado para proveer protección química, resistencia y versatilidad. Los Guantes son resistentes a productos cáusticos, grasas de animales, aceites, hidrocarburos y proveen protección extra contra abrasión, punción y cortes.USOS\n• Protección mecánica y Química, interior flocado, recomendado para alta protección química como desengrasado, solventes, aceites, pinturas y barnices. También usado para la manipulación de alimentos. TALLA L. ",
+       "cantidad": 20,
+       "precio_unitario": 4900,
+       "monto_total_producto": 98000
+      }
+     ],
+     "id_cotizacion": 575818482,
+     "codigo_sucursal_empresa": "1264103",
+     "codigo_empresa": "1850012",
+     "es_emt": 1,
+     "descripcion": "Stock disponible salvo ventas previas. Entrega en 4-6 días hábiles en destino solicitado en\nALMIRANTE LATORRE 301, Ancud, Región de los Lagos. Cotización: 2048-540-COT26. Erika\nBoscari - +569 4938 4718",
+     "fecha_vigencia": "2026-10-22T10:03:03Z",
+     "fecha_creacion": "2026-09-22T10:13:43.640Z",
+     "valor_neto": 227700,
+     "total_impuesto": 43263,
+     "monto_despacho": 0,
+     "monto_total": 270963,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Stock disponible salvo ventas previas. Entrega en 4-6 días hábiles en destino solicitado en\nALMIRANTE LATORRE 301, Ancud, Región de los Lagos. Cotización: 2048-540-COT26. Erika\nBoscari - +569 4938 4718",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "ERROR ADMINISTRATIVO SE VUELVE A SUBIR LA COMPRA",
+     "estado_por_comprador": 9,
+     "activo": 0,
+     "id_oc": 55534245,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "77.536.802-0",
+     "razon_social": "SOCIEDAD COMERCIALIZADORA NESA LAB LIMITADA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 24111805,
+       "nombre_producto": "Depósitos de productos químicos",
+       "descripcion": "KIT MALETÍN PARA DERRAMES UNIVERSAL, CAPACIDAD DERRAME 43 LITROS, MATERIAL POLIETILENO, LENTES Y GUANTES DE SEGURIDAD, BOLSA PARA ELIMINAR RESIDUOS PELIGROSOS, ALMOHADILLAS ABSORBENTES. (imagen referencial en adjunto).",
+       "cantidad": 1,
+       "precio_unitario": 195094,
+       "monto_total_producto": 195094
+      },
+      {
+       "codigo_producto": 42132203,
+       "nombre_producto": "Guantes médicos de examen o para usos no quirúrgicos",
+       "descripcion": "Guante de Nitrilo de 13”, no soportado especialmente diseñado para proveer protección química, resistencia y versatilidad. Los Guantes son resistentes a productos cáusticos, grasas de animales, aceites, hidrocarburos y proveen protección extra contra abrasión, punción y cortes.USOS\n• Protección mecánica y Química, interior flocado, recomendado para alta protección química como desengrasado, solventes, aceites, pinturas y barnices. También usado para la manipulación de alimentos. TALLA L. ",
+       "cantidad": 20,
+       "precio_unitario": 13922,
+       "monto_total_producto": 278440
+      }
+     ],
+     "id_cotizacion": 575818610,
+     "codigo_sucursal_empresa": "1343596",
+     "codigo_empresa": "1928085",
+     "es_emt": 1,
+     "descripcion": "Oferta según lo solicitado, detallada en cotización formal adjunta.",
+     "fecha_vigencia": "2026-10-22T10:17:42Z",
+     "fecha_creacion": "2026-09-22T10:17:50.723Z",
+     "valor_neto": 473534,
+     "total_impuesto": 89971,
+     "monto_despacho": 0,
+     "monto_total": 563505,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Oferta según lo solicitado, detallada en cotización formal adjunta.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    }
+   ],
+   "flags": {
+    "considera_requisitos_medioambientales": false,
+    "considera_requisitos_impacto_social_economico": false
+   },
+   "descripcion": "EL HOSPITAL DE ANCUD REQUIERE LA COMPRA DE KIT MALETÍN PARA DERRAMES UNIVERSAL Y GUANTES NITRILO INSOPORTADO \"TALLA L \"(SE ADJUNTAN IMAGENES REFERENCIALES) SE SOLICITA FICHA TÉCNICA Y COTIZACIÓN FORMAL, PROVEEDORES QUE NO ADJUNTEN LO SOLICITADO SERÁN DECLARADOS INADMISIBLES. EL VALOR DEL DESPACHO DEBE ESTAR INCLUIDO EN EL MONTO COTIZADO.ENTREGA EN BODEGA CENTRAL CON GUIA DE DESPACHO.",
+   "id_orden_compra": null
+  },
+  "1391-601-COT26": {
+   "codigo": "1391-601-COT26",
+   "nombre": "CRS LINARES FOSOAD 25 REQUIERE LA ADQUISICIÓN DE RESMAS HOJA TAMAÑO OFICIO PARA PROGRAMA LICO DEL CAIS DE LINARES.",
+   "estado": {
+    "codigo": "desierta",
+    "glosa": "Desierta",
+    "id_estado": 6
+   },
+   "convocatoria": {
+    "estado_convocatoria": 1,
+    "descripcion": "Primer llamado",
+    "fecha_cierre_primer_llamado": "2026-09-30 10:00",
+    "fecha_cierre_segundo_llamado": "2026-10-01 11:11"
+   },
+   "documentos": [
+    {
+     "id": 1933476,
+     "nombre": "ANEXO 1.pdf"
+    },
+    {
+     "id": 1933477,
+     "nombre": "REQUERIMIENTOS ADMINISTRATIVOS RESMAS 1391-601-COT26.pdf"
+    }
+   ],
+   "fechas": {
+    "fecha_publicacion": "2026-09-29 08:48",
+    "fecha_cierre": "2026-09-30 10:00",
+    "fecha_ultimo_cambio": "2026-09-30 11:25",
+    "fecha_cancelacion": null
+   },
+   "institucion": {
+    "organismo_comprador": "Dirección Regional de Gendarmeria - Talca",
+    "rut": "61.004.051-9",
+    "unidad_compra": "Región del Maule",
+    "region": 7,
+    "nombre_region": "Región del Maule "
+   },
+   "resumen": {
+    "multa_sancion": 1,
+    "total_ofertas_recibidas": 10,
+    "total_demandas": 0
+   },
+   "motivos": {
+    "motivo_cancelacion": null,
+    "motivo_desierta": "LAS PROPUESTAS SUPERARON EL MONTO DISPONIBLE"
+   },
+   "entrega": {
+    "direccion_entrega": "Edificio O’Higgins, 2° piso, Of. 14-B, Linares,",
+    "plazo_entrega_dias": 5
+   },
+   "presupuesto": {
+    "moneda": "CLP",
+    "tipo_presupuesto": "Disponible",
+    "presupuesto_estimado": 264587,
+    "monto_disponible": 264587,
+    "monto_disponible_clp": 264587,
+    "valor_cambio_moneda": null,
+    "fecha_cambio_moneda": null
+   },
+   "productos_solicitados": [
+    {
+     "nombre": "Papel para fotocopiadora o impresora",
+     "codigo_producto": 14111507,
+     "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+     "cantidad": 85,
+     "unidad_medida": "EA"
+    }
+   ],
+   "proveedores_cotizando": [
+    {
+     "rut_proveedor": "96.972.190-2",
+     "razon_social": "DISTRIBUIDORA VERGIO SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 2805,
+       "monto_total_producto": 238425
+      }
+     ],
+     "id_cotizacion": 575959708,
+     "codigo_sucursal_empresa": "46253",
+     "codigo_empresa": "45353",
+     "es_emt": 1,
+     "descripcion": "Despacho gratuito en 2-3 días hábiles desde aceptada la OC\nFAVOR REVISAR COTIZACIÓN Y FICHA DE PRODUCTOS ADJUNTA\ncualquier duda o consulta comunicarse a: ventas2@vtainstituciones.cl o al +56 412628416",
+     "fecha_vigencia": "2026-10-29T09:57:07Z",
+     "fecha_creacion": "2026-09-29T09:57:14.663Z",
+     "valor_neto": 238425,
+     "total_impuesto": 45301,
+     "monto_despacho": 0,
+     "monto_total": 283726,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Despacho gratuito en 2-3 días hábiles desde aceptada la OC\nFAVOR REVISAR COTIZACIÓN Y FICHA DE PRODUCTOS ADJUNTA\ncualquier duda o consulta comunicarse a: ventas2@vtainstituciones.cl o al +56 412628416",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "76.257.094-7",
+     "razon_social": "ESTEBAN PAUL ROMERO BARRAZA COMERCIALIZACION DE ARTICULOS NACIONALES E IMPORTADOS E.I.R.L.",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 3194,
+       "monto_total_producto": 271490
+      }
+     ],
+     "id_cotizacion": 575978551,
+     "codigo_sucursal_empresa": "1239026",
+     "codigo_empresa": "1825287",
+     "es_emt": 1,
+     "descripcion": "SE ADJUNTA COTIZACIÓN\nENTREGA GRATUITA EN 2 DÍAS\nCONTACTO: ESTEBANPROMEROB@GMAIL.COM\n+56973776871\n",
+     "fecha_vigencia": "2026-10-29T19:55:10Z",
+     "fecha_creacion": "2026-09-29T19:56:36.470Z",
+     "valor_neto": 271490,
+     "total_impuesto": 51583,
+     "monto_despacho": 0,
+     "monto_total": 323073,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "SE ADJUNTA COTIZACIÓN\nENTREGA GRATUITA EN 2 DÍAS\nCONTACTO: ESTEBANPROMEROB@GMAIL.COM\n+56973776871\n",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "76.955.038-0",
+     "razon_social": "IMPORTADORA Y COMERCIALIZADORA FERVET ON LINE LIMITADA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 3399,
+       "monto_total_producto": 288915
+      }
+     ],
+     "id_cotizacion": 575975454,
+     "codigo_sucursal_empresa": "1073023",
+     "codigo_empresa": "1664623",
+     "es_emt": 1,
+     "descripcion": "Entrega 7 días hábiles.",
+     "fecha_vigencia": "2026-10-29T17:30:30Z",
+     "fecha_creacion": "2026-09-29T17:30:21.057Z",
+     "valor_neto": 288915,
+     "total_impuesto": 54894,
+     "monto_despacho": 0,
+     "monto_total": 343809,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Entrega 7 días hábiles.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "78.494.305-4",
+     "razon_social": "COMERCIALIZADORA RG SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 3437,
+       "monto_total_producto": 292145
+      }
+     ],
+     "id_cotizacion": 575957642,
+     "codigo_sucursal_empresa": "1548786",
+     "codigo_empresa": "2127495",
+     "es_emt": 1,
+     "descripcion": "Se cotizan los productos solicitados.\nValor del despacho incluido en el total.\nInfo. al email: comercialrgconcepcion@gmail.com o al +569 8289 2425\n",
+     "fecha_vigencia": "2026-10-29T08:52:10Z",
+     "fecha_creacion": "2026-09-29T08:53:05.650Z",
+     "valor_neto": 292145,
+     "total_impuesto": 55508,
+     "monto_despacho": 0,
+     "monto_total": 347653,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Se cotizan los productos solicitados.\nValor del despacho incluido en el total.\nInfo. al email: comercialrgconcepcion@gmail.com o al +569 8289 2425\n",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "77.989.247-6",
+     "razon_social": "INVERSIONES IC SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 3500,
+       "monto_total_producto": 297500
+      }
+     ],
+     "id_cotizacion": 575983397,
+     "codigo_sucursal_empresa": "1393961",
+     "codigo_empresa": "1976546",
+     "es_emt": 1,
+     "descripcion": "Entrega en 3 días. Se adjunta cotización detallada y ficha técnica.",
+     "fecha_vigencia": "2026-10-30T05:09:03Z",
+     "fecha_creacion": "2026-09-30T02:09:38.417Z",
+     "valor_neto": 297500,
+     "total_impuesto": 56525,
+     "monto_despacho": 0,
+     "monto_total": 354025,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Entrega en 3 días. Se adjunta cotización detallada y ficha técnica.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "76.431.105-1",
+     "razon_social": "CAREMARC SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 3625,
+       "monto_total_producto": 308125
+      }
+     ],
+     "id_cotizacion": 575986763,
+     "codigo_sucursal_empresa": "1194629",
+     "codigo_empresa": "1782892",
+     "es_emt": 1,
+     "descripcion": "Entrega de 3 a 5 días hábiles, desde recepción conforme de orden de compra \nFelipe Arévalo Ayala \nf.arevalo@caremarc.cl  \n+56932483620  \nSan Javier",
+     "fecha_vigencia": "2026-10-30T09:52:21Z",
+     "fecha_creacion": "2026-09-30T09:53:50.017Z",
+     "valor_neto": 308125,
+     "total_impuesto": 58544,
+     "monto_despacho": 0,
+     "monto_total": 366669,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Entrega de 3 a 5 días hábiles, desde recepción conforme de orden de compra \nFelipe Arévalo Ayala \nf.arevalo@caremarc.cl  \n+56932483620  \nSan Javier",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "78.247.235-6",
+     "razon_social": "INVERSIONES AITRUST SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 3719,
+       "monto_total_producto": 316115
+      }
+     ],
+     "id_cotizacion": 575962513,
+     "codigo_sucursal_empresa": "1523744",
+     "codigo_empresa": "2102868",
+     "es_emt": 1,
+     "descripcion": "VER NOTAS-Se Adjunta Cotización + Ficha Técnica de productos * Favor Revisar Adjuntos. Contacto Marcelo Pavez Rios, 569 95290885 | Q-14023",
+     "fecha_vigencia": "2026-10-29T11:16:10Z",
+     "fecha_creacion": "2026-09-29T11:11:25.170Z",
+     "valor_neto": 316115,
+     "total_impuesto": 60062,
+     "monto_despacho": 0,
+     "monto_total": 376177,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "VER NOTAS-Se Adjunta Cotización + Ficha Técnica de productos * Favor Revisar Adjuntos. Contacto Marcelo Pavez Rios, 569 95290885 | Q-14023",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "76.748.475-5",
+     "razon_social": "PRO SALES DIEGO TORNERIA E.I.R.L.",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 3750,
+       "monto_total_producto": 318750
+      }
+     ],
+     "id_cotizacion": 575976665,
+     "codigo_sucursal_empresa": "1295167",
+     "codigo_empresa": "1880475",
+     "es_emt": 1,
+     "descripcion": "Entrega 1-3 dias habiles\ndtorneria@prosales.cl",
+     "fecha_vigencia": "2026-10-29T18:16:56Z",
+     "fecha_creacion": "2026-09-29T18:17:40.210Z",
+     "valor_neto": 318750,
+     "total_impuesto": 60563,
+     "monto_despacho": 0,
+     "monto_total": 379313,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Entrega 1-3 dias habiles\ndtorneria@prosales.cl",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "77.319.828-4",
+     "razon_social": "COMERCIAL LAGOS SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 4198,
+       "monto_total_producto": 356830
+      }
+     ],
+     "id_cotizacion": 575985883,
+     "codigo_sucursal_empresa": "1249967",
+     "codigo_empresa": "1836148",
+     "es_emt": 1,
+     "descripcion": "Se adjunta cotización, se cotiza en las marcas y productos solicitados. Despacho dentro de 3 a 5 días una vez aceptada la OC. Cualquier duda contactarse con Rodrigo Lagos al teléfono +569 85955857 o al email cotizaciones@aloinsumos.cl.",
+     "fecha_vigencia": "2026-10-30T09:16:28Z",
+     "fecha_creacion": "2026-09-30T09:30:49.357Z",
+     "valor_neto": 356830,
+     "total_impuesto": 67798,
+     "monto_despacho": 0,
+     "monto_total": 424628,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Se adjunta cotización, se cotiza en las marcas y productos solicitados. Despacho dentro de 3 a 5 días una vez aceptada la OC. Cualquier duda contactarse con Rodrigo Lagos al teléfono +569 85955857 o al email cotizaciones@aloinsumos.cl.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "77.593.236-8",
+     "razon_social": "SOMETHINGS ING SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 14111507,
+       "nombre_producto": "Papel para fotocopiadora o impresora",
+       "descripcion": "85 RESMAS DE PAPEL IMPRESIÓN TAMAÑO OFICIO COLOR BLANCO 500 HOJAS POR UNIDAD (VER REQUERIMIENTOS ADMINISTRATIVOS)",
+       "cantidad": 85,
+       "precio_unitario": 8549,
+       "monto_total_producto": 726665
+      }
+     ],
+     "id_cotizacion": 575980692,
+     "codigo_sucursal_empresa": "1239044",
+     "codigo_empresa": "1825305",
+     "es_emt": 1,
+     "descripcion": "Se cotiza según lo requerido, con entrega incluída de hasta 6 A 9 dias post O.C. para mayor informacion contactarse al whatsapp +56966229136",
+     "fecha_vigencia": "2026-10-29T21:10:09Z",
+     "fecha_creacion": "2026-09-29T22:10:34.357Z",
+     "valor_neto": 726665,
+     "total_impuesto": 138066,
+     "monto_despacho": 0,
+     "monto_total": 864731,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Se cotiza según lo requerido, con entrega incluída de hasta 6 A 9 dias post O.C. para mayor informacion contactarse al whatsapp +56966229136",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    }
+   ],
+   "flags": {
+    "considera_requisitos_medioambientales": true,
+    "considera_requisitos_impacto_social_economico": true
+   },
+   "descripcion": "E1O2RT9 CRS Linares FOSOAD 25 requiere adquirir Resma hota tamaño oficio para CAIS Linares (Programa Lico). La oferta deberá incluir los productos y en costo total incluir el despacho. Serán inadmisibles ofertas incompletas, que excedan 5 días hábiles desde la O/C o el presupuesto disponible. Despacho: Edificio O’Higgins, 2° piso, Of. 14-B, Linares, lunes a viernes, 08:30 a 17:00 hrs. Fonos: 712989969-712989968.",
+   "id_orden_compra": null
+  },
+  "2440-1659-COT26": {
+   "codigo": "2440-1659-COT26",
+   "nombre": " COMPUTADORES  ESCUELA JOSÉ MORALES DÍAZ  DE CURICÓ",
+   "estado": {
+    "codigo": "desierta",
+    "glosa": "Desierta",
+    "id_estado": 6
+   },
+   "convocatoria": {
+    "estado_convocatoria": 2,
+    "descripcion": "Segundo llamado",
+    "fecha_cierre_primer_llamado": "2026-09-28 08:00",
+    "fecha_cierre_segundo_llamado": "2026-10-02 08:56"
+   },
+   "documentos": [
+    {
+     "id": 1919058,
+     "nombre": "Anexo requisitos para Cotizar Materiales, Insumos u Otros 2026.pdf"
+    },
+    {
+     "id": 1919059,
+     "nombre": "ESPECIFICACIONES TECNICAS .pdf"
+    }
+   ],
+   "fechas": {
+    "fecha_publicacion": "2026-09-24 09:56",
+    "fecha_cierre": "2026-10-02 08:56",
+    "fecha_ultimo_cambio": "2026-10-05 15:35",
+    "fecha_cancelacion": null
+   },
+   "institucion": {
+    "organismo_comprador": "I MUNICIPALIDAD DE CURICO",
+    "rut": "69.100.100-8",
+    "unidad_compra": "Municipalidad de Curicó - Educación - Adquisiciones",
+    "region": 7,
+    "nombre_region": "Región del Maule "
+   },
+   "resumen": {
+    "multa_sancion": 1,
+    "total_ofertas_recibidas": 11,
+    "total_demandas": 0
+   },
+   "motivos": {
+    "motivo_cancelacion": null,
+    "motivo_desierta": " NO CUMPLEN CON LO REQUERIDO "
+   },
+   "entrega": {
+    "direccion_entrega": " DIRECCION SAN MARTÍN 455",
+    "plazo_entrega_dias": 5
+   },
+   "presupuesto": {
+    "moneda": "CLP",
+    "tipo_presupuesto": "Disponible",
+    "presupuesto_estimado": 1000000,
+    "monto_disponible": 1000000,
+    "monto_disponible_clp": 1000000,
+    "valor_cambio_moneda": null,
+    "fecha_cambio_moneda": null
+   },
+   "productos_solicitados": [
+    {
+     "nombre": "Computadores de escritorio",
+     "codigo_producto": 43211507,
+     "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+     "cantidad": 2,
+     "unidad_medida": "EA"
+    }
+   ],
+   "proveedores_cotizando": [
+    {
+     "rut_proveedor": "16.508.086-6",
+     "razon_social": "CÉSAR RODRIGO ORTEGA AGUILERA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 400000,
+       "monto_total_producto": 800000
+      }
+     ],
+     "id_cotizacion": 576017377,
+     "codigo_sucursal_empresa": "210705",
+     "codigo_empresa": "206391",
+     "es_emt": 1,
+     "descripcion": "Cotizamos equipos computacionales ideales para entidades públicas e instituciones del Estado, soporte preferencial y despacho gratuito de 1 a 5 días, garantía de 12 meses. Consultas 942352649. www.cesarortega.cl",
+     "fecha_vigencia": "2026-10-31T11:36:45Z",
+     "fecha_creacion": "2026-10-01T11:37:12.217Z",
+     "valor_neto": 800000,
+     "total_impuesto": 152000,
+     "monto_despacho": 0,
+     "monto_total": 952000,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Cotizamos equipos computacionales ideales para entidades públicas e instituciones del Estado, soporte preferencial y despacho gratuito de 1 a 5 días, garantía de 12 meses. Consultas 942352649. www.cesarortega.cl",
+     "estado": 3,
+     "justificacion_inadmisibilidad": " NO CORRESPONDE MODELO DE  PROCESADOR ",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "76.384.297-5",
+     "razon_social": "PCINBOX ARAUCANIA SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 415000,
+       "monto_total_producto": 830000
+      }
+     ],
+     "id_cotizacion": 576038352,
+     "codigo_sucursal_empresa": "847557",
+     "codigo_empresa": "1443443",
+     "es_emt": 1,
+     "descripcion": "disponible entrega 3 dias.",
+     "fecha_vigencia": "2026-11-01T08:38:05Z",
+     "fecha_creacion": "2026-10-02T08:38:43.300Z",
+     "valor_neto": 830000,
+     "total_impuesto": 157700,
+     "monto_despacho": 0,
+     "monto_total": 987700,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "disponible entrega 3 dias.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": " NO CUMPLE CON EL DISCO SSD ",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "16.508.086-6",
+     "razon_social": "CÉSAR RODRIGO ORTEGA AGUILERA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 420000,
+       "monto_total_producto": 840000
+      }
+     ],
+     "id_cotizacion": 576017413,
+     "codigo_sucursal_empresa": "210705",
+     "codigo_empresa": "206391",
+     "es_emt": 1,
+     "descripcion": "Cotizamos equipos computacionales ideales para entidades públicas e instituciones del Estado, soporte preferencial y despacho gratuito de 1 a 5 días, garantía de 12 meses. Consultas 942352649. www.cesarortega.cl",
+     "fecha_vigencia": "2026-10-31T11:37:37Z",
+     "fecha_creacion": "2026-10-01T11:37:51.903Z",
+     "valor_neto": 840000,
+     "total_impuesto": 159600,
+     "monto_despacho": 0,
+     "monto_total": 999600,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Cotizamos equipos computacionales ideales para entidades públicas e instituciones del Estado, soporte preferencial y despacho gratuito de 1 a 5 días, garantía de 12 meses. Consultas 942352649. www.cesarortega.cl",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El producto o servicio ofertado no cumple con las especificaciones solicitadas.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "16.508.086-6",
+     "razon_social": "CÉSAR RODRIGO ORTEGA AGUILERA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 420000,
+       "monto_total_producto": 840000
+      }
+     ],
+     "id_cotizacion": 576017453,
+     "codigo_sucursal_empresa": "210705",
+     "codigo_empresa": "206391",
+     "es_emt": 1,
+     "descripcion": "Cotizamos equipos computacionales ideales para entidades públicas e instituciones del Estado, soporte preferencial y despacho gratuito de 1 a 5 días, garantía de 12 meses. Consultas 942352649. www.cesarortega.cl",
+     "fecha_vigencia": "2026-10-31T11:38:11Z",
+     "fecha_creacion": "2026-10-01T11:38:42.233Z",
+     "valor_neto": 840000,
+     "total_impuesto": 159600,
+     "monto_despacho": 0,
+     "monto_total": 999600,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Cotizamos equipos computacionales ideales para entidades públicas e instituciones del Estado, soporte preferencial y despacho gratuito de 1 a 5 días, garantía de 12 meses. Consultas 942352649. www.cesarortega.cl",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El producto o servicio ofertado no cumple con las especificaciones solicitadas.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "96.661.420-k",
+     "razon_social": "SERVICIOS COMPUTACIONALES GLOBAL SA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 411756,
+       "monto_total_producto": 823512
+      }
+     ],
+     "id_cotizacion": 575940757,
+     "codigo_sucursal_empresa": "73054",
+     "codigo_empresa": "70829",
+     "es_emt": 0,
+     "descripcion": "SE COTIZA LO REQUERIDO \nNOMBRE: DEISY CONTRERAS\nCORREO: DEISY.CONTRERAS@SCGLOBAL.CL\nTELEFONO: 959986185",
+     "fecha_vigencia": "2026-10-28T12:03:06Z",
+     "fecha_creacion": "2026-09-28T12:09:21.167Z",
+     "valor_neto": 848723,
+     "total_impuesto": 161257,
+     "monto_despacho": 25211,
+     "monto_total": 1009980,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "SE COTIZA LO REQUERIDO \nNOMBRE: DEISY CONTRERAS\nCORREO: DEISY.CONTRERAS@SCGLOBAL.CL\nTELEFONO: 959986185",
+     "estado": 3,
+     "justificacion_inadmisibilidad": " COBRA  DESPACHO ",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "76.074.614-2",
+     "razon_social": "PCINBOX SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 478990,
+       "monto_total_producto": 957980
+      }
+     ],
+     "id_cotizacion": 576034290,
+     "codigo_sucursal_empresa": "820816",
+     "codigo_empresa": "1417412",
+     "es_emt": 1,
+     "descripcion": "GARANTIA 1 AÑO, DESPACHO 3 DIAS HABILES.",
+     "fecha_vigencia": "2026-10-31T21:58:43Z",
+     "fecha_creacion": "2026-10-01T22:01:46.093Z",
+     "valor_neto": 957980,
+     "total_impuesto": 182016,
+     "monto_despacho": 0,
+     "monto_total": 1139996,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "GARANTIA 1 AÑO, DESPACHO 3 DIAS HABILES.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "77.229.656-8",
+     "razon_social": "PRODUCTOS Y SERVICIOS INFORMATICOS TORRES SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 629412,
+       "monto_total_producto": 1258824
+      }
+     ],
+     "id_cotizacion": 576032082,
+     "codigo_sucursal_empresa": "1158684",
+     "codigo_empresa": "1747904",
+     "es_emt": 1,
+     "descripcion": "Se adjunta cotización + Ficha Técnica + Certificado de marca LENOVO.\n\nDocumentos administrativos adjuntos.\n\nGarantía 12 meses.\n\nDespacho sin costo en 5 días hábiles.\n\nfhenriquez@gigablack.cl",
+     "fecha_vigencia": "2026-10-31T18:56:19Z",
+     "fecha_creacion": "2026-10-01T19:08:38.817Z",
+     "valor_neto": 1258824,
+     "total_impuesto": 239177,
+     "monto_despacho": 0,
+     "monto_total": 1498001,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Se adjunta cotización + Ficha Técnica + Certificado de marca LENOVO.\n\nDocumentos administrativos adjuntos.\n\nGarantía 12 meses.\n\nDespacho sin costo en 5 días hábiles.\n\nfhenriquez@gigablack.cl",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El producto o servicio ofertado no cumple con las especificaciones solicitadas.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "77.077.451-9",
+     "razon_social": "CEFEG PRODUCCIONES SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 650000,
+       "monto_total_producto": 1300000
+      }
+     ],
+     "id_cotizacion": 576036004,
+     "codigo_sucursal_empresa": "1117468",
+     "codigo_empresa": "1707841",
+     "es_emt": 1,
+     "descripcion": "Se cotiza lo solicitado, despacho incluido.",
+     "fecha_vigencia": "2026-11-01T00:06:41Z",
+     "fecha_creacion": "2026-10-02T00:10:37.493Z",
+     "valor_neto": 1300000,
+     "total_impuesto": 247000,
+     "monto_despacho": 0,
+     "monto_total": 1547000,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "Se cotiza lo solicitado, despacho incluido.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": " LICENCIA NO CORRESPONDE  A LO SOLICITADO",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "76.095.909-K",
+     "razon_social": "COMERCIAL SYBCOM LIMITADA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 679900,
+       "monto_total_producto": 1359800
+      }
+     ],
+     "id_cotizacion": 575988542,
+     "codigo_sucursal_empresa": "598940",
+     "codigo_empresa": "1181400",
+     "es_emt": 1,
+     "descripcion": "ADJUNTO COTIZACION Y CATALOGO DE PRODUCTOS OFERTADOS.ENTREGA EN DOS DIAS HABILES,UNA VEZ RECEPCIONADA Y ACEPTADA LA ORDEN DE COMPRA.DESPACHO GRATIS.SALA DE VENTAS LINARES",
+     "fecha_vigencia": "2026-10-30T10:30:41Z",
+     "fecha_creacion": "2026-09-30T10:35:16.140Z",
+     "valor_neto": 1359800,
+     "total_impuesto": 258362,
+     "monto_despacho": 0,
+     "monto_total": 1618162,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "ADJUNTO COTIZACION Y CATALOGO DE PRODUCTOS OFERTADOS.ENTREGA EN DOS DIAS HABILES,UNA VEZ RECEPCIONADA Y ACEPTADA LA ORDEN DE COMPRA.DESPACHO GRATIS.SALA DE VENTAS LINARES",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "79.882.360-4",
+     "razon_social": "INGENIERIA E INFORMATICA ASOCIADA LIMITADA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 740333,
+       "monto_total_producto": 1480666
+      }
+     ],
+     "id_cotizacion": 575939545,
+     "codigo_sucursal_empresa": "49170",
+     "codigo_empresa": "48141",
+     "es_emt": 0,
+     "descripcion": "FAVOR REVISAR CARACTERISTICAS EN DETALLE ADJUNTO, VALOR INCLUYE DESPACHO / FORMA DE PAGO OC 30 DIAS /ENTREGA DE 3 A 5 DIAS HÁBILES// CONSULTAS Julio Sepúlveda Cataldo JSEPULVEDA@IIA.CL +56934345326\n",
+     "fecha_vigencia": "2026-10-05T11:33:19Z",
+     "fecha_creacion": "2026-09-28T11:38:11.240Z",
+     "valor_neto": 1480666,
+     "total_impuesto": 281327,
+     "monto_despacho": 0,
+     "monto_total": 1761993,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "FAVOR REVISAR CARACTERISTICAS EN DETALLE ADJUNTO, VALOR INCLUYE DESPACHO / FORMA DE PAGO OC 30 DIAS /ENTREGA DE 3 A 5 DIAS HÁBILES// CONSULTAS Julio Sepúlveda Cataldo JSEPULVEDA@IIA.CL +56934345326\n",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    },
+    {
+     "rut_proveedor": "78.026.692-9",
+     "razon_social": "PROVEPRO SPA",
+     "productos_cotizados": [
+      {
+       "codigo_producto": 43211507,
+       "nombre_producto": "Computadores de escritorio",
+       "descripcion": "COMPUTADORES ,SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS  CON LO REQUERIDO POR EL ESTABLECIMIENTO ",
+       "cantidad": 2,
+       "precio_unitario": 1095780,
+       "monto_total_producto": 2191560
+      }
+     ],
+     "id_cotizacion": 576036940,
+     "codigo_sucursal_empresa": "1408612",
+     "codigo_empresa": "1989891",
+     "es_emt": 1,
+     "descripcion": "-Productos en stock.\n-Despacho incluido.\n-3 días hábiles ( opción de priorizar). \n-Revisar adjunto. \n-Wsp+569 61985601.\n-Pprovepro@gmail.com.",
+     "fecha_vigencia": "2026-11-01T02:00:29Z",
+     "fecha_creacion": "2026-10-02T02:00:54.093Z",
+     "valor_neto": 2191560,
+     "total_impuesto": 416396,
+     "monto_despacho": 0,
+     "monto_total": 2607956,
+     "proveedor_seleccionado": 0,
+     "descripcion_cotizacion": "-Productos en stock.\n-Despacho incluido.\n-3 días hábiles ( opción de priorizar). \n-Revisar adjunto. \n-Wsp+569 61985601.\n-Pprovepro@gmail.com.",
+     "estado": 3,
+     "justificacion_inadmisibilidad": "El valor ofertado sobrepasa el monto máximo disponible para la compra.",
+     "estado_por_comprador": null,
+     "activo": null,
+     "id_oc": null,
+     "nombre_impuesto": "IVA",
+     "porcentaje_impuesto": 19
+    }
+   ],
+   "flags": {
+    "considera_requisitos_medioambientales": false,
+    "considera_requisitos_impacto_social_economico": false
+   },
+   "descripcion": " COMPUTADORES  SE ADJUNTAN ANEXOS PARA COTIZAR Y ESPECIFICACIONES TÉCNICAS CON LO REQUERIDO POR EL ESTABLECIMIENTO, ADJUNTAR IMAGEN DE LO OFERTADO.",
+   "id_orden_compra": null
+  }
+ }
+}
