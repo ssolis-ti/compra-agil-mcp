@@ -56,6 +56,21 @@ ${kpiRow([
 
 ${callout('Motivo de deserción', `<p style="margin:0">${esc(p.motivo_desierta)}</p>`, p.motivo_desierta === 'No especificado en el sistema' ? 'neutro' : 'alerta')}
 
+${(() => {
+  const e = d.evidencia_del_proceso_auditado;
+  if (!e) return '';
+  const sobre = e.cotizaciones_sobre_presupuesto;
+  const lineas = [
+    `${numero(e.cotizaciones_recibidas)} cotización(es) recibida(s), ${numero(e.cotizaciones_inadmisibles)} inadmisible(s).`,
+    e.menor_monto_neto !== null
+      ? `Menor monto cotizado: ${clp(e.menor_monto_neto)} neto${e.menor_monto_total !== null ? ` (${clp(e.menor_monto_total)} con IVA)` : ''}, frente a un presupuesto de ${clp(p.presupuesto_disponible)}.`
+      : '',
+    sobre !== null && e.cotizaciones_recibidas > 0 ? `${numero(sobre)} de ${numero(e.cotizaciones_recibidas)} superan el presupuesto en neto.` : '',
+    e.motivos_de_inadmisibilidad.length > 0 ? `Motivos de inadmisibilidad: ${e.motivos_de_inadmisibilidad.join('; ')}.` : '',
+  ].filter(Boolean).map((l) => `<p style="margin:0">${esc(l)}</p>`).join('');
+  return callout('Evidencia del propio proceso', lineas, sobre ? 'alerta' : 'neutro');
+})()}
+
 ${b._aviso_cobertura ? callout('Cobertura incompleta', `<p style="margin:0">${esc(b._aviso_cobertura)}</p>`, 'alerta') : ''}
 
 <h2>Recomendaciones</h2>
