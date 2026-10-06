@@ -103,7 +103,19 @@ Defectos confirmados contra el código en la simulación del 6-oct ([resultado-s
 
 **Aceptación:** cada punto con su test de regresión y una nueva corrida de la simulación (mismos tres perfiles) sin esos hallazgos.
 
-S1–S3 corregidos en la rama `claude/fase-1-8-s1-s3` (tests `auditoria-evidencia`, `borrador-presupuesto`, `precios-region`) y S4–S9 en `claude/fase-1-8-s4-s9` (tests `precios-inadmisibles`, `precios-informacion`, `docs-multas`, `region`, `ruta-salida`, `auditoria-evidencia`), todos verificados de punta a punta por el protocolo MCP. Pendiente: la nueva corrida de la simulación con los tres perfiles.
+S1–S3 corregidos en la rama `claude/fase-1-8-s1-s3` (tests `auditoria-evidencia`, `borrador-presupuesto`, `precios-region`) y S4–S9 en `claude/fase-1-8-s4-s9` (tests `precios-inadmisibles`, `precios-informacion`, `docs-multas`, `region`, `ruta-salida`, `auditoria-evidencia`), todos verificados de punta a punta por el protocolo MCP. La segunda corrida de la simulación (mismos tres perfiles) no reprodujo ninguno de los nueve.
+
+### Fase 1.9 — Lo que encontró la segunda simulación 🟠
+Ver «Segunda corrida» en [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md).
+
+- **S1b 🟠** Auditoría: marcar presupuesto cuando las cotizaciones propias no caben con IVA (o la mayoría lo supera en neto), aunque el motivo oficial sea otro.
+- **S11 🟠** Corregir la descripción de `obtener_detalle_compra` sobre cuándo aparecen las cotizaciones.
+- **S12 🟠** Precios por código: si falla el detalle de referencia, usar el nombre del listado o sugerir reintentar con `q`.
+- **S13 🟠** Auditoría: advertir cuando hay un solo comparable; aclarar neto vs. IVA en la comparación.
+- **S14 🟠** Auditoría: término de comparables más amplio que el nombre completo del producto, o sugerirlo cuando no hay comparables.
+- **S15 🟡** Documentos: ampliar el contexto de los fragmentos para no cortar cifras.
+- **S16 🟡** Informe `precio`: mostrar suficiencia, cobertura y «solo admisibles».
+- **S17–S18 🟡** Formato de errores de esquema, enlace a la ficha en el 504 del detalle, procedencia del precio del borrador, `tiene_orden_compra` sin dato como `null`, ejemplo de fecha con `-03:00`.
 
 ---
 
