@@ -113,7 +113,37 @@ describe('auditar_compras_desiertas — evidencia del propio proceso (S1)', () =
     });
     const rec = await recolectarDatosAuditoria(clienteCon(objetivo) as never, { codigo_compra: '3-3-COT26' });
     if (rec.kind !== 'datos') throw new Error('se esperaban datos');
-    expect(rec.datos.recomendaciones_de_optimizacion[0]).toMatch(/cabe en neto \(\$1\.200\.000\) pero no con IVA \(\$1\.428\.000\)/);
+    expect(rec.datos.recomendaciones_de_optimizacion[0]).toMatch(/ninguna cotización cabe con IVA — la menor es \$1\.200\.000 neto y \$1\.428\.000 con IVA/);
+    expect(rec.datos.recomendaciones_de_optimizacion[0]).toContain('probablemente el presupuesto incluye IVA');
+  });
+
+  it('S1b: no cabe con IVA aunque el motivo oficial sea requisitos (caso del tóner, segunda simulación)', async () => {
+    const objetivo = proceso('3851-115-COT26', {
+      presupuesto: { ...proceso('x').presupuesto, monto_disponible_clp: 21_537_000, monto_disponible: 21_537_000 },
+      motivos: { motivo_cancelacion: null, motivo_desierta: 'Ofertas no cumplen requisitos técnicos' },
+      proveedores_cotizando: [cotizacion(23_915_150), cotizacion(29_412_600), cotizacion(18_736_550), cotizacion(29_221_150)],
+    });
+    const rec = await recolectarDatosAuditoria(clienteCon(objetivo) as never, { codigo_compra: '3851-115-COT26' });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    expect(rec.datos.analisis_de_brechas.presupuesto_insuficiente).toBe(true);
+    expect(rec.datos.analisis_de_brechas.requisitos_complejos).toBe(true);
+    const r = rec.datos.recomendaciones_de_optimizacion[0];
+    expect(r).toMatch(/^Presupuesto: ninguna cotización cabe con IVA — la menor es \$18\.736\.550 neto y \$22\.296\.495 con IVA frente a \$21\.537\.000, y 3 de 4 lo superan ya en neto/);
+    expect(r).toContain('Aunque el motivo oficial es otro («Ofertas no cumplen requisitos técnicos»)');
+    // Y sigue la recomendación de requisitos, que es el motivo oficial.
+    expect(rec.datos.recomendaciones_de_optimizacion.some((x) => x.startsWith('Requisitos:'))).toBe(true);
+  });
+
+  it('S1b: la mayoría sobre el presupuesto en neto se marca aunque la menor quepa', async () => {
+    const objetivo = proceso('6-6-COT26', {
+      motivos: { motivo_cancelacion: null, motivo_desierta: 'Ofertas no cumplen requisitos técnicos' },
+      // Presupuesto 1.259.000: la menor (900.000) cabe con IVA (1.071.000); 2 de 3 superan en neto.
+      proveedores_cotizando: [cotizacion(900_000), cotizacion(1_300_000), cotizacion(1_400_000)],
+    });
+    const rec = await recolectarDatosAuditoria(clienteCon(objetivo) as never, { codigo_compra: '6-6-COT26' });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    expect(rec.datos.analisis_de_brechas.presupuesto_insuficiente).toBe(true);
+    expect(rec.datos.recomendaciones_de_optimizacion[0]).toMatch(/^Presupuesto: 2 de 3 cotizaciones de este proceso superan en neto/);
   });
 
   it('sin motivo ni evidencia ni brechas: no atribuye una causa', async () => {

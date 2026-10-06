@@ -41,6 +41,7 @@ import { registerGenerarInforme } from './tools/generar-informe.js';
 import { registerVerificarTicket } from './tools/verificar-ticket.js';
 import { registerVerificarHora } from './tools/verificar-hora.js';
 import { INSTRUCCIONES } from './instrucciones.js';
+import { instalarPresupuesto } from './utils/presupuesto.js';
 
 // Resources
 import { registerRegionesResource } from './resources/regiones.js';
@@ -104,7 +105,9 @@ async function main() {
     }
   );
 
-  // 3. Registrar herramientas (Tools)
+  // 3. Registrar herramientas (Tools). Cada llamada corre con un presupuesto
+  //    de tiempo bajo el corte del cliente MCP (ver utils/presupuesto.ts).
+  instalarPresupuesto(server);
   registerBuscarCompras(server, client);
   registerDetalleCompra(server, client);
   registerMonitorearCambios(server, client);

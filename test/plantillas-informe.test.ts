@@ -196,7 +196,7 @@ describe('recolectarDatosPrecios', () => {
     if (rec.kind !== 'mensaje') return;
     expect(rec.isError).toBe(true);
     expect(rec.texto).toContain('Esto NO significa que no haya precios publicados');
-    expect(rec.texto).toContain('las 1 consultas fallaron');
+    expect(rec.texto).toContain('1 de 1 consulta de detalle no se completó: 1 falló porque la API no respondió');
     expect(rec.texto).toContain('ya pidió el mínimo');
     expect(rec.texto).toContain('HTTP 504');
     expect(rec.texto).not.toContain('limite_analisis');

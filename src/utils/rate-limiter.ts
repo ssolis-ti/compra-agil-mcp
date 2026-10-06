@@ -139,26 +139,55 @@ export class RateLimiter {
   }
 
   /**
-   * Espera (si es necesario) hasta que haya cupo dentro de la ventana de 1 minuto,
-   * de forma proactiva, ANTES de enviar la solicitud. Evita gatillar 429 por ráfagas.
+   * Turno que le tocaría a una consulta nueva, como instante (epoch ms).
+   *
+   * Los turnos se guardan en orden y nunca hay más de `maxPerMinute` en una
+   * ventana de 60 s. Un turno nuevo va después del último reservado (orden de
+   * llegada) y, si la ventana está llena, cuando salga de ella el más antiguo
+   * de los últimos `maxPerMinute`.
+   */
+  private proximoTurno(ahora: number): number {
+    this.requestTimestamps = this.requestTimestamps.filter((t) => t > ahora - 60_000);
+    const n = this.requestTimestamps.length;
+    let turno = Math.max(ahora, this.requestTimestamps[n - 1] ?? ahora);
+    if (n >= this.maxPerMinute) {
+      turno = Math.max(turno, this.requestTimestamps[n - this.maxPerMinute] + 60_000 + 5);
+    }
+    return turno;
+  }
+
+  /** Milisegundos que esperaría una consulta nueva, sin reservar turno. */
+  esperaPrevista(): number {
+    const ahora = Date.now();
+    return this.proximoTurno(ahora) - ahora;
+  }
+
+  /**
+   * Reserva el próximo turno y devuelve cuánto esperar. Es síncrono: dos
+   * llamadas seguidas nunca reciben el mismo turno.
+   */
+  reservarTurno(): number {
+    const ahora = Date.now();
+    const turno = this.proximoTurno(ahora);
+    this.requestTimestamps.push(turno);
+    return turno - ahora;
+  }
+
+  /**
+   * Espera, si hace falta, hasta el turno reservado: así el tráfico queda bajo
+   * el máximo por minuto y no gatilla 429 por ráfagas.
+   *
+   * ⚠ Antes comprobaba el cupo, esperaba a que saliera el más antiguo y al
+   *   despertar anotaba la hora sin volver a mirar: varias consultas que
+   *   esperaban a la vez despertaban juntas y salían en ráfaga, por encima
+   *   del máximo. Reservar el turno antes de esperar lo impide.
    */
   async throttle(): Promise<void> {
-    // Purgar timestamps con más de 60s de antigüedad
-    const cutoff = Date.now() - 60_000;
-    this.requestTimestamps = this.requestTimestamps.filter((t) => t > cutoff);
-
-    if (this.requestTimestamps.length >= this.maxPerMinute) {
-      // Esperar hasta que el request más antiguo salga de la ventana
-      const oldest = this.requestTimestamps[0];
-      const waitMs = Math.max(0, oldest + 60_000 - Date.now()) + 5;
-      logger.debug(`Rate limiter: throttling ${waitMs}ms (${this.requestTimestamps.length}/${this.maxPerMinute} req/min).`);
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-      // Repurgar tras la espera
-      const cutoff2 = Date.now() - 60_000;
-      this.requestTimestamps = this.requestTimestamps.filter((t) => t > cutoff2);
+    const espera = this.reservarTurno();
+    if (espera > 0) {
+      logger.debug(`Rate limiter: turno en ${espera} ms (${this.requestTimestamps.length}/${this.maxPerMinute} en la ventana).`);
+      await new Promise((resolve) => setTimeout(resolve, espera));
     }
-
-    this.requestTimestamps.push(Date.now());
   }
 
   /**
