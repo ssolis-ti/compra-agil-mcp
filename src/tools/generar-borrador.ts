@@ -133,7 +133,7 @@ export async function estimarPrecioUnitario(
 
   const presupuesto = presupuestoDelComprador(detalle);
   if (presupuesto > 0) {
-    const cantidadTotal = detalle.productos_solicitados?.reduce((acc, p) => acc + p.cantidad, 0) || 1;
+    const cantidadTotal = detalle.productos_solicitados?.reduce((acc, p) => acc + (p.cantidad ?? 0), 0) || 1;
     // ⚠ E2 (enjambre contra la API real, 6-oct): antes el 90 % del presupuesto
     //   era el NETO, y con el IVA el total quedaba en el 107 %: el borrador
     //   proponía por defecto una oferta que no cabía ($552.874 frente a
@@ -186,7 +186,7 @@ export interface BorradorCotizacion {
   monto_total: number;
   descripcion_cotizacion: string;
   productos_cotizados: Array<{
-    codigo_producto: number | string;
+    codigo_producto: number | string | null;
     nombre_producto: string;
     descripcion: string;
     cantidad: number;
@@ -289,14 +289,21 @@ export async function construirBorradorCotizacion(
   const priceSource = estimacion.fuente;
 
   // Construir productos cotizados
+  // Fase 1.4: si la API omite la cantidad, `cantidad * precio` daba NaN. Se
+  // asume 1 y se advierte: un borrador necesita un número, pero no uno inventado en silencio.
+  const sinCantidad = (targetDetail.productos_solicitados || []).filter((p) => typeof p.cantidad !== 'number').map((p) => p.nombre);
+  if (sinCantidad.length > 0) {
+    advertencias.push(`La API no informa la cantidad de: ${sinCantidad.join(', ')}. Se asumió 1; revísala en la ficha antes de presentar.`);
+  }
   const productosCotizados = (targetDetail.productos_solicitados || []).map(prod => {
     const uPrice = suggestedPrice;
-    const totalProd = prod.cantidad * uPrice;
+    const cantidad = typeof prod.cantidad === 'number' ? prod.cantidad : 1;
+    const totalProd = cantidad * uPrice;
     return {
-      codigo_producto: prod.codigo_producto,
+      codigo_producto: prod.codigo_producto ?? null,
       nombre_producto: prod.nombre,
       descripcion: prod.descripcion || `Suministro de ${prod.nombre}`,
-      cantidad: prod.cantidad,
+      cantidad,
       precio_unitario: uPrice,
       monto_total_producto: totalProd,
     };

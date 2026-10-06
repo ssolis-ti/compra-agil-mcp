@@ -122,3 +122,14 @@ describe('carta del borrador (S10)', () => {
     expect(carta).toMatch(/\[Detalla aquí cómo cumple tu oferta cada especificación solicitada\]/);
   });
 });
+
+describe('producto sin cantidad (fase 1.4, lo destapó el compilador)', () => {
+  it('no produce NaN: asume 1 y lo advierte', async () => {
+    const d = proceso(9_021_000);
+    d.productos_solicitados = [{ codigo_producto: 1, nombre: 'Kit de aseo', descripcion: null, unidad_medida: 'Kit' }];
+    const b = await construirBorradorCotizacion(clienteCon(d) as never, argsUsuaria);
+    expect(b.productos_cotizados[0].cantidad).toBe(1);
+    expect(Number.isFinite(b.valor_neto)).toBe(true);
+    expect(b._campos_a_revisar.join(' ')).toMatch(/no informa la cantidad de: Kit de aseo\. Se asumió 1/);
+  });
+});

@@ -11,7 +11,8 @@ import { esAdmisible, extraerMontoNeto } from './quotation.js';
 export interface CotizanteComparado {
   rut: string;
   razon_social: string;
-  es_empresa_menor_tamano: boolean;
+  /** `null` si la API no lo informa (fase 1.4). */
+  es_empresa_menor_tamano: boolean | null;
   monto_total: number | null;
   valor_neto: number | null;
   impuesto: number | null;
@@ -50,7 +51,7 @@ function resumir(prov: ProveedorCotizando): CotizanteComparado {
   const fila: CotizanteComparado = {
     rut: prov.rut_proveedor,
     razon_social: prov.razon_social,
-    es_empresa_menor_tamano: prov.es_emt,
+    es_empresa_menor_tamano: prov.es_emt ?? null,
     monto_total: prov.monto_total ?? null,
     valor_neto: prov.valor_neto ?? null,
     impuesto: prov.total_impuesto ?? null,

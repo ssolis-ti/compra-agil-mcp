@@ -50,37 +50,45 @@ export interface Paginacion {
   total_resultados: number;
 }
 
+/**
+ * Tipos honestos (fase 1.4): lo que garantiza `api/normalizar.ts` es
+ * obligatorio —`codigo`, `nombre`, `estado.codigo`/`glosa`, que cada
+ * sub-objeto exista y que las listas sean listas—; todo lo demás es opcional o
+ * nulo, porque la API puede omitirlo. Antes se declaraba obligatorio y el
+ * compilador no avisaba de un acceso inseguro nuevo (así apareció el
+ * `undefined < MIN_BUDGET` del daemon).
+ */
 export interface CompraAgilItem {
   codigo: string;
   nombre: string;
-  estado: { id_estado: number; codigo: string; glosa: string };
-  convocatoria: { estado_convocatoria: number; descripcion: string };
-  documentos: Array<{ id: string; nombre: string }>;
+  estado: { id_estado?: number | null; codigo: string; glosa: string };
+  convocatoria: { estado_convocatoria?: number | null; descripcion?: string | null };
+  documentos: Array<{ id?: string | null; nombre?: string | null }>;
   fechas: {
-    fecha_publicacion: string;
-    fecha_cierre: string;
-    fecha_ultimo_cambio: string;
-    fecha_cancelacion: string | null;
+    fecha_publicacion?: string | null;
+    fecha_cierre?: string | null;
+    fecha_ultimo_cambio?: string | null;
+    fecha_cancelacion?: string | null;
   };
   montos: {
-    moneda: string;
-    monto_disponible: number;
-    monto_disponible_clp: number;
+    moneda?: string | null;
+    monto_disponible?: number | null;
+    monto_disponible_clp?: number | null;
   };
   institucion: {
-    organismo_comprador: string;
-    rut: string;
-    unidad_compra: string;
-    region: number | null;
-    nombre_region: string | null;
+    organismo_comprador?: string | null;
+    rut?: string | null;
+    unidad_compra?: string | null;
+    region?: number | null;
+    nombre_region?: string | null;
   };
-  resumen: { total_ofertas_recibidas: number };
+  resumen: { total_ofertas_recibidas?: number | null };
   motivos: {
-    motivo_cancelacion: string | null;
-    motivo_desierta: string | null;
-    motivo_seleccion: string | null;
+    motivo_cancelacion?: string | null;
+    motivo_desierta?: string | null;
+    motivo_seleccion?: string | null;
   };
-  links: { detalle: string };
+  links: { detalle?: string | null };
 }
 
 export interface BuscarResponse {
@@ -127,26 +135,26 @@ export interface OrdenCompraResponse {
 }
 
 export interface ProductoSolicitado {
-  codigo_producto: number | string;
+  codigo_producto?: number | string | null;
   nombre: string;
-  descripcion: string | null;
-  cantidad: number;
-  unidad_medida: string;
+  descripcion?: string | null;
+  cantidad?: number | null;
+  unidad_medida?: string | null;
 }
 
 export interface ProductoCotizado {
-  codigo_producto: number | string;
-  nombre_producto: string;
-  descripcion: string | null;
-  cantidad: number;
-  precio_unitario: number | null;
-  monto_total_producto: number | null;
+  codigo_producto?: number | string | null;
+  nombre_producto?: string | null;
+  descripcion?: string | null;
+  cantidad?: number | null;
+  precio_unitario?: number | null;
+  monto_total_producto?: number | null;
 }
 
 export interface ProveedorCotizando {
   rut_proveedor: string;
   razon_social: string;
-  es_emt: boolean;
+  es_emt?: boolean | null;
   id_cotizacion?: number;
   codigo_empresa?: string;
   codigo_sucursal_empresa?: string;
@@ -170,41 +178,41 @@ export interface ProveedorCotizando {
     motivo_seleccion: string | null;
     criterio_seleccion: string | null;
   };
-  productos_cotizados?: ProductoCotizado[];
+  productos_cotizados: ProductoCotizado[];
 }
 
 export interface CompraAgilDetalle {
   codigo: string;
   nombre: string;
-  descripcion: string;
+  descripcion?: string | null;
   // Campo raíz — la API real expone id_orden_compra aquí directamente
   id_orden_compra?: number | null;
-  estado: { id_estado: number; codigo: string; glosa: string };
+  estado: { id_estado?: number | null; codigo: string; glosa: string };
   convocatoria: {
-    estado_convocatoria: number;
-    descripcion: string;
-    fecha_cierre_primer_llamado: string | null;
-    fecha_cierre_segundo_llamado: string | null;
+    estado_convocatoria?: number | null;
+    descripcion?: string | null;
+    fecha_cierre_primer_llamado?: string | null;
+    fecha_cierre_segundo_llamado?: string | null;
   };
   fechas: {
-    fecha_publicacion: string;
-    fecha_cierre: string;
-    fecha_ultimo_cambio: string;
-    fecha_cancelacion: string | null;
+    fecha_publicacion?: string | null;
+    fecha_cierre?: string | null;
+    fecha_ultimo_cambio?: string | null;
+    fecha_cancelacion?: string | null;
   };
   entrega: {
-    direccion_entrega: string;
-    plazo_entrega_dias: number | null;
+    direccion_entrega?: string | null;
+    plazo_entrega_dias?: number | null;
   };
-  documentos: Array<{ id: string; nombre: string }>;
+  documentos: Array<{ id?: string | null; nombre?: string | null }>;
   presupuesto: {
-    tipo_presupuesto: string;
+    tipo_presupuesto?: string | null;
     moneda: string;
-    presupuesto_estimado: number | null;
-    monto_disponible: number | null;
-    monto_disponible_clp: number | null;
-    valor_cambio_moneda: number | null;
-    fecha_cambio_moneda: string | null;
+    presupuesto_estimado?: number | null;
+    monto_disponible?: number | null;
+    monto_disponible_clp?: number | null;
+    valor_cambio_moneda?: number | null;
+    fecha_cambio_moneda?: string | null;
   };
   // Sub-objeto opcional — puede no venir si la API lo omite
   orden_compra?: {
@@ -214,26 +222,26 @@ export interface CompraAgilDetalle {
     estado_orden_compra: string | null;
   };
   institucion: {
-    organismo_comprador: string;
-    rut: string;
-    unidad_compra: string;
-    region: number | null;
-    nombre_region: string | null;
+    organismo_comprador?: string | null;
+    rut?: string | null;
+    unidad_compra?: string | null;
+    region?: number | null;
+    nombre_region?: string | null;
   };
   productos_solicitados: ProductoSolicitado[];
   proveedores_cotizando: ProveedorCotizando[];
   resumen: {
-    multa_sancion: number | null;
-    total_ofertas_recibidas: number;
-    total_demandas: number;
+    multa_sancion?: number | null;
+    total_ofertas_recibidas?: number | null;
+    total_demandas?: number | null;
   };
   motivos: {
-    motivo_cancelacion: string | null;
-    motivo_desierta: string | null;
+    motivo_cancelacion?: string | null;
+    motivo_desierta?: string | null;
   };
   flags: {
-    considera_requisitos_medioambientales: boolean;
-    considera_requisitos_impacto_social_economico: boolean;
+    considera_requisitos_medioambientales?: boolean | null;
+    considera_requisitos_impacto_social_economico?: boolean | null;
   };
 }
 

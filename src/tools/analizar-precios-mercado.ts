@@ -68,7 +68,8 @@ export interface CotizacionObservada {
   estado_proceso: string;
   institucion: string;
   proveedor: string;
-  es_emt: boolean;
+  /** `null` si la API no lo informa (fase 1.4). */
+  es_emt: boolean | null;
   precio_unitario: number | null;
   monto_neto: number | null;
   monto_total: number | null;
@@ -336,9 +337,9 @@ export async function recolectarDatosPrecios(
         const registro: CotizacionObservada = {
           codigo_proceso: item.codigo,
           estado_proceso: det.estado.glosa,
-          institucion: det.institucion.organismo_comprador,
+          institucion: det.institucion.organismo_comprador ?? 'No informado',
           proveedor: prov.razon_social,
-          es_emt: prov.es_emt,
+          es_emt: prov.es_emt ?? null,
           precio_unitario: unitario,
           monto_neto: neto,
           monto_total: prov.monto_total ?? null,

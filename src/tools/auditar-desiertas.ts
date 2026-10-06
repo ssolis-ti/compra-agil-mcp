@@ -90,7 +90,7 @@ export interface DatosAuditoria {
     estado: string;
     presupuesto_disponible: number;
     duracion_dias: number;
-    items_solicitados: Array<{ nombre: string; cantidad: number; unidad: string }>;
+    items_solicitados: Array<{ nombre: string; cantidad: number | null; unidad: string | null }>;
     motivo_desierta: string;
   };
   evidencia_del_proceso_auditado: EvidenciaProceso;
@@ -446,7 +446,7 @@ export async function recolectarDatosAuditoria(
           mayor_monto_cotizado: Math.max(...netos),
           menor_precio_unitario: menorUnitario,
           duracion_dias: successDuration ?? 0,
-          fecha_cierre: item.fechas?.fecha_cierre,
+          fecha_cierre: item.fechas?.fecha_cierre ?? undefined,
           motivo_desierta: detail.motivos?.motivo_desierta ?? null,
         });
       }
@@ -626,8 +626,8 @@ export async function recolectarDatosAuditoria(
       duracion_dias: targetDuration,
       items_solicitados: targetDetail.productos_solicitados?.map(p => ({
         nombre: p.nombre,
-        cantidad: p.cantidad,
-        unidad: p.unidad_medida,
+        cantidad: p.cantidad ?? null,
+        unidad: p.unidad_medida ?? null,
       })) || [],
       motivo_desierta: targetDetail.motivos?.motivo_desierta || 'No especificado en el sistema',
     },

@@ -156,7 +156,8 @@ export function evaluarOportunidad(
     presupuesto_disponible: budget,
     ofertas_recibidas: bids,
     horas_restantes: Math.round(hoursLeft * 10) / 10,
-    fecha_cierre: item.fechas?.fecha_cierre,
+    // Nunca vacío aquí: sin cierre interpretable el proceso ya se descartó arriba.
+    fecha_cierre: item.fechas?.fecha_cierre ?? '',
     fecha_cierre_hora_chile: enHoraDeChile(item.fechas?.fecha_cierre),
     llamado,
     puntuacion_caliente: score,
