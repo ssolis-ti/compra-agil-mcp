@@ -6,6 +6,10 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-10-06
+
+Versión cerrada: junta los arreglos que encontró el enjambre de agentes contra la API real (6-oct) y las dos simulaciones anteriores, las fases de calidad y rendimiento del Sprint 1 y las de operación del Sprint 2. El cambio de fondo es la hora: **la API entrega hora de Chile, no UTC**, y hasta la 2.7.0 cada cierre se mostraba 3 horas antes y el radar ocultaba los procesos que cerraban en las 3 horas siguientes. No hay cambios incompatibles en los parámetros; sí cambian los valores de las horas, que ahora son los correctos.
+
 ### Seguridad
 * **SDK de MCP 1.29.0 → 1.32.1** por el aviso [GHSA-6qxp-vccf-f47h](https://github.com/advisories/GHSA-6qxp-vccf-f47h) (severidad alta, versiones 1.12.0–1.30.1): el **cliente OAuth** del SDK podía enviar credenciales a un servidor de autorización elegido por el servidor MCP. Este servidor usa solo el lado servidor sobre stdio y no usa OAuth, así que no estaba expuesto, pero el aviso hacía fallar la CI (`npm audit --omit=dev --audit-level=high`) desde su publicación. `npm audit --omit=dev`: 0 vulnerabilidades.
 
