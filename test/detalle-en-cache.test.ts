@@ -26,11 +26,24 @@ const detalleFalso = (codigo: string) => ({
   },
 });
 
+const listadoFalso = () => ({
+  success: 'OK',
+  payload: {
+    items: [{ codigo: CODIGO, nombre: 'Compra de prueba' }],
+    paginacion: { total_paginas: 1, numero_pagina: 1, tamano_pagina: 10, total_resultados: 1 },
+  },
+});
+
 let fetchSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   _resetSecretos();
   fetchSpy = vi.fn(async (url: string) => {
+    // La búsqueda responde con forma de listado: un listado sin `items` se
+    // rechaza como respuesta inválida (ver src/api/normalizar.ts).
+    if (new URL(url).pathname === '/v2/compra-agil') {
+      return { ok: true, status: 200, json: async () => listadoFalso() };
+    }
     const codigo = decodeURIComponent(String(url).split('/').pop() ?? '');
     return { ok: true, status: 200, json: async () => detalleFalso(codigo) };
   });

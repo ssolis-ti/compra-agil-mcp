@@ -15,6 +15,7 @@ import { LimitadorConcurrencia } from '../utils/concurrencia.js';
 import path from 'path';
 import { registrarSecreto } from '../utils/redact.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
+import { normalizarDetalle, normalizarListado, normalizarOrdenCompra, RespuestaInvalidaError } from './normalizar.js';
 
 // ─── Tipos ──────────────────────────────────────────────────────────
 
@@ -332,15 +333,26 @@ export class CompraAgilClient {
   /**
    * Realiza un GET autenticado a la API.
    */
-  private async request<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
+  private async request<T>(
+    path: string,
+    params: Record<string, string | number | undefined> | undefined,
+    normalizar: (payload: unknown) => T,
+  ): Promise<T> {
     // Una respuesta vigente en caché ahorra la consulta entera: ni cuota, ni
     // espera, ni riesgo de 429. Se comprueba antes que el rate limit, para que
     // un ticket temporalmente limitado igual pueda servir lo ya conocido.
+    // Se normaliza también al leer: el archivo pudo escribirlo una versión
+    // anterior que guardaba la respuesta cruda.
     const claveCache = ResponseCache.clave(path, params);
-    const enCache = this.cache.obtener<T>(claveCache);
+    const enCache = this.cache.obtener<unknown>(claveCache);
     if (enCache !== undefined) {
-      logger.debug(`Caché: acierto para ${claveCache}`);
-      return enCache;
+      try {
+        const valor = normalizar(enCache);
+        logger.debug(`Caché: acierto para ${claveCache}`);
+        return valor;
+      } catch {
+        // Una entrada vieja que ya no tiene la forma esperada se ignora.
+      }
     }
 
     // Verificar rate limit diario antes de enviar
@@ -388,21 +400,25 @@ export class CompraAgilClient {
       this.rateLimiter.recordRequest();
     }
 
-    let payload: unknown;
+    let payload: T;
     try {
-      payload = await handleApiResponse(response);
+      payload = normalizar(await handleApiResponse(response));
     } catch (error) {
       if (error instanceof CompraAgilApiError) {
         throw new CompraAgilApiError(error.httpStatus, error.apiErrors, consulta, error.local);
       }
+      if (error instanceof RespuestaInvalidaError) {
+        throw new CompraAgilApiError(response.status, [], consulta, { causa: 'respuesta_invalida', motivo: error.motivo });
+      }
       throw error;
     }
 
-    // Solo se guardan respuestas exitosas: un error no debe quedar congelado.
+    // Solo se guardan respuestas exitosas y con forma válida: un error no debe
+    // quedar congelado.
     const ttl = path.includes('/compra-agil/') ? TTL_DETALLE_SEG : TTL_BUSQUEDA_SEG;
     this.cache.guardar(claveCache, payload, ttl);
 
-    return payload as T;
+    return payload;
   }
 
   /**
@@ -482,7 +498,13 @@ export class CompraAgilClient {
    */
   detalleEnCache(codigo: string): CompraAgilDetalle | undefined {
     const clave = ResponseCache.clave(`/v2/compra-agil/${encodeURIComponent(codigo)}`);
-    return this.cache.obtener<CompraAgilDetalle>(clave);
+    const valor = this.cache.obtener<unknown>(clave);
+    if (valor === undefined) return undefined;
+    try {
+      return normalizarDetalle(valor);
+    } catch {
+      return undefined;
+    }
   }
 
   /** Estadísticas de reutilización de respuestas (cuánta cuota se ahorró). */
@@ -516,7 +538,7 @@ export class CompraAgilClient {
   }
 
   async buscar(params: BuscarParams): Promise<BuscarResponse> {
-    return this.request<BuscarResponse>('/v2/compra-agil', this.paramsDeBusqueda(params));
+    return this.request('/v2/compra-agil', this.paramsDeBusqueda(params), normalizarListado);
   }
 
   busquedaEnCache(params: BuscarParams): boolean {
@@ -584,7 +606,7 @@ export class CompraAgilClient {
    * Obtener el detalle completo de una Compra Ágil específica.
    */
   async detalle(codigo: string): Promise<CompraAgilDetalle> {
-    return this.request<CompraAgilDetalle>(`/v2/compra-agil/${encodeURIComponent(codigo)}`);
+    return this.request(`/v2/compra-agil/${encodeURIComponent(codigo)}`, undefined, normalizarDetalle);
   }
 
   /**
@@ -614,8 +636,8 @@ export class CompraAgilClient {
    * Admite tanto el ID numérico interno como el código alfanumérico.
    */
   async obtenerDetalleOC(idOC: string | number): Promise<OrdenCompraResponse> {
-    return this.request<OrdenCompraResponse>('/servicios/v1/publico/OrdenCompra.json', {
+    return this.request('/servicios/v1/publico/OrdenCompra.json', {
       codigo: String(idOC),
-    });
+    }, normalizarOrdenCompra);
   }
 }
