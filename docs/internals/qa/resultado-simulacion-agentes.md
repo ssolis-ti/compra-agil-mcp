@@ -28,6 +28,9 @@ que van aparte al final.
 
 ## Defectos confirmados
 
+S1, S2 y S3 ya están corregidos (rama `claude/fase-1-8-s1-s3`); el resto sigue
+en la fase 1.8 del [roadmap](roadmap.md).
+
 | # | Sev. | Herramienta | Defecto | Evidencia en el código |
 | :--- | :--- | :--- | :--- | :--- |
 | S1 | 🔴 Alta | `auditar_compras_desiertas` | **La recomendación ignora el motivo oficial y la evidencia del propio proceso.** Con `motivo_desierta: "Ofertas sobre el presupuesto disponible"` y una cotización del mismo proceso de $1.679.096 contra un presupuesto de $1.259.000, concluyó «No se detectaron discrepancias… revisar que no estén amarrados a una única marca». La auditoría solo compara contra *otros* procesos y nunca mira las cotizaciones del auditado ni su motivo | `src/tools/auditar-desiertas.ts:283-319`: las brechas salen solo de comparables; el mensaje genérico es el `else` final |
