@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
-import { esAdmisible, extraerMontoNeto } from '../utils/quotation.js';
+import { esAdmisible, extraerMontoNeto, extraerPrecioUnitario } from '../utils/quotation.js';
 import type { CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { safeError } from '../utils/redact.js';
 
@@ -34,6 +34,8 @@ export interface ProcesoComparable {
   cotizaciones_inadmisibles: number;
   menor_monto_cotizado: number;
   mayor_monto_cotizado: number;
+  /** Menor precio unitario cotizado, si las cotizaciones lo traen. */
+  menor_precio_unitario: number | null;
   duracion_dias: number;
   fecha_cierre?: string;
   motivo_desierta: string | null;
@@ -77,12 +79,21 @@ export interface DatosAuditoria {
     estadisticas_montos_cotizados: { minimo_cotizado: number; maximo_cotizado: number; promedio_cotizado: number } | null;
     estadisticas_duracion: { minimo_dias: number; maximo_dias: number; promedio_dias: number } | null;
   };
+  /**
+   * `true` hay brecha, `false` se evaluó y no la hay, `null` no se pudo
+   * evaluar (sin comparables ni evidencia propia). Nunca `false` por falta de
+   * datos: el informe imprimía «Presupuesto en rango» sin haber comparado nada.
+   */
   analisis_de_brechas: {
-    presupuesto_insuficiente: boolean;
-    plazo_insuficiente: boolean;
+    presupuesto_insuficiente: boolean | null;
+    plazo_insuficiente: boolean | null;
     requisitos_complejos: boolean;
-    diferencia_presupuesto_porcentaje: number;
-    diferencia_plazo_dias: number;
+    /** (presupuesto − promedio cotizado) / promedio × 100, en la base indicada. */
+    diferencia_presupuesto_porcentaje: number | null;
+    diferencia_plazo_dias: number | null;
+    /** Por unidad cuando los comparables traen precio unitario; si no, montos totales. */
+    base_comparacion: 'precio_unitario' | 'monto_total' | null;
+    lectura_diferencia: string | null;
   };
   recomendaciones_de_optimizacion: string[];
   procesos_comparables_analizados: ProcesoComparable[];
@@ -274,6 +285,7 @@ export async function recolectarDatosAuditoria(
 
   const successDurations: number[] = [];
   const successPrices: number[] = [];
+  const successUnitPrices: number[] = [];
   const processedCases: ProcesoComparable[] = [];
   let fallosDetalle = 0;
   let intentosDetalle = 0;
@@ -323,6 +335,11 @@ export async function recolectarDatosAuditoria(
         // al que ese mercado estuvo dispuesto a atender la necesidad.
         const menorNeto = Math.min(...netos);
         successPrices.push(menorNeto);
+        const unitarios = cotizaciones
+          .map((c) => extraerPrecioUnitario(c, keyword))
+          .filter((n): n is number => n !== null);
+        const menorUnitario = unitarios.length > 0 ? Math.min(...unitarios) : null;
+        if (menorUnitario !== null) successUnitPrices.push(menorUnitario);
 
         let successDuration = 0;
         if (detail.fechas?.fecha_cierre && detail.fechas?.fecha_publicacion) {
@@ -340,6 +357,7 @@ export async function recolectarDatosAuditoria(
           cotizaciones_inadmisibles: inadmisibles,
           menor_monto_cotizado: menorNeto,
           mayor_monto_cotizado: Math.max(...netos),
+          menor_precio_unitario: menorUnitario,
           duracion_dias: successDuration,
           fecha_cierre: item.fechas?.fecha_cierre,
           motivo_desierta: detail.motivos?.motivo_desierta ?? null,
@@ -376,26 +394,50 @@ export async function recolectarDatosAuditoria(
   const presupuestoPorEvidencia = causa === 'presupuesto' ||
     (targetBudget > 0 && evidencia.menor_monto_neto !== null && evidencia.menor_monto_neto > targetBudget);
 
-  const analisis_critico = {
-    presupuesto_insuficiente: false,
-    plazo_insuficiente: false,
+  // ⚠ Se compara por unidad cuando se puede. Comparar montos totales de
+  //   procesos con cantidades distintas daba cifras sin sentido: en la
+  //   simulación del 6-oct salió «diferencia_presupuesto_porcentaje: 142» entre
+  //   compras de 2 y de 9 computadores.
+  const cantidadObjetivo = (targetDetail.productos_solicitados ?? []).reduce((acc, p) => acc + (p.cantidad || 0), 0);
+  const porUnidad = cantidadObjetivo > 0 && successUnitPrices.length > 0 && successUnitPrices.length === successPrices.length;
+  const promedio = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
+  const refPresupuesto = porUnidad ? targetBudget / cantidadObjetivo : targetBudget;
+  const refPromedio = porUnidad ? promedio(successUnitPrices) : avgPrice;
+  const refMinimo = porUnidad ? Math.min(...successUnitPrices) : minPrice;
+
+  const analisis_critico: DatosAuditoria['analisis_de_brechas'] = {
+    presupuesto_insuficiente: null,
+    plazo_insuficiente: null,
     requisitos_complejos: false,
-    diferencia_presupuesto_porcentaje: 0,
-    diferencia_plazo_dias: 0,
+    diferencia_presupuesto_porcentaje: null,
+    diferencia_plazo_dias: null,
+    base_comparacion: null,
+    lectura_diferencia: null,
   };
+  let presupuestoComparado = false;
+  let plazoComparado = false;
 
   if (!sinComparablesDistintos) {
-    if (targetBudget > 0 && avgPrice > 0) {
-      analisis_critico.diferencia_presupuesto_porcentaje = Math.round(((targetBudget - avgPrice) / avgPrice) * 100);
-      if (targetBudget < minPrice || targetBudget < avgPrice * 0.8) {
+    if (targetBudget > 0 && refPromedio > 0) {
+      presupuestoComparado = true;
+      const dif = Math.round(((refPresupuesto - refPromedio) / refPromedio) * 100);
+      analisis_critico.diferencia_presupuesto_porcentaje = dif;
+      analisis_critico.base_comparacion = porUnidad ? 'precio_unitario' : 'monto_total';
+      analisis_critico.lectura_diferencia =
+        `El presupuesto${porUnidad ? ' por unidad' : ''} está ${Math.abs(dif)} % ${dif < 0 ? 'bajo' : 'sobre'} el promedio ` +
+        `de lo cotizado${porUnidad ? ' por unidad' : ''} en procesos comparables` +
+        (porUnidad ? '.' : ' (montos totales de procesos con cantidades posiblemente distintas: tómalo con cautela).');
+      if (refPresupuesto < refMinimo || refPresupuesto < refPromedio * 0.8) {
         analisis_critico.presupuesto_insuficiente = true;
       }
     } else if (targetBudget === 0 && avgPrice > 0) {
       // Si el presupuesto objetivo es $0 o no especificado, se marca como potencial brecha si el histórico requiere fondos
+      presupuestoComparado = true;
       analisis_critico.presupuesto_insuficiente = true;
     }
 
     if (targetDuration > 0 && avgDuration > 0) {
+      plazoComparado = true;
       analisis_critico.diferencia_plazo_dias = Math.round((targetDuration - avgDuration) * 10) / 10;
       if (targetDuration < 2 || targetDuration < avgDuration * 0.6) {
         analisis_critico.plazo_insuficiente = true;
@@ -406,15 +448,20 @@ export async function recolectarDatosAuditoria(
     // Plazo menor a 2 días siempre se marca como potencialmente insuficiente en Compra Ágil
     analisis_critico.plazo_insuficiente = true;
   }
-  const presupuestoPorComparables = analisis_critico.presupuesto_insuficiente;
-  const plazoPorComparables = analisis_critico.plazo_insuficiente;
+  const presupuestoPorComparables = analisis_critico.presupuesto_insuficiente === true;
+  const plazoPorComparables = analisis_critico.plazo_insuficiente === true;
 
   const requisitosAmbientales = Boolean(
     targetDetail.flags?.considera_requisitos_medioambientales ||
     targetDetail.flags?.considera_requisitos_impacto_social_economico
   );
-  analisis_critico.presupuesto_insuficiente = presupuestoPorComparables || presupuestoPorEvidencia;
-  analisis_critico.plazo_insuficiente = plazoPorComparables || causa === 'plazo';
+  const presupuestoEvaluado = presupuestoComparado || (targetBudget > 0 && evidencia.menor_monto_neto !== null);
+  analisis_critico.presupuesto_insuficiente = presupuestoPorComparables || presupuestoPorEvidencia
+    ? true
+    : presupuestoEvaluado ? false : null;
+  analisis_critico.plazo_insuficiente = plazoPorComparables || causa === 'plazo'
+    ? true
+    : plazoComparado ? false : null;
   analisis_critico.requisitos_complejos = requisitosAmbientales || causa === 'requisitos' ||
     (evidencia.cotizaciones_recibidas > 0 && evidencia.cotizaciones_inadmisibles === evidencia.cotizaciones_recibidas);
 
@@ -423,7 +470,9 @@ export async function recolectarDatosAuditoria(
   if (presupuestoPorComparables) {
     if (targetBudget > 0) {
       recomendaciones.push(
-        `Aumentar el presupuesto disponible. El presupuesto actual de $${targetBudget.toLocaleString('es-CL')} es un ${Math.abs(analisis_critico.diferencia_presupuesto_porcentaje)}% inferior al promedio de lo que el mercado cotizó en procesos similares ($${avgPrice.toLocaleString('es-CL')}). Se sugiere incrementarlo a al menos $${Math.round(avgPrice * 1.05).toLocaleString('es-CL')}.`
+        porUnidad
+          ? `Aumentar el presupuesto disponible. Por unidad, el presupuesto ($${Math.round(refPresupuesto).toLocaleString('es-CL')}) es un ${Math.abs(analisis_critico.diferencia_presupuesto_porcentaje ?? 0)}% inferior al promedio de lo que el mercado cotizó en procesos similares ($${refPromedio.toLocaleString('es-CL')} por unidad). Para ${cantidadObjetivo} unidades, se sugiere al menos $${Math.round(refPromedio * 1.05 * cantidadObjetivo).toLocaleString('es-CL')}.`
+          : `Aumentar el presupuesto disponible. El presupuesto actual de $${targetBudget.toLocaleString('es-CL')} es un ${Math.abs(analisis_critico.diferencia_presupuesto_porcentaje ?? 0)}% inferior al promedio de lo que el mercado cotizó en procesos similares ($${avgPrice.toLocaleString('es-CL')}, montos totales sin normalizar por cantidad). Se sugiere incrementarlo a al menos $${Math.round(avgPrice * 1.05).toLocaleString('es-CL')}.`
       );
     } else {
       recomendaciones.push(

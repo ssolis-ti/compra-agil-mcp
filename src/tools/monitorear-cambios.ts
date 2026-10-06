@@ -8,6 +8,7 @@
  */
 
 import { z } from 'zod';
+import { esquemaRegion } from '../utils/region.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -42,8 +43,9 @@ export const inputSchema = {
   estado: z.string().optional().describe(
     'Filtrar por estado(s), separados por coma. Ej: "publicada" para solo oportunidades abiertas.'
   ),
-  region: z.string().optional().describe(
-    'Código(s) de región, separados por coma. Ej: "13" para Metropolitana.'
+  region: esquemaRegion(
+    'Código(s) de región (1-16), separados por coma. Ej: "13" para Metropolitana.',
+    { multiple: true },
   ),
   tamano_pagina: z.number().min(10).max(10).default(TAMANO_PAGINA_SEGURO).describe(
     'Fijo en 10. Una página de 50 sobre un filtro amplio responde HTTP 504. Para ver más, pide numero_pagina siguiente.'
@@ -177,6 +179,7 @@ export function registerMonitorearCambios(server: McpServer, client: CompraAgilC
             response.paginacion.total_paginas,
             response.paginacion.total_resultados,
             summary.length,
+            true,
           ),
           resultados: summary,
         });

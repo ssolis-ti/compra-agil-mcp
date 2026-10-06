@@ -11,8 +11,10 @@ export const TAMANO_PAGINA_SEGURO = 10;
  * Con cero resultados la API responde numero_pagina=1 y total_paginas=0.
  * Copiar eso como "1 de 0" parece una página que existe.
  */
-export function textoPagina(numeroPagina: number, totalPaginas: number): string {
-  if (!(totalPaginas > 0)) return 'sin resultados en esta ventana';
+export function textoPagina(numeroPagina: number, totalPaginas: number, conVentana = false): string {
+  // «en esta ventana» solo cuando la consulta tenía una ventana temporal (el
+  // monitor). En una búsqueda sin ventana confundía al modelo (simulación 6-oct).
+  if (!(totalPaginas > 0)) return conVentana ? 'sin resultados en esta ventana' : 'sin resultados para estos filtros';
   return `${numeroPagina} de ${totalPaginas}`;
 }
 
@@ -31,6 +33,7 @@ export function camposPagina(
   totalPaginas: number,
   totalResultados: number,
   filtrados: number,
+  conVentana = false,
 ): {
   total_resultados: number;
   total_filtrados_en_pagina: number;
@@ -42,6 +45,6 @@ export function camposPagina(
     total_resultados: totalResultados,
     total_filtrados_en_pagina: filtrados,
     ...numerosPaginaVisibles(numeroPagina, totalPaginas),
-    pagina: textoPagina(numeroPagina, totalPaginas),
+    pagina: textoPagina(numeroPagina, totalPaginas, conVentana),
   };
 }

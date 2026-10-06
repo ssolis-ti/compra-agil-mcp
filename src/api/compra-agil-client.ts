@@ -541,6 +541,11 @@ export class CompraAgilClient {
     return this.request('/v2/compra-agil', this.paramsDeBusqueda(params), normalizarListado);
   }
 
+  /** Segundos que lleva en caché esta búsqueda, o `undefined` si saldría a la red. */
+  edadBusquedaEnCache(params: BuscarParams): number | undefined {
+    return this.cache.edad(ResponseCache.clave('/v2/compra-agil', this.paramsDeBusqueda(params)));
+  }
+
   busquedaEnCache(params: BuscarParams): boolean {
     return this.cache.vigente(ResponseCache.clave('/v2/compra-agil', this.paramsDeBusqueda(params)));
   }

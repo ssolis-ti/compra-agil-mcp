@@ -28,8 +28,9 @@ que van aparte al final.
 
 ## Defectos confirmados
 
-S1, S2 y S3 ya están corregidos (rama `claude/fase-1-8-s1-s3`); el resto sigue
-en la fase 1.8 del [roadmap](roadmap.md).
+S1–S3 están corregidos en la rama `claude/fase-1-8-s1-s3` y S4–S9 en
+`claude/fase-1-8-s4-s9` (fase 1.8 del [roadmap](roadmap.md)). S10 (textos y
+formato) queda pendiente.
 
 | # | Sev. | Herramienta | Defecto | Evidencia en el código |
 | :--- | :--- | :--- | :--- | :--- |
@@ -78,3 +79,55 @@ Ver «Simulación de uso con agentes» en [README.md](README.md). Los prompts de
 los tres perfiles están en el historial de esta sesión; el de la etapa 3 de
 [validacion-api-real.md](validacion-api-real.md) sirve como base para correrla
 contra la API real con presupuesto de cuota.
+
+---
+
+## Segunda corrida (tras S1–S9)
+
+6 de octubre de 2026, 01:47–01:51 UTC. Mismo entorno y los **mismos tres
+perfiles con el mismo encargo**, sin decirles qué se corrigió (al auditor se
+le avisó de los dos artefactos de la API simulada de la primera corrida y se le
+sumaron dos pedidos para cubrir S5 y S6). Servidor compilado desde
+`claude/fase-1-8-s4-s9`. 45 llamadas, **0 fugas del ticket**.
+
+### Antes y después
+
+| # | Primera corrida | Segunda corrida |
+| :--- | :--- | :--- |
+| S1 | Auditoría opuesta a la evidencia del proceso | ✅ En portátiles marca presupuesto y requisitos desde las cotizaciones propias. ⚠ Caso no cubierto: ver **S1b** abajo |
+| S2 | Borrador $127.113 sobre el presupuesto sin aviso | ✅ «El valor neto ($9.432.758) supera el presupuesto… en $2.758», con máximos $41.541 / $34.909 (la proveedora los recalculó) |
+| S3 | Precios por código impone la región | ✅ No reapareció (el caso se cortó antes por un 504, ver S12) |
+| S4 | Descripción contradice la respuesta | ✅ El analista recalculó y no reportó contradicción; usó «solo admisibles» |
+| S5 | «Presupuesto en rango» sin comparar | ✅ Compara por unidad («16 % sobre el promedio… por unidad»). ⚠ Con n=1 lo llama «promedio» sin advertirlo (S13) |
+| S6 | El PDF de multas quedaba fuera | ✅ Aparece primero. ⚠ El fragmento corta la tasa diaria (S15) |
+| S7 | Región 17 gastaba una consulta | ✅ Rechazo local en 2 ms. Formato del error: ver S17 |
+| S8 | `C:\…\Desktop` creaba una carpeta | ✅ Rechazo con la alternativa `COMPRA_AGIL_INFORMES_DIR` |
+| S9 | Sin procesos fallidos, sin suficiencia, sin frescura | ✅ Fallidos con ficha, suficiencia «baja/media», `_frescura` |
+
+### Nuevos hallazgos, verificados contra el código
+
+| # | Sev. | Herramienta | Hallazgo | Evidencia |
+| :--- | :--- | :--- | :--- | :--- |
+| S1b | 🟠 Media | `auditar_compras_desiertas` | El aviso «cabe en neto pero no con IVA» solo se da si el motivo oficial es presupuesto. Tóner: motivo «requisitos técnicos», 3 de 4 ofertas sobre el presupuesto en neto y las 4 con IVA → `presupuesto_insuficiente: false` y ninguna recomendación de precio | `auditar-desiertas.ts:170` y `:394` |
+| S11 | 🟠 Media | `obtener_detalle_compra` | La descripción dice que las cotizaciones solo aparecen «desde el estado "Cerrada" en segundo llamado»; el detalle de una desierta de primer llamado las trae y el análisis de precios dice lo contrario | `detalle-compra.ts:24` |
+| S12 | 🟠 Media | `analizar_precios_mercado` con código | Si el detalle del proceso de referencia da 504, falla todo el análisis con el texto del 504 y no sugiere reintentar con `q` (podría usar el nombre del listado) | — |
+| S13 | 🟠 Media | `auditar_compras_desiertas`, informe | Con un solo comparable lo llama «promedio» y concluye «en rango» sin advertir n=1; compara presupuesto (¿con IVA?) contra netos | — |
+| S14 | 🟠 Media | `auditar_compras_desiertas` | Busca comparables con el nombre completo del producto («Computadores portátiles para docentes») y solo se encuentra a sí mismo; dice «No hay otro proceso desierto en la muestra» sin sugerir un término más amplio | `auditar-desiertas.ts:263` |
+| S15 | 🟡 Media | `consultar_documentos_locales` | El contexto de una línea antes y otra después corta la tasa diaria de la multa por atraso | `doc-search.ts` |
+| S16 | 🟡 Media | informe `precio` | No muestra suficiencia, cobertura ni las estadísticas «solo admisibles», y su nota remite a ese campo JSON | `reports/templates/precio.ts` |
+| S17 | 🟡 Baja | validación de entradas | Un rechazo de esquema (región 17) llega como `MCP error -32602` con JSON de Zod, no como el «Error de validación» del resto | SDK de MCP |
+| S18 | 🟡 Baja | varias | El error 504 del detalle no trae el enlace a la ficha; el borrador no dice de qué muestra sale su precio; `verificar_orden_compra` devuelve `tiene_orden_compra: false` aunque su nota dice que no prueba nada; `monitorear_cambios_recientes` sugiere `Z` en el ejemplo (un modelo se corre 3 h) | — |
+
+### Tiempos
+
+Con tres usuarios a la vez y la API respondiendo en ~400 ms, 4 de 45 llamadas
+tardaron entre 25 y 45 s: búsqueda 41,5 s, borrador 42,0 s, auditoría 45,4 s e
+informe 25,7 s. Es la espera en el freno propio de 15 consultas/min: la fase
+1.1 sigue siendo la prioridad de rendimiento.
+
+### Conclusión
+
+Los nueve defectos de la primera corrida no se reprodujeron. La segunda
+encontró uno que el arreglo de S1 dejó abierto (S1b) y ocho de severidad media
+o baja que la primera no alcanzó a ver, porque los defectos graves los
+tapaban. Van como fase 1.9 del [roadmap](roadmap.md).
