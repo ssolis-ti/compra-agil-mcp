@@ -113,9 +113,10 @@ Si estás utilizando un asistente o agente de IA en tu editor de código con per
 ---
 
 ### Opción B: 💻 Instalación Manual clásica
-Si prefieres realizar la instalación tú mismo desde la terminal:
+Si prefieres realizar la instalación tú mismo desde la terminal (Node 20.16+ o 22.3+):
 ```bash
-# Entrar al proyecto
+# Descargar el proyecto y entrar en él
+git clone https://github.com/ssolis-ti/compra-agil-mcp.git mcp-compra-agil
 cd mcp-compra-agil
 
 # Instalar dependencias de desarrollo y producción
@@ -128,7 +129,7 @@ npm run build
 ---
 
 ### Opción C: 📦 Ejecución directa vía NPX (Publicación en NPM)
-El servidor está configurado para empaquetarse de manera compacta. Si decides publicarlo en el registro de paquetes de NPM (ej: con `npm publish`), cualquier otra persona podrá ejecutarlo e integrarlo de forma instantánea **sin necesidad de descargar el código fuente ni compilarlo manualmente**:
+El paquete se publica en npm como `@ssolis-ti/mcp-compra-agil`, así que se puede ejecutar **sin descargar el código fuente ni compilarlo**. Comprueba la versión publicada con `npm view @ssolis-ti/mcp-compra-agil version`: si es anterior a la del repositorio, usa la Opción B para tener las últimas correcciones.
 
 1. **Configuración directa en el cliente MCP:**
    Se puede configurar el comando de inicio usando `npx`:

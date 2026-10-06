@@ -1,7 +1,8 @@
 # QA y plan de trabajo — punto de retome
 
-Estado del proyecto después de la auditoría QA de la 2.6.1 (octubre 2026) y
-de su Sprint 0. Empieza aquí para retomar el trabajo en una sesión local.
+Estado del proyecto después de la auditoría QA de la 2.6.1, su Sprint 0 y la
+versión 2.7.0 (octubre 2026). Empieza aquí para retomar el trabajo en una
+sesión local.
 
 ## Dónde quedamos
 
@@ -9,35 +10,36 @@ de su Sprint 0. Empieza aquí para retomar el trabajo en una sesión local.
 | :--- | :--- |
 | Auditoría QA de la 2.6.1 | ✅ Hecha — [auditoria-2.6.1.md](auditoria-2.6.1.md) |
 | Sprint 0 (bloqueantes para producción) | ✅ Hecho — [sprint-0.md](sprint-0.md) |
-| PR [#8](https://github.com/ssolis-ti/compra-agil-mcp/pull/8) (rama `claude/great-bardeen-784fao`) | 🟡 Abierto, CI en verde, **sin fusionar** |
-| Validación contra la API real | 🟡 Etapa 1 hecha — [resultado-api-real.md](resultado-api-real.md); falta la etapa 2 |
+| PR #8 a #13 | ✅ Fusionados en `main` (6-oct) |
+| Validación contra la API real | 🟡 Etapa 1 hecha — [resultado-api-real.md](resultado-api-real.md); la de la 2.7.0 va en la rama `qa/validacion-2.7.0`, y la comprobación UTC/hora de Chile con `1499-607-COT26` el 6-oct a las 18:00 |
 | Simulación de uso con 3 agentes (API simulada) | ✅ Dos corridas — [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md): la primera halló S1–S9 (corregidos en los PR #9 y #10); la segunda no los reprodujo y halló S1b y S11–S18 (fase 1.9) |
-| Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #12 y el de la 2.7.0 |
-| Versión 2.7.0 | 🟡 PR preparado (`claude/release-2.7.0`): falta fusionar, validar contra la API real y `npm publish` |
+| Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #13 |
+| Versión 2.7.0 | 🟡 En `main`; **sin publicar en npm** (npm sigue en la 2.5.0). Falta la validación real y el tag `v2.7.0` |
+| Publicación automática en npm | 🟡 PR [#14](https://github.com/ssolis-ti/compra-agil-mcp/pull/14): `publicar.yml` publica al empujar un tag `v*`; requiere el secreto `NPM_TOKEN` |
 | Resto del Sprint 1, fase 1.9 y Sprint 2 | ⏳ Pendientes — [roadmap.md](roadmap.md) |
 
-El Sprint 0 se probó contra una API **simulada** con fallas inyectadas: el
-entorno en la nube donde se hizo no tenía acceso a `mercadopublico.cl` ni el
-ticket. Por eso lo primero en local es validar contra la API real.
+Todo lo de la 2.7.0 se probó contra una API **simulada** con fallas
+inyectadas: el entorno en la nube donde se hizo no tenía acceso a
+`mercadopublico.cl` ni el ticket. Por eso lo primero en local es validar contra
+la API real antes de publicar.
 
 ## Cómo retomar en local (Windows)
 
 ```powershell
 cd C:\Users\P0zcl\Desktop\proyectos\mcp-compra-agil
 git fetch origin
-git checkout claude/great-bardeen-784fao
+git checkout main
 git pull
 npm ci
 npm run build
-npm test            # 397 tests, todos deben pasar
+npm test            # todos deben pasar (458 en la 2.7.0)
 ```
 
 Después, en este orden:
 
-1. **Validar contra la API real** → [validacion-api-real.md](validacion-api-real.md). Si algo sale mal, se corrige en la misma rama antes de fusionar.
-2. **Fusionar el PR #8** desde GitHub.
-3. **Publicar la versión** (2.7.0 — ver la fase 0 del [roadmap](roadmap.md)).
-4. **Sprint 1** → [roadmap.md](roadmap.md), fase por fase.
+1. **Validar contra la API real** → [validacion-api-real.md](validacion-api-real.md). Si algo sale mal, se corrige en un PR antes de publicar.
+2. **Publicar la 2.7.0** → fase 0 del [roadmap](roadmap.md) y la sección 6 de `CONTRIBUTING.md`.
+3. **Sprint 1** → [roadmap.md](roadmap.md), fase por fase (quedan 1.2–1.7 y la 1.9).
 
 ## Banco de pruebas sin ticket
 
