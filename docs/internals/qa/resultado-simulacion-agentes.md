@@ -28,8 +28,9 @@ que van aparte al final.
 
 ## Defectos confirmados
 
-S1, S2 y S3 ya están corregidos (rama `claude/fase-1-8-s1-s3`); el resto sigue
-en la fase 1.8 del [roadmap](roadmap.md).
+S1–S3 están corregidos en la rama `claude/fase-1-8-s1-s3` y S4–S9 en
+`claude/fase-1-8-s4-s9` (fase 1.8 del [roadmap](roadmap.md)). S10 (textos y
+formato) queda pendiente.
 
 | # | Sev. | Herramienta | Defecto | Evidencia en el código |
 | :--- | :--- | :--- | :--- | :--- |
