@@ -28,6 +28,20 @@ const VACIAS = new Set([
   'algún', 'alguna', 'todo', 'toda', 'todos', 'todas', 'otro', 'otra',
 ]);
 
+/**
+ * Términos que aparecen en todos los documentos de este corpus: todos tratan
+ * de Compra Ágil en Mercado Público. No distinguen un archivo de otro.
+ *
+ * ⚠ En la simulación con agentes (6-oct), «¿qué multas me pueden aplicar…
+ *   en una compra ágil?» puso primero los manuales de la API y dejó fuera el
+ *   PDF de multas: «compra» y «agil» sumaban puntaje a cualquier archivo.
+ *   Se ignoran salvo que la consulta no tenga ningún otro término.
+ */
+const DEL_DOMINIO = new Set([
+  'compra', 'compras', 'agil', 'agiles', 'mercado', 'publico', 'publica',
+  'publicas', 'publicos', 'chilecompra',
+]);
+
 /** Minúsculas y sin acentos, para que "sanción" y "sancion" se encuentren. */
 export function normalizar(texto: string): string {
   return texto
@@ -38,7 +52,7 @@ export function normalizar(texto: string): string {
 
 /**
  * Descompone la consulta en términos buscables: normalizados, sin palabras
- * vacías y de al menos 3 caracteres.
+ * vacías ni términos del dominio (ver DEL_DOMINIO) y de al menos 3 caracteres.
  *
  * Si al filtrar no queda ningún término (consulta hecha solo de palabras
  * vacías, ej. "qué es esto"), se devuelven todos los de 3+ caracteres antes
@@ -49,8 +63,9 @@ export function tokenizar(query: string): string[] {
     .split(/[^a-z0-9ñ]+/)
     .filter((t) => t.length >= 3);
 
-  const utiles = crudos.filter((t) => !VACIAS.has(t));
-  const elegidos = utiles.length > 0 ? utiles : crudos;
+  const sinVacias = crudos.filter((t) => !VACIAS.has(t));
+  const distintivos = sinVacias.filter((t) => !DEL_DOMINIO.has(t));
+  const elegidos = distintivos.length > 0 ? distintivos : sinVacias.length > 0 ? sinVacias : crudos;
   return [...new Set(elegidos)];
 }
 
