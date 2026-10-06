@@ -1,0 +1,86 @@
+# Roadmap — sprints pendientes
+
+Cada fase se cierra con: test de regresión (comprobado con mutación),
+`npx tsc --noEmit`, `npm test` verde, entrada en `CHANGELOG.md` bajo
+`[Unreleased]` y un commit propio. Las fases van en orden: cada una se apoya
+en la anterior.
+
+Referencias a hallazgos: [auditoria-2.6.1.md](auditoria-2.6.1.md).
+
+---
+
+## Fase 0 — Cerrar el Sprint 0 (antes de todo)
+
+1. **Validar contra la API real** → [validacion-api-real.md](validacion-api-real.md). Si aparece un problema, se corrige en la rama del PR #8.
+2. **Fusionar el PR #8.**
+3. **Publicar 2.7.0:** mover `[Unreleased]` del CHANGELOG a `[2.7.0]`, subir `version` en `package.json`, `npm publish` (corre build y tests por `prepublishOnly`). Es minor y no patch por el cambio de comportamiento de `ruta_salida`.
+
+---
+
+## Sprint 1 — Rendimiento y calidad (~1 semana)
+
+### Fase 1.1 — Presupuesto de tiempo por herramienta 🟠
+**Problema medido:** el freno propio de 15 consultas/min (`src/utils/rate-limiter.ts`, `throttle()`) retiene una consulta hasta ~60 s. En la batería de `scripts/qa/` la consulta ~20 del minuto esperó **57 s** antes de salir, y una herramienta con `limite_analisis` alto excede los 60 s del cliente MCP sin entregar nada. Además, las esperas despiertan todas a la vez sin volver a mirar el límite y salen en ráfaga.
+
+**Hacer:**
+- Un presupuesto por llamada de herramienta (p. ej. 45 s) que el cliente consulte antes de esperar en el freno: si la espera no cabe, no se envía la consulta y la herramienta responde con lo que tenga.
+- Las herramientas de análisis (`analizar_precios_mercado`, `auditar_compras_desiertas`, `generar_borrador_cotizacion`, `generar_informe`) devuelven resultados **parciales** con un aviso de cobertura, como ya hacen ante detalles fallidos.
+- `throttle()`: cola FIFO; cada despertar vuelve a comprobar el límite.
+- `LimitadorConcurrencia`: contar las consultas en vuelo de forma global, no por tanda (hoy dos herramientas simultáneas suman 2× el límite), y `ultimoHttpVisto` por tanda.
+
+**Aceptación:** ninguna herramienta pasa de 50 s con la API simulada aunque el freno esté lleno; test de que 30 esperas simultáneas nunca superan 15 envíos por ventana.
+
+### Fase 1.2 — Escritura de la caché 🟡
+**Problema:** `ResponseCache.persistir()` reescribe el JSON entero (hasta 500 entradas, varios MB) con `writeFileSync` en cada respuesta, y no es atómico.
+
+**Hacer:** escritura diferida (debounce ~1 s) y atómica (archivo temporal + `rename`); vaciar al cerrar el proceso. Igual para `.rate-limit-state.json` si aplica (ya usa lock).
+
+**Aceptación:** 20 detalles en paralelo → 1–2 escrituras, no 20; un proceso cortado a mitad de escritura no deja la caché ilegible.
+
+### Fase 1.3 — Caché del texto de los PDF 🟡
+**Problema:** `consultar_documentos_locales` vuelve a extraer el texto de los 7 PDF en cada consulta (0,8–1 s).
+
+**Hacer:** memorizar el texto por archivo, invalidado por `mtime` y tamaño.
+
+**Aceptación:** la segunda consulta tarda < 100 ms.
+
+### Fase 1.4 — Tipos honestos 🟡
+**Problema:** las interfaces de `src/api/compra-agil-client.ts` declaran como `number`/`string` campos que la API puede omitir. La normalización del Sprint 0 evita los crashes, pero el compilador no avisa de un acceso inseguro nuevo (así apareció el `undefined < MIN_BUDGET` del daemon).
+
+**Hacer:** derivar los tipos del esquema de `src/api/normalizar.ts` (`z.infer`) o marcar las hojas como opcionales/nulas, y corregir lo que `tsc` señale.
+
+**Aceptación:** `tsc` en verde sin `as any` nuevos.
+
+### Fase 1.5 — Linter y dependencias de desarrollo 🟡
+- ESLint con `typescript-eslint` (reglas recomendadas + `no-floating-promises`), paso en la CI.
+- `vitest` 3 → 5 (cierra las 2 vulnerabilidades moderadas restantes).
+- `src/index.ts`: derivar los nombres de herramientas registradas en vez de la lista mantenida a mano.
+
+### Fase 1.6 — Cobertura de las herramientas 🟡
+Hoy (aprox.): `documentos.ts` 5 %, `generar-informe.ts`, `detalle-oc.ts`, `verificar-hora.ts`, `verificar-ticket.ts`, `monitor.ts` e `index.ts` 0 %.
+
+**Hacer:** tests de handler con el arnés `servidorFalso()` de `test/normalizar.test.ts`; el daemon con la API simulada. Agregar `@vitest/coverage-v8` y un umbral en la CI.
+
+**Aceptación:** herramientas ≥ 80 % de líneas; umbral global ≥ 75 % en la CI.
+
+### Fase 1.7 — Daemon de monitoreo 🟡
+- `.monitor-state.json` crece sin límite: guardar el código con su fecha y podar los de más de 30 días.
+
+---
+
+## Sprint 2 — Operación
+
+### Fase 2.1 — Prueba diaria contra la API real
+Workflow programado (`schedule`) con un ticket de pruebas en los secrets del repositorio, que corra `scripts/qa/escenarios-reales.mjs` con un presupuesto pequeño. Detecta a tiempo que la API cambió de forma (lo que la fase 2 del Sprint 0 rechazaría como «forma inesperada»).
+
+### Fase 2.2 — Métricas por herramienta
+Latencia, aciertos de caché, 429/504 y timeouts por herramienta, expuestos en `obtener_estadisticas_uso`. Con eso se calibra el timeout y el presupuesto de tiempo con datos y no con supuestos.
+
+### Fase 2.3 — Documentación que viaja con el paquete
+`docs/` no está en `files` de `package.json`: quien instala con `npx` no tiene las guías. Opciones: incluir `docs/api` y `docs/guias` (~15 MB de PDF) o descargarlas al primer uso.
+
+### Fase 2.4 — Decisiones como ADRs
+Recuperar `decisiones.md` y `PENDIENTES.md` (borrados en `6be7402`) y convertirlos en `docs/adr/NNNN-titulo.md`, junto con las decisiones del Sprint 0 ([sprint-0.md](sprint-0.md)). Si se usó spec-kit en local, subir `specs/` para auditar contra criterios de aceptación.
+
+### Fase 2.5 — Contraste con el grafo de graphify
+Regenerar `graphify-out/` sobre la rama actual y revisar dependencias entre módulos: que `tools/` no dependa de otra herramienta, que `api/` no importe de `tools/`, y ciclos.
