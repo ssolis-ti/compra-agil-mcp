@@ -9,7 +9,8 @@
 
 import { logger } from '../utils/logger.js';
 import { handleApiResponse, CompraAgilApiError } from '../utils/error-handler.js';
-import { RateLimiter, RUTA_ESTADO_POR_DEFECTO } from '../utils/rate-limiter.js';
+import { RateLimiter, rutaEstadoPorDefecto } from '../utils/rate-limiter.js';
+import { rutaDeDatos } from '../utils/rutas.js';
 import { ResponseCache } from '../utils/cache.js';
 import { LimitadorConcurrencia } from '../utils/concurrencia.js';
 import path from 'path';
@@ -239,7 +240,9 @@ export interface CompraAgilDetalle {
 // ─── Cliente ────────────────────────────────────────────────────────
 
 /** Archivo donde se reutilizan respuestas entre reinicios del servidor. */
-export const RUTA_CACHE_POR_DEFECTO = path.resolve(process.cwd(), '.api-cache.json');
+export function rutaCachePorDefecto(): string {
+  return rutaDeDatos('.api-cache.json');
+}
 
 /**
  * Vigencia por tipo de consulta, en segundos.
@@ -325,8 +328,8 @@ export class CompraAgilClient {
     const persistir = opciones.persistir === true;
     // Con persistencia: la cuota es del ticket y del día, no del proceso, así
     // que reiniciar el servidor no debe borrar la memoria de un 429.
-    this.rateLimiter = new RateLimiter(15, persistir ? RUTA_ESTADO_POR_DEFECTO : null);
-    this.cache = new ResponseCache({ rutaEstado: persistir ? RUTA_CACHE_POR_DEFECTO : null });
+    this.rateLimiter = new RateLimiter(15, persistir ? rutaEstadoPorDefecto() : null);
+    this.cache = new ResponseCache({ rutaEstado: persistir ? rutaCachePorDefecto() : null });
     this.concurrencia = new LimitadorConcurrencia({ maximo: 5 });
     this.timeoutMs = opciones.timeoutMs ?? timeoutDesdeEntorno();
     // El cliente se auto-protege: cualquier consumidor (servidor MCP, daemon,

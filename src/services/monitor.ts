@@ -8,6 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { loadEnvManual } from '../utils/env-loader.js';
+import { rutaDeDatos } from '../utils/rutas.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { safeError, registrarSecreto } from '../utils/redact.js';
 import { enHoraDeChile } from '../utils/fechas.js';
@@ -33,8 +34,8 @@ const MIN_BUDGET = parseFloat(process.env.MONITOR_MIN_BUDGET_CLP || '5000000');
 const KEYWORDS_RAW = process.env.MONITOR_KEYWORDS || 'software, desarrollo, licencias, plataforma, sistema';
 const KEYWORDS = KEYWORDS_RAW.split(',').map(kw => kw.trim().toLowerCase()).filter(Boolean);
 
-const ALERTS_LOG_PATH = path.resolve(process.cwd(), 'alerts.log');
-const STATE_PATH = path.resolve(process.cwd(), '.monitor-state.json');
+const ALERTS_LOG_PATH = rutaDeDatos('alerts.log');
+const STATE_PATH = rutaDeDatos('.monitor-state.json');
 
 // ─── Deduplicación de alertas ──────────────────────────────────────────
 // Evita re-alertar el mismo proceso en ciclos consecutivos. Se persiste en disco
