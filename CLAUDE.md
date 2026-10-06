@@ -3,12 +3,17 @@
 Servidor MCP (TypeScript, stdio) para la API Compra Ágil v2 de Mercado Público
 de Chile. Código y documentación en español.
 
+**Si solo vas a instalar o usar el servidor**, sigue la sección «Instalación»
+del [README](README.md) y no necesitas nada más de este archivo: lo que sigue
+es para desarrollar el servidor. `docs/internals/` y `scripts/qa/` son
+herramientas de ingeniería, no hacen falta para usarlo.
+
 ## Retomar el trabajo
 
 El estado del proyecto, lo hecho y lo pendiente está en
 [`docs/internals/qa/README.md`](docs/internals/qa/README.md). Léelo antes de
-proponer cambios: el siguiente paso es la validación contra la API real y
-luego el Sprint 1 de [`docs/internals/qa/roadmap.md`](docs/internals/qa/roadmap.md).
+proponer cambios: la 2.7.0 ya está validada contra la API real; lo siguiente
+es publicarla y luego el Sprint 1 de [`docs/internals/qa/roadmap.md`](docs/internals/qa/roadmap.md).
 
 ## Comandos
 
