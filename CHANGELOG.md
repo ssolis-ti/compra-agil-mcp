@@ -23,6 +23,9 @@ Auditoría QA de la 2.6.1, dos simulaciones de uso con agentes y la validación 
 ### Corregido — paquete de npm
 * **El paquete no traía las guías ni los manuales.** `files` de `package.json` solo incluía `dist/`, así que con `npx` o `npm install -g` la carpeta `docs/` no existía: `consultar_documentos_locales` y el recurso `compra-agil://documentacion/…` quedaban vacíos sin decir por qué. Ahora se publican `docs/api/` y `docs/guias/`; `docs/internals/` (notas de ingeniería) sigue fuera. Lo detectó la revisión del contenido del paquete antes de publicar; `test/paquete.test.ts` lo comprueba con `npm pack --dry-run`.
 
+### Seguridad — dependencias de desarrollo
+* **vitest 3.2 → 4.1.11.** `npm audit` marcaba 3 vulnerabilidades (2 críticas en `tinypool`, de ejecución de código por contaminación de prototipos, y 1 moderada en `@vitest/mocker`, de lectura de archivos). Solo afectaban a quien corre los tests: el paquete publicado no las incluye, y `npm audit --omit=dev` ya daba 0. Se eligió la 4.1.11 y no la 5, que exige Node 22.12 y dejaría fuera a Node 20, todavía soportado. El árbol de producción no cambia.
+
 ### Añadido — publicación
 * **Publicación automática en npm** (`.github/workflows/publicar.yml`): al empujar un tag `vX.Y.Z`, comprueba que exista el secret `NPM_TOKEN`, que el tag coincida con `package.json`, que esa versión no esté publicada y que el CHANGELOG tenga su sección; publica (con build y tests por `prepublishOnly`, y procedencia firmada si el repositorio es público) y crea la release de GitHub con esa sección como notas.
 
