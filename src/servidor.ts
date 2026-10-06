@@ -16,6 +16,7 @@ import { logger } from './utils/logger.js';
 import { instalarFormatoDeErrores } from './utils/validacion.js';
 import { anotarRegistros, type Registrados } from './utils/registro.js';
 import { instalarPresupuesto } from './utils/presupuesto.js';
+import { instalarMetricas } from './utils/metricas.js';
 import { INSTRUCCIONES } from './instrucciones.js';
 
 // Tools
@@ -74,6 +75,9 @@ export function crearServidor(client: CompraAgilClient, version: string): { serv
 
   // Los nombres del log de arranque se anotan al registrar, no a mano (ítem 34).
   const registrados = anotarRegistros(server);
+
+  // Latencia, llamadas y errores por herramienta (fase 2.2).
+  instalarMetricas(server);
 
   // Herramientas. Cada llamada corre con un presupuesto de tiempo bajo el
   // corte del cliente MCP (ver utils/presupuesto.ts).

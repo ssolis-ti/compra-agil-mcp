@@ -7,10 +7,12 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { resumenMetricas } from '../utils/metricas.js';
 
 const TOOL_NAME = 'obtener_estadisticas_uso';
 const TOOL_DESCRIPTION = `Informa cuántas consultas a la API lleva hecha esta instalación en el día UTC en curso, y si ya se recibió un 429 por cuota agotada.
-IMPORTANTE: es un conteo LOCAL, no el saldo oficial del ticket. La API no publica cuánta cuota queda, y el ticket puede estar siendo consumido también por otras herramientas o equipos. Sirve para moderar el gasto, no para afirmar cuántas consultas quedan.`;
+IMPORTANTE: es un conteo LOCAL, no el saldo oficial del ticket. La API no publica cuánta cuota queda, y el ticket puede estar siendo consumido también por otras herramientas o equipos. Sirve para moderar el gasto, no para afirmar cuántas consultas quedan.
+También informa, desde que arrancó este proceso, la latencia y los errores de cada herramienta y el resultado de las consultas a la API (caché, 504, 429, timeouts): úsalo para saber si la API está lenta o caída antes de lanzar un análisis largo.`;
 
 export function cuerpoEstadisticas(stats: { requestsToday: number; isLimited: boolean; resetTime: string | null }): Record<string, unknown> {
   return {
@@ -39,7 +41,7 @@ export function registerEstadisticasUso(server: McpServer, client: CompraAgilCli
     },
     async () => {
       const stats = client.getRateLimitStats();
-      const salida = cuerpoEstadisticas(stats);
+      const salida = { ...cuerpoEstadisticas(stats), metricas: resumenMetricas() };
       return {
         content: [{
           type: 'text' as const,

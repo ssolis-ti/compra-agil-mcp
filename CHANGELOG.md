@@ -66,6 +66,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **Los recursos se verifican contra lo que hacen las herramientas (ítem 36)**: 16 regiones, la limitación de `proveedor_seleccionado` y `oc_emitida`, el token bucket, y ningún resto del «máx. 50» ni de la cuota por día calendario.
 * **Los nombres registrados se derivan del servidor (ítem 34)**, y una prueba compara las tablas de herramientas del README y del manual con `tools/list`: falla si se agrega o renombra una herramienta sin documentarla.
 
+### Añadido — métricas de uso
+* **`obtener_estadisticas_uso` informa métricas medidas dentro del servidor (fase 2.2):** por herramienta, llamadas, errores y latencia (media, mediana, p95 y máxima); por consulta a la API, cuántas salieron, cuántas se sirvieron desde la caché, cuántas se omitieron por el presupuesto de tiempo y el desglose por resultado (200, 504, 429, timeout, error de red). Sirven para saber si la API está lenta antes de lanzar un análisis largo, y para calibrar el timeout con datos: en el enjambre del 6-oct las latencias solo se pudieron medir desde fuera. Son del proceso actual y no guardan parámetros ni respuestas.
+
 ### Rendimiento
 * **La caché escribe a disco una vez por ráfaga, y de forma atómica (fase 1.2).** Antes cada respuesta reescribía el JSON entero —hasta 500 entradas— con una escritura síncrona: una tanda de 20 detalles eran 20 escrituras que bloqueaban el proceso. Ahora se agrupan en una sola, ~1 s después de la última respuesta, a un archivo temporal que luego se renombra: un corte a mitad deja el archivo anterior completo. Lo pendiente se escribe al cerrar el proceso.
 * **El texto de los PDF locales se memoriza (fase 1.3).** `consultar_documentos_locales` y el recurso de documentación extraían los 7 PDF en cada consulta (0,8–1 s); ahora la segunda lectura tarda menos de 100 ms, y un archivo se relee si cambia su fecha o su tamaño.

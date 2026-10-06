@@ -17,6 +17,7 @@ import { registrarSecreto } from '../utils/redact.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
 import { contextoActual, tiempoRestante } from '../utils/presupuesto.js';
 import { normalizarDetalle, normalizarListado, normalizarOrdenCompra, RespuestaInvalidaError } from './normalizar.js';
+import { registrarAciertoCache, registrarConsultaApi, registrarOmitidaPorTiempo } from '../utils/metricas.js';
 
 // ─── Tipos ──────────────────────────────────────────────────────────
 
@@ -363,6 +364,7 @@ export class CompraAgilClient {
       try {
         const valor = normalizar(enCache);
         logger.debug(`Caché: acierto para ${claveCache}`);
+        registrarAciertoCache();
         return valor;
       } catch {
         // Una entrada vieja que ya no tiene la forma esperada se ignora.
@@ -406,6 +408,7 @@ export class CompraAgilClient {
     if (restante !== undefined) {
       const espera = this.rateLimiter.esperaPrevista();
       if (espera + MINIMO_UTIL_MS > restante) {
+        registrarOmitidaPorTiempo();
         throw new CompraAgilApiError(0, [], consulta, {
           causa: 'tiempo_agotado', esperaMs: espera, presupuestoMs: contextoActual()?.presupuestoMs,
         });
@@ -417,7 +420,17 @@ export class CompraAgilClient {
 
     logger.debug(`API Request: GET ${sanitizedUrl.toString()}`);
 
-    const response = await this.enviar(url.toString(), consulta);
+    let response: Response;
+    try {
+      response = await this.enviar(url.toString(), consulta);
+    } catch (error) {
+      // Métricas (fase 2.2): una consulta que no tuvo respuesta también cuenta.
+      if (error instanceof CompraAgilApiError && (error.causa === 'timeout' || error.causa === 'red')) {
+        registrarConsultaApi(error.causa);
+      }
+      throw error;
+    }
+    registrarConsultaApi(response.status);
 
     if (response.status === 429) {
       // La guía (§7) indica esperar lo que diga Retry-After; si no viene, el

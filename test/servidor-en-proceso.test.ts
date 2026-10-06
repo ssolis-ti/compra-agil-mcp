@@ -243,6 +243,17 @@ describe('servidor en proceso — recursos y prompts', () => {
     expect(compra.contents[0]?.text).toMatch(/cierre_hora_chile/);
   });
 
+  it('obtener_estadisticas_uso refleja las llamadas de esta sesión (fase 2.2)', async () => {
+    const { t } = await llamar('obtener_estadisticas_uso');
+    const { metricas } = JSON.parse(t);
+    expect(metricas.herramientas.obtener_detalle_compra.llamadas).toBeGreaterThanOrEqual(1);
+    expect(metricas.herramientas.obtener_detalle_compra.latencia_ms.maxima).toBeGreaterThanOrEqual(0);
+    expect(metricas.consultas_api.enviadas).toBeGreaterThan(0);
+    // verificar_orden_compra y los informes reutilizaron el detalle: hubo aciertos de caché.
+    expect(metricas.consultas_api.desde_cache).toBeGreaterThan(0);
+    expect(metricas.consultas_api.por_resultado['200']).toBeGreaterThan(0);
+  });
+
   it('entrega los dos prompts', async () => {
     const a = await cliente.getPrompt({ name: 'buscar_oportunidades_proveedor', arguments: { rubro: 'aseo', region: '13' } });
     const b = await cliente.getPrompt({ name: 'analizar_competencia', arguments: { codigo: '1-1-COT26' } });
