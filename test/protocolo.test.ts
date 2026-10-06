@@ -35,6 +35,8 @@ beforeAll(async () => {
       ...process.env as Record<string, string>,
       COMPRA_AGIL_TICKET: TICKET,
       COMPRA_AGIL_BASE_URL: 'http://127.0.0.1:9',
+      // Desde la fase 1.0 la caché va a la carpeta de datos, no al cwd.
+      COMPRA_AGIL_DATA_DIR: cwd,
       LOG_LEVEL: 'debug',
     },
     stderr: 'pipe',

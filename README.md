@@ -68,7 +68,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 
 ## ⚡ Características Clave
 * **Modernizado para SDK v1.12+:** Carga declarativa y robusta de herramientas, recursos y prompts bajo los nuevos estándares del protocolo.
-* **Carga de Entorno Autónoma:** El servidor detecta y carga de forma automática y manual el archivo `.env` del directorio de trabajo al iniciarse, facilitando la conexión en clientes MCP de escritorio sin necesidad de configurar variables de sistema globales.
+* **Carga de Entorno Autónoma:** El servidor carga al iniciarse el `.env` del directorio de trabajo, de la carpeta del proyecto y de su carpeta de datos, así que funciona aunque el cliente MCP lo lance desde otra carpeta, sin variables de sistema globales ni el ticket en la config del cliente.
 * **Lector de Documentación Integrado (Recursos):** Exposición nativa de guías, normativas y manuales en PDF (dentro de la carpeta `docs/`) como recursos del protocolo MCP (`compra-agil://documentacion/{filename}`). El servidor extrae el texto del PDF de manera local y lo inyecta en el LLM bajo demanda. ⚠ **Solo si clonas este repositorio** — ver [nota sobre la instalación por npm](#-la-documentación-no-viaja-en-el-paquete-de-npm).
 * **Filtrado Inteligente Anti-Ruido:** Filtros locales en la herramienta `buscar_compras_agiles` (`palabras_clave_requeridas` y `palabras_clave_excluidas`) para afinar búsquedas amplias de la API y remover ofertas irrelevantes.
 * **Paginación Inteligente y Monitoreo Completo:** La herramienta de cambios recientes admite navegación de páginas (`numero_pagina`), y el demonio de monitoreo periódico procesa de forma recursiva todas las páginas de resultados (`client.buscarTodo()`) para evitar pérdidas de alertas.
@@ -166,7 +166,11 @@ COMPRA_AGIL_BASE_URL=https://api2.mercadopublico.cl
 # Tiempo máximo de cada llamada a una herramienta en ms (por defecto 45000)
 # COMPRA_AGIL_PRESUPUESTO_MS=45000
 
-# Carpeta raíz de los informes (por defecto ./informes). ruta_salida no sale de ella.
+# Carpeta de datos: caché, estado de cuota, daemon e informes. Por defecto, la
+# carpeta del proyecto (clon) o una del usuario (npx). No depende del cwd.
+# COMPRA_AGIL_DATA_DIR=C:/Users/tu-usuario/AppData/Local/mcp-compra-agil
+
+# Carpeta raíz de los informes (por defecto <carpeta de datos>/informes). ruta_salida no sale de ella.
 # COMPRA_AGIL_INFORMES_DIR=C:/Users/tu-usuario/Documents/informes-compra-agil
 
 # Nivel de log: debug | info | warn | error
@@ -224,7 +228,12 @@ npm run inspect
 
 ## 🔌 Integración con Clientes MCP y Agentes
 
-Este servidor se comunica de manera estándar mediante Stdio. Al conectar, el `initialize` entrega unas instrucciones de uso: no mostrar el ticket, no declarar un ganador, no descargar adjuntos por la API y no insistir ante un 429. El ticket se toma de la variable de entorno `COMPRA_AGIL_TICKET`. Los ejemplos de abajo usan un texto de relleno. En una instalación real la config debe referenciar la variable, no pegar el valor.
+Este servidor se comunica de manera estándar mediante Stdio. Al conectar, el `initialize` entrega unas instrucciones de uso: no mostrar el ticket, no declarar un ganador, no descargar adjuntos por la API y no insistir ante un 429.
+
+**Dónde busca el ticket y dónde guarda sus archivos.** Un cliente MCP lanza el servidor desde su propia carpeta, no desde la del proyecto, así que el servidor no depende de ella:
+
+* **`.env`**: lo busca en la carpeta de trabajo, en la carpeta del proyecto (junto a `dist/`) y en la carpeta de datos, en ese orden. Una variable ya definida en el entorno gana. Con el ticket en el `.env` del proyecto, **la config del cliente no necesita el ticket**.
+* **Carpeta de datos** (caché `.api-cache.json`, estado de cuota `.rate-limit-state.json`, estado y alertas del daemon, `informes/`): `COMPRA_AGIL_DATA_DIR` si está definida; si no, la carpeta del proyecto cuando es un clon del repositorio; si no (instalación con `npx` o `npm -g`), `%LOCALAPPDATA%\mcp-compra-agil` en Windows o `~/.local/state/mcp-compra-agil` en el resto. `COMPRA_AGIL_INFORMES_DIR` sigue mandando para los informes.
 
 ### 1. Grok
 
@@ -250,20 +259,20 @@ Añade el servidor a tu archivo de configuración global editando `%APPDATA%\Cla
   "mcpServers": {
     "compra-agil": {
       "command": "node",
-      "args": ["C:\\ruta\\completa\\mcp-compra-agil\\dist\\index.js"],
-      "env": {
-        "COMPRA_AGIL_TICKET": "tu_ticket_de_chilecompra_aqui"
-      }
+      "args": ["C:\\ruta\\completa\\mcp-compra-agil\\dist\\index.js"]
     }
   }
 }
 ```
 
+El ticket se lee del `.env` de la carpeta del proyecto: no hace falta escribirlo en esta config ni lanzar el servidor con `cmd /c cd /d …`. Si instalaste con `npx`, deja el `.env` en la carpeta de datos (`%LOCALAPPDATA%\mcp-compra-agil\.env`) o define `COMPRA_AGIL_DATA_DIR` en el bloque `env`.
+
 ### 3. Claude Code (`claudecode`)
 Para registrar el servidor de forma global en Claude Code (el agente CLI de Anthropic), ejecuta el siguiente comando en tu terminal **antes** de iniciar tu sesión de `claude`:
 ```bash
-claude mcp add compra-agil --env COMPRA_AGIL_TICKET=tu_ticket_de_chilecompra_aqui -- node C:\ruta\completa\mcp-compra-agil\dist\index.js
+claude mcp add compra-agil -- node C:\ruta\completa\mcp-compra-agil\dist\index.js
 ```
+*El ticket se toma del `.env` de la carpeta del proyecto. No lo pases en `--env`: quedaría en el historial de la terminal.*
 *Nota: Si estás en un proyecto local, puedes usar rutas relativas o el comando local.*
 Para comprobar que se cargó con éxito, inicia una sesión de `claude` y escribe el comando `/mcp` o ejecuta `claude mcp list` en tu terminal.
 
@@ -475,7 +484,7 @@ Por eso este servidor **no bloquea hasta el día siguiente**: honra `Retry-After
 
 Abre el archivo en tu navegador y usa **Ctrl+P** para exportarlo a PDF, seleccionando el papel correspondiente en el diálogo de impresión.
 
-Los informes se guardan en `informes/` del directorio de trabajo, o en la carpeta que fije `COMPRA_AGIL_INFORMES_DIR`. `ruta_salida` solo acepta una subcarpeta dentro de ella (ej: `radar/octubre`): el modelo elige ese valor después de leer textos de terceros, así que no puede escribir en otra parte del disco.
+Los informes se guardan en `informes/` de la carpeta de datos (ver más abajo), o en la carpeta que fije `COMPRA_AGIL_INFORMES_DIR`. `ruta_salida` solo acepta una subcarpeta dentro de ella (ej: `radar/octubre`): el modelo elige ese valor después de leer textos de terceros, así que no puede escribir en otra parte del disco.
 
 | Tipo | Qué imprime |
 | :--- | :--- |

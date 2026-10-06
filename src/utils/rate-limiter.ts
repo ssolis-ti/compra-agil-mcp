@@ -10,9 +10,12 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from './logger.js';
+import { rutaDeDatos } from './rutas.js';
 
 /** Archivo donde el servidor recuerda la cuota entre reinicios. */
-export const RUTA_ESTADO_POR_DEFECTO = path.resolve(process.cwd(), '.rate-limit-state.json');
+export function rutaEstadoPorDefecto(): string {
+  return rutaDeDatos('.rate-limit-state.json');
+}
 
 interface EstadoPersistido {
   day: string;

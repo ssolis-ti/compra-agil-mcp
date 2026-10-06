@@ -63,7 +63,7 @@ const inputSchema = {
   plazo_entrega_dias: z.number().optional().describe('Solo "cotizacion". Plazo de entrega en días. Si se omite, se usa el del comprador o 5.'),
   descripcion_propuesta: z.string().optional().describe('Solo "cotizacion". Mensaje comercial que entra en la carta.'),
   limite_analisis: z.number().min(1).max(15).optional().describe('Procesos históricos a revisar. En "precio", 1-15 (default 5). En "auditoria", 1-8 (default 3).'),
-  ruta_salida: z.string().optional().describe('Subcarpeta dentro de la carpeta de informes (ej: "radar/octubre"). Si se omite, se usa la carpeta de informes: "informes/" del directorio de trabajo, o la que fije COMPRA_AGIL_INFORMES_DIR. No acepta carpetas fuera de ella.'),
+  ruta_salida: z.string().optional().describe('Subcarpeta dentro de la carpeta de informes (ej: "radar/octubre"). Si se omite, se usa la carpeta de informes: "informes/" de la carpeta de datos del servidor, o la que fije COMPRA_AGIL_INFORMES_DIR. No acepta carpetas fuera de ella.'),
 };
 
 function texto(contenido: string, isError = false) {

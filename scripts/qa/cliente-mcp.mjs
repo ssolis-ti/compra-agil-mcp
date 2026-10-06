@@ -44,7 +44,10 @@ if (real) {
 // caché y el estado de cuota con tu uso normal.
 const cwd = real ? RAIZ : fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-qa-'));
 const env = { ...process.env, LOG_LEVEL: 'debug', COMPRA_AGIL_TICKET: ticket };
-if (!real) env.COMPRA_AGIL_BASE_URL = `http://127.0.0.1:${process.env.PORT || 8765}`;
+if (!real) {
+  env.COMPRA_AGIL_BASE_URL = `http://127.0.0.1:${process.env.PORT || 8765}`;
+  env.COMPRA_AGIL_DATA_DIR = cwd; // caché y estado fuera del proyecto
+}
 
 const transporte = new StdioClientTransport({
   command: process.execPath, args: [path.join(RAIZ, 'dist', 'index.js')], cwd, env, stderr: 'pipe',

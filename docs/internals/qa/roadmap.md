@@ -19,7 +19,7 @@ Referencias a hallazgos: [auditoria-2.6.1.md](auditoria-2.6.1.md).
 
 ## Sprint 1 — Rendimiento y calidad (~1 semana)
 
-### Fase 1.0 — Rutas independientes del directorio de trabajo 🟠
+### Fase 1.0 — Rutas independientes del directorio de trabajo 🟠 ✅ (rama `claude/fase-1-0-rutas`)
 **Problema medido** (5 de octubre, al registrar el servidor en Claude Desktop para la etapa 2): el servidor resuelve sus archivos con `process.cwd()`, y un cliente MCP lo lanza desde **su propio** directorio, no desde el del proyecto. Con la configuración que da el README —solo la ruta a `dist/index.js`— pasa esto:
 
 | Archivo | Dónde se resuelve | Efecto con el cwd del cliente |
