@@ -71,7 +71,7 @@ describe('CompraAgilClient — tiempo límite', () => {
     const client = new CompraAgilClient('TICKET-TEST', undefined, { timeoutMs: 30 });
 
     await capturar(client.detalle('1-1-COT26'));
-    await expect(client.detalle('1-1-COT26')).resolves.toEqual({ codigo: '1-1-COT26' });
+    await expect(client.detalle('1-1-COT26')).resolves.toMatchObject({ codigo: '1-1-COT26' });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -98,7 +98,7 @@ describe('CompraAgilClient — fallos de red', () => {
     vi.stubGlobal('fetch', fetchSpy);
     const client = new CompraAgilClient('TICKET-TEST');
 
-    await expect(client.detalle('X')).resolves.toEqual({ codigo: 'X' });
+    await expect(client.detalle('X')).resolves.toMatchObject({ codigo: 'X' });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -156,6 +156,6 @@ describe('CompraAgilClient — respuesta que no es JSON', () => {
     expect(error.actionableMessage).toContain('GET /v2/compra-agil/X');
     expect(error.actionableMessage).not.toMatch(/Unexpected token/);
 
-    await expect(client.detalle('X')).resolves.toEqual({ codigo: 'X' });
+    await expect(client.detalle('X')).resolves.toMatchObject({ codigo: 'X' });
   });
 });

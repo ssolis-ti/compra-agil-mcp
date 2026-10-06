@@ -33,6 +33,8 @@ export interface DetalleLocal {
   timeoutMs?: number;
   /** Error original de red, ya redactado al formatear. */
   origen?: unknown;
+  /** Qué parte de una respuesta legible no tiene la forma esperada. */
+  motivo?: string;
 }
 
 export class CompraAgilApiError extends Error {
@@ -70,6 +72,9 @@ function getLocalMessage(local: DetalleLocal, consulta: string): string {
     case 'red':
       return `No se pudo conectar con la API de Mercado Público (error de red: ${safeError(local.origen)}).${llamada} Se reintentó una vez. Revisa la conexión a internet o un proxy, y reintenta en unos minutos.`;
     case 'respuesta_invalida':
+      if (local.motivo) {
+        return `La API de Mercado Público respondió con una forma inesperada (${redact(local.motivo)}).${llamada} No es un problema de tus parámetros y no quedó en caché. Si se repite, la API pudo haber cambiado: confirma el proceso en la ficha pública.`;
+      }
       return `La API de Mercado Público respondió, pero con un cuerpo que no es JSON válido (respuesta cortada o página de error de la pasarela).${llamada} No es un problema de tus parámetros y no quedó en caché. Reintenta en unos minutos.`;
     default:
       return `Error inesperado al consultar la API de Compra Ágil.${llamada}`;
