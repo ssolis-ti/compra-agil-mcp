@@ -9,6 +9,7 @@
  */
 
 import { z } from 'zod';
+import { esquemaRegion } from '../utils/region.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -50,7 +51,7 @@ const inputSchema = {
   formato_papel: z.enum(['carta', 'oficio', 'a4']).default('carta').optional().describe(
     'Tamaño de papel: "carta" (216×279mm, el más usado en oficinas chilenas, por defecto), "oficio" (216×330mm, folio chileno para documentos oficiales/legales) o "a4" (210×297mm, estándar ISO).'
   ),
-  region: z.string().optional().describe('Código de región para acotar (1-16). Ej: "13" para Metropolitana. Lo usan "radar" y "precio".'),
+  region: esquemaRegion('Código de región para acotar (1-16). Ej: "13" para Metropolitana. Lo usan "radar" y "precio".'),
   q: z.string().optional().describe('Término de búsqueda para acotar a un rubro o producto (ej: "licencias"). Lo usan "radar", "precio" y "auditoria".'),
   presupuesto_minimo: z.number().optional().describe('Solo "radar". Filtrar procesos con presupuesto disponible mayor o igual a este monto en CLP.'),
   limite_resultados: z.number().min(1).max(50).default(20).optional().describe('Solo "radar". Cantidad máxima de oportunidades a incluir en el informe (1-50, default 20).'),
