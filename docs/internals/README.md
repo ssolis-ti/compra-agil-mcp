@@ -17,4 +17,5 @@ Documentación de **ingeniería del servidor MCP**, no del mecanismo Compra Ági
 | Documento | Para qué sirve |
 | :--- | :--- |
 | [qa/README.md](qa/README.md) | **Punto de retome:** auditoría QA de la 2.6.1, Sprint 0 hecho, roadmap de sprints pendientes y plan de validación contra la API real |
+| [adr/README.md](adr/README.md) | **Decisiones de arquitectura:** por qué el código está como está (20 ADR, incluida la de la hora de Chile y por qué la 2.7.0 concluyó lo contrario) |
 | [hallazgos-api.md](hallazgos-api.md) | Comportamiento **real** de la API medido empíricamente vs. lo que promete la documentación oficial |

@@ -69,6 +69,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 ### Añadido — métricas de uso
 * **`obtener_estadisticas_uso` informa métricas medidas dentro del servidor (fase 2.2):** por herramienta, llamadas, errores y latencia (media, mediana, p95 y máxima); por consulta a la API, cuántas salieron, cuántas se sirvieron desde la caché, cuántas se omitieron por el presupuesto de tiempo y el desglose por resultado (200, 504, 429, timeout, error de red). Sirven para saber si la API está lenta antes de lanzar un análisis largo, y para calibrar el timeout con datos: en el enjambre del 6-oct las latencias solo se pudieron medir desde fuera. Son del proceso actual y no guardan parámetros ni respuestas.
 
+### Documentación
+* **Decisiones de arquitectura como ADR (fase 2.4)**, en `docs/internals/adr/`: las 11 de la bitácora borrada en `6be7402`, recuperadas tal cual, más 9 del Sprint 0 y de esta versión —entre ellas por qué la API entrega hora de Chile y por qué la validación de la 2.7.0 concluyó lo contrario—. Quedan fuera de `consultar_documentos_locales`, que solo debe ofrecer normativa de Compra Ágil.
+
 ### Rendimiento
 * **La caché escribe a disco una vez por ráfaga, y de forma atómica (fase 1.2).** Antes cada respuesta reescribía el JSON entero —hasta 500 entradas— con una escritura síncrona: una tanda de 20 detalles eran 20 escrituras que bloqueaban el proceso. Ahora se agrupan en una sola, ~1 s después de la última respuesta, a un archivo temporal que luego se renombra: un corte a mitad deja el archivo anterior completo. Lo pendiente se escribe al cerrar el proceso.
 * **El texto de los PDF locales se memoriza (fase 1.3).** `consultar_documentos_locales` y el recurso de documentación extraían los 7 PDF en cada consulta (0,8–1 s); ahora la segunda lectura tarda menos de 100 ms, y un archivo se relee si cambia su fecha o su tamaño.
