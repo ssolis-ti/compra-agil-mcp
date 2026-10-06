@@ -15,7 +15,7 @@ Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a 
 ### Añadido
 * **CI en GitHub Actions** (`.github/workflows/ci.yml`): tipos, build y tests en Ubuntu y Windows con Node 20 y 22, más `npm audit` de producción con nivel alto. El repositorio no tenía ninguna verificación automática antes de un merge.
 * **Prueba de humo por el protocolo MCP** (`test/protocolo.test.ts`): arranca el servidor real por stdio y comprueba versión, capacidades, las 16 herramientas, recursos, prompts, una llamada válida, una inválida y que el ticket no salga en los logs. Hasta ahora ningún test verificaba que el servidor arrancara.
-* **Banco de pruebas `scripts/qa/`**: API simulada con fallas inyectadas (cuelgue, 504, 429, JSON cortado, nulos, XSS) y un cliente MCP que corre escenarios por stdio contra el servidor compilado. Con `QA_API_REAL=1` corre una batería acotada contra la API real. Documentación de la auditoría, el Sprint 0 y el roadmap en `docs/internals/qa/`.
+* **Banco de pruebas `scripts/qa/`**: API simulada con fallas inyectadas (cuelgue, 504, 429, JSON cortado, nulos, XSS) y un cliente MCP que corre escenarios por stdio contra el servidor compilado. Con `QA_API_REAL=1` corre una batería acotada contra la API real. Para simular uso con agentes: catálogo sintético con fallas aleatorias calibradas con la API real (`CATALOGO=sintetico`, `FALLA_DETALLE`, `LATENCIA_MS`) y un puente HTTP (`puente-mcp.mjs`) hacia una sola instancia del servidor. Documentación de la auditoría, el Sprint 0 y el roadmap en `docs/internals/qa/`.
 * **`engines` en `package.json`**: Node `>=20.16 <21 || >=22.3`, lo que exige `pdf-parse`.
 
 ### Dependencias
