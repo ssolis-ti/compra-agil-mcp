@@ -13,6 +13,7 @@ import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { safeError, registrarSecreto } from '../utils/redact.js';
 import { enHoraDeChile, ventanaUltimosMinutos } from '../utils/fechas.js';
 import { ahora, iniciarRelojOficial } from '../utils/reloj.js';
+import { leerEstadoMonitor, podarEstado, serializarEstado } from '../utils/estado-monitor.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
 
 // Inicializar entorno
@@ -40,24 +41,23 @@ const STATE_PATH = rutaDeDatos('.monitor-state.json');
 
 // ─── Deduplicación de alertas ──────────────────────────────────────────
 // Evita re-alertar el mismo proceso en ciclos consecutivos. Se persiste en disco
-// para sobrevivir reinicios del daemon.
-function loadAlertedCodes(): Set<string> {
+// para sobrevivir reinicios del daemon. Cada código guarda cuándo se alertó y se
+// podan los de más de 30 días (fase 1.7): antes la lista crecía para siempre.
+function loadAlertedCodes(): Map<string, number> {
   try {
-    if (fs.existsSync(STATE_PATH)) {
-      const raw = JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
-      if (Array.isArray(raw.alerted)) return new Set(raw.alerted);
-    }
+    if (fs.existsSync(STATE_PATH)) return leerEstadoMonitor(fs.readFileSync(STATE_PATH, 'utf8'), Date.now());
   } catch (e) {
     console.error(`[ADVERTENCIA] No se pudo leer el estado de deduplicación (${STATE_PATH}): ${safeError(e)}`);
   }
-  return new Set();
+  return new Map();
 }
 
-const alertedCodes: Set<string> = loadAlertedCodes();
+const alertedCodes: Map<string, number> = loadAlertedCodes();
 
 function persistAlertedCodes(): void {
   try {
-    fs.writeFileSync(STATE_PATH, JSON.stringify({ alerted: [...alertedCodes] }, null, 2), 'utf8');
+    podarEstado(alertedCodes, Date.now());
+    fs.writeFileSync(STATE_PATH, serializarEstado(alertedCodes), 'utf8');
   } catch (e) {
     console.error(`[ADVERTENCIA] No se pudo guardar el estado de deduplicación: ${safeError(e)}`);
   }
@@ -119,7 +119,7 @@ async function runCheck() {
       if (matchedKeyword) {
         // Deduplicación: no re-alertar un proceso ya notificado en ciclos previos
         if (alertedCodes.has(item.codigo)) continue;
-        alertedCodes.add(item.codigo);
+        alertedCodes.set(item.codigo, Date.now());
 
         alertCount++;
         // El cierre se informa declarando la zona: la API lo entrega en hora de

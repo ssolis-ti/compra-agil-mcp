@@ -1,7 +1,7 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import fs from 'fs';
 import path from 'path';
-import { PDFParse } from 'pdf-parse';
+import { leerTextoLocal } from '../utils/texto-local.js';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
 import { safeError } from '../utils/redact.js';
 
@@ -52,17 +52,8 @@ export function registerDocumentacionResource(server: McpServer): void {
           throw new Error(`El archivo ${filename} no existe en la carpeta docs/.`);
         }
 
-        const ext = path.extname(filename).toLowerCase();
-        let text = '';
-
-        if (ext === '.pdf') {
-          const buffer = fs.readFileSync(filePath);
-          const parser = new PDFParse({ data: buffer });
-          const pdfData = await parser.getText();
-          text = pdfData.text || '';
-        } else {
-          text = fs.readFileSync(filePath, 'utf8');
-        }
+        // Memorizado por archivo (fase 1.3): un PDF no se vuelve a extraer si no cambió.
+        const text = await leerTextoLocal(filePath);
 
         return {
           contents: [{

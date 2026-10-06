@@ -53,6 +53,11 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **`verificar_hora_oficial` informa el reloj que usa el servidor y la base de zonas horarias.** El NTP da la hora UTC exacta, no la zona: el paso a UTC-3/UTC-4 sale de la base de zonas de Node, y Chile cambia su horario por decreto. Advierte si la base es anterior a la 2025b.
 * **El detalle trae la hora de Chile de los cierres de cada llamado**, y el monitoreo la del último cambio.
 
+### Rendimiento
+* **La caché escribe a disco una vez por ráfaga, y de forma atómica (fase 1.2).** Antes cada respuesta reescribía el JSON entero —hasta 500 entradas— con una escritura síncrona: una tanda de 20 detalles eran 20 escrituras que bloqueaban el proceso. Ahora se agrupan en una sola, ~1 s después de la última respuesta, a un archivo temporal que luego se renombra: un corte a mitad deja el archivo anterior completo. Lo pendiente se escribe al cerrar el proceso.
+* **El texto de los PDF locales se memoriza (fase 1.3).** `consultar_documentos_locales` y el recurso de documentación extraían los 7 PDF en cada consulta (0,8–1 s); ahora la segunda lectura tarda menos de 100 ms, y un archivo se relee si cambia su fecha o su tamaño.
+* **El estado del daemon de monitoreo ya no crece sin límite (fase 1.7).** Cada código alertado guarda su fecha y se podan los de más de 30 días. El formato anterior se sigue leyendo, así que un daemon instalado no re-alerta al actualizarse.
+
 ### Eliminado
 * `CompraAgilClient.cambiosRecientes()`: no tenía usos y mandaba la ventana defectuosa.
 

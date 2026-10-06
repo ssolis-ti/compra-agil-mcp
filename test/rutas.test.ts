@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -134,7 +134,8 @@ describe('servidor lanzado desde otra carpeta (como lo hace un cliente MCP)', ()
     const r = await cliente.callTool({ name: 'buscar_compras_agiles', arguments: { q: 'resmas' } });
     expect(r.isError).toBeFalsy();
     expect(ticketRecibido).toBe(TICKET);
-    expect(fs.existsSync(path.join(datos, '.api-cache.json'))).toBe(true);
+    // La caché se escribe diferida, ~1 s después de la última respuesta (fase 1.2).
+    await vi.waitFor(() => expect(fs.existsSync(path.join(datos, '.api-cache.json'))).toBe(true), { timeout: 5_000 });
     expect(fs.existsSync(path.join(datos, '.rate-limit-state.json'))).toBe(true);
     expect(fs.readdirSync(cwdAjeno)).toEqual([]);
   }, 30_000);

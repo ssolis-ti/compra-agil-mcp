@@ -105,7 +105,10 @@ describe('ResponseCache — persistencia entre reinicios', () => {
   });
 
   it('un proceso nuevo reutiliza lo guardado por el anterior', () => {
-    new ResponseCache({ rutaEstado: tmp }).guardar('k', { dato: 'vale' }, 600);
+    const anterior = new ResponseCache({ rutaEstado: tmp });
+    anterior.guardar('k', { dato: 'vale' }, 600);
+    // La escritura es diferida (fase 1.2); al cerrar, el proceso vacía lo pendiente.
+    anterior.vaciar();
     expect(new ResponseCache({ rutaEstado: tmp }).obtener('k')).toEqual({ dato: 'vale' });
   });
 
@@ -147,5 +150,46 @@ describe('ResponseCache.clave — la usa detalleEnCache()', () => {
 
   it('un detalle nunca pedido no está en caché (la herramienta responderá sin datos)', () => {
     expect(new ResponseCache().obtener(ResponseCache.clave('/v2/compra-agil/JAMAS-PEDIDO'))).toBeUndefined();
+  });
+});
+
+describe('ResponseCache — escritura diferida y atómica (fase 1.2)', () => {
+  const tmp = path.join(os.tmpdir(), `cache-f12-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    fs.rmSync(tmp, { force: true });
+  });
+
+  it('20 respuestas seguidas producen una sola escritura', () => {
+    vi.useFakeTimers();
+    const escrituras = vi.spyOn(fs, 'writeFileSync');
+    const cache = new ResponseCache({ rutaEstado: tmp });
+    for (let i = 0; i < 20; i++) cache.guardar(`detalle-${i}`, { i }, 600);
+    expect(escrituras).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1_000);
+    expect(escrituras).toHaveBeenCalledTimes(1);
+    expect(Object.keys(JSON.parse(fs.readFileSync(tmp, 'utf8')))).toHaveLength(20);
+  });
+
+  it('un corte a mitad de escritura deja el archivo anterior completo y legible', () => {
+    const cache = new ResponseCache({ rutaEstado: tmp });
+    cache.guardar('a', 'primero', 600);
+    cache.vaciar();
+    // El proceso "muere" entre escribir el temporal y renombrarlo.
+    vi.spyOn(fs, 'renameSync').mockImplementation(() => { throw new Error('corte'); });
+    cache.guardar('b', 'segundo', 600);
+    cache.vaciar();
+    vi.restoreAllMocks();
+    const recargada = new ResponseCache({ rutaEstado: tmp });
+    expect(recargada.obtener('a')).toBe('primero');
+    expect(fs.readdirSync(path.dirname(tmp)).filter((f) => f.startsWith(path.basename(tmp)) && f.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('limpiar escribe de inmediato', () => {
+    const cache = new ResponseCache({ rutaEstado: tmp });
+    cache.guardar('a', 1, 600);
+    cache.limpiar();
+    expect(JSON.parse(fs.readFileSync(tmp, 'utf8'))).toEqual({});
   });
 });

@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
+import { leerTextoLocal } from '../utils/texto-local.js';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
 import { agruparCatalogo, anteponerManualServidor, anteponerSanciones, buscarEnTexto, consultaSensible, consultaTecnica, deduplicarDocumentos, marcarSiEsGuiaOficial, recortarArchivos, recortarEnPalabra, relegarDocumentosTecnicos } from '../utils/doc-search.js';
 import { safeError } from '../utils/redact.js';
@@ -298,18 +299,10 @@ export function registerDocumentosTools(server: McpServer): void {
 
         for (const file of files) {
           const filePath = path.join(DOCS_DIR, file);
-          const ext = path.extname(file).toLowerCase();
-          let fileText = '';
 
           try {
-            if (ext === '.pdf') {
-              const buffer = fs.readFileSync(filePath);
-              const parser = new PDFParse({ data: buffer });
-              const pdfData = await parser.getText();
-              fileText = pdfData.text || '';
-            } else {
-              fileText = fs.readFileSync(filePath, 'utf8');
-            }
+            // Memorizado por archivo (fase 1.3): antes se extraían los 7 PDF en cada consulta.
+            const fileText = await leerTextoLocal(filePath);
 
             const hallazgo = buscarEnTexto(fileText, args.query);
             terminosConsulta = hallazgo.terminos;

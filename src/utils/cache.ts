@@ -36,6 +36,19 @@ export interface OpcionesCache {
   rutaEstado?: string | null;
   /** Máximo de entradas retenidas; al excederlo se descartan las más antiguas. */
   maxEntradas?: number;
+  /** Espera antes de escribir a disco, para agrupar una ráfaga de respuestas. */
+  esperaEscrituraMs?: number;
+}
+
+/** Cachés con escritura pendiente: se vacían al cerrar el proceso. */
+const pendientesAlSalir = new Set<ResponseCache>();
+let salidaRegistrada = false;
+function registrarVaciadoAlSalir(): void {
+  if (salidaRegistrada) return;
+  salidaRegistrada = true;
+  process.on('exit', () => {
+    for (const cache of pendientesAlSalir) cache.vaciar();
+  });
 }
 
 export class ResponseCache {
@@ -44,10 +57,13 @@ export class ResponseCache {
   private readonly maxEntradas: number;
   private aciertos = 0;
   private fallos = 0;
+  private readonly esperaEscrituraMs: number;
+  private temporizador: NodeJS.Timeout | null = null;
 
   constructor(opciones: OpcionesCache = {}) {
     this.rutaEstado = opciones.rutaEstado ?? null;
     this.maxEntradas = opciones.maxEntradas ?? 500;
+    this.esperaEscrituraMs = opciones.esperaEscrituraMs ?? 1000;
     this.cargar();
   }
 
@@ -130,10 +146,22 @@ export class ResponseCache {
     };
   }
 
-  /** Vacía la caché (memoria y disco). */
+  /** Vacía la caché (memoria y disco), sin esperar. */
   limpiar(): void {
     this.entradas.clear();
-    this.persistir();
+    this.vaciar(true);
+  }
+
+  /**
+   * Escribe ya lo pendiente. Lo llama el temporizador, el cierre del proceso y
+   * quien necesite el disco al día (tests, `limpiar`).
+   */
+  vaciar(forzar = false): void {
+    const habiaPendiente = this.temporizador !== null;
+    if (this.temporizador) clearTimeout(this.temporizador);
+    this.temporizador = null;
+    pendientesAlSalir.delete(this);
+    if (habiaPendiente || forzar) this.escribir();
   }
 
   private cargar(): void {
@@ -155,12 +183,36 @@ export class ResponseCache {
     }
   }
 
+  /**
+   * Programa la escritura a disco.
+   *
+   * ⚠ Fase 1.2 (auditoría QA 2.6.1): antes cada respuesta reescribía el JSON
+   *   entero —hasta 500 entradas, varios MB— con `writeFileSync`, y una tanda
+   *   de 20 detalles en paralelo eran 20 escrituras síncronas que bloqueaban el
+   *   proceso. Ahora la ráfaga se agrupa en una sola escritura.
+   */
   private persistir(): void {
     if (!this.rutaEstado) return;
+    if (this.temporizador) return;
+    this.temporizador = setTimeout(() => this.vaciar(), this.esperaEscrituraMs);
+    this.temporizador.unref();
+    pendientesAlSalir.add(this);
+    registrarVaciadoAlSalir();
+  }
+
+  /**
+   * Escritura atómica: a un temporal y luego `rename`. Un corte a mitad deja
+   * el archivo anterior completo, nunca uno a medias e ilegible.
+   */
+  private escribir(): void {
+    if (!this.rutaEstado) return;
+    const temporal = `${this.rutaEstado}.${process.pid}.tmp`;
     try {
-      fs.writeFileSync(this.rutaEstado, JSON.stringify(Object.fromEntries(this.entradas)), 'utf8');
+      fs.writeFileSync(temporal, JSON.stringify(Object.fromEntries(this.entradas)), 'utf8');
+      fs.renameSync(temporal, this.rutaEstado);
     } catch {
       // Si el disco no deja escribir, se sigue con la caché en memoria.
+      try { fs.rmSync(temporal, { force: true }); } catch { /* nada que limpiar */ }
     }
   }
 }

@@ -58,11 +58,11 @@ verde, CHANGELOG, commit propio).
 | ✅ | `presupuesto_clp` aclara que ya viene en pesos; el listado de documentos no menciona `docs/internals/` | `buscar-compras.ts:91`, `documentos.ts:285` |
 | ✅ Descartado | Aviso de cobertura distinto entre corridas: el texto refleja la causa real de cada una (detalles omitidos por el presupuesto de tiempo, sin cuota, frente a detalles que fallaron) | `auditar-desiertas.ts` |
 
-### Bloque E — Mejoras de análisis 🟢 · S
+### Bloque E — Mejoras de análisis 🟢 · S · ✅ (`d936dae`)
 - ✅ **E7:** `palabras_clave_requeridas` y `palabras_clave_excluidas` en `analizar_precios_mercado`, `auditar_compras_desiertas` y el borrador, con la misma semántica que en `buscar_compras_agiles`.
 
 ### Bloque F — Rendimiento · M
-- Fases **1.2** (escritura diferida y atómica de la caché), **1.3** (caché del texto de los PDF) y **1.7** (poda del estado del daemon).
+- ✅ Fases **1.2** (escritura diferida y atómica de la caché), **1.3** (caché del texto de los PDF) y **1.7** (poda del estado del daemon).
 
 ### Bloque G — Calidad · L
 - **Fase 1.4** (tipos honestos) y **1.5** (ESLint en la CI; nombres de herramientas derivados del servidor, sin la lista a mano de `src/index.ts`).
