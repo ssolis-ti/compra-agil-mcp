@@ -11,6 +11,7 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ### Documentación
 * README: la instalación manual empieza con `git clone` e indica la versión de Node, y la opción `npx` avisa que npm puede ir atrás del repositorio (hoy sirve la 2.5.0). El punto de retome de QA (`docs/internals/qa/README.md`) y la fase 0 del roadmap reflejan que los PR #8 a #13 ya están en `main` y que falta la validación real y el tag.
+* Validación de la 2.7.0 contra la API real (`docs/internals/qa/resultado-api-real.md`): sin bloqueantes, 17 consultas y ningún 429. Queda confirmado que `fecha_cierre` sin zona es UTC: el estado pasa a `cerrada` en el primer ciclo de 5 minutos después del cierre, en el mismo reloj que `fecha_ultimo_cambio`, y la ventana relativa `ttl_cambio_ms` prueba que ese reloj es UTC real. De noche la API puede dejar un proceso `publicada` con el cierre ya vencido.
 
 ## [2.7.0] - 2026-10-06
 
