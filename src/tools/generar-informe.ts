@@ -239,15 +239,21 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
           const datos = recoleccion.datos;
           const html = renderAuditoriaInforme({ datos, generadoEn, formato });
           const nombre = `auditoria-${slug(datos.proceso_auditado.codigo)}-${formato}-${stamp(generadoEn)}.html`;
+          const g = datos.analisis_de_brechas;
           const brechas = [
-            datos.analisis_de_brechas.presupuesto_insuficiente ? 'presupuesto' : '',
-            datos.analisis_de_brechas.plazo_insuficiente ? 'plazo' : '',
-            datos.analisis_de_brechas.requisitos_complejos ? 'requisitos' : '',
+            g.presupuesto_insuficiente ? 'presupuesto' : '',
+            g.plazo_insuficiente ? 'plazo' : '',
+            g.requisitos_complejos ? 'requisitos' : '',
+          ].filter(Boolean);
+          const noEvaluables = [
+            g.presupuesto_insuficiente === null ? 'presupuesto' : '',
+            g.plazo_insuficiente === null ? 'plazo' : '',
           ].filter(Boolean);
           return entregar(html, nombre, formato, args.ruta_salida, [
             `• ${datos.proceso_auditado.codigo} — ${datos.proceso_auditado.nombre}`,
             `• ${datos.recomendaciones_de_optimizacion.length} recomendación(es)`,
-            brechas.length > 0 ? `• Brechas: ${brechas.join(', ')}` : '• Sin brecha marcada de presupuesto, plazo o requisitos',
+            brechas.length > 0 ? `• Brechas: ${brechas.join(', ')}` : '• Sin brecha marcada en lo que se pudo evaluar',
+            ...(noEvaluables.length > 0 ? [`• No evaluable (sin comparables ni evidencia): ${noEvaluables.join(', ')}`] : []),
           ]);
         }
 

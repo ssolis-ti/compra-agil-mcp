@@ -137,3 +137,50 @@ describe('auditar_compras_desiertas — evidencia del propio proceso (S1)', () =
     expect(html).toContain('Presupuesto bajo');
   });
 });
+
+describe('auditar_compras_desiertas — «no evaluable» y comparación por unidad (S5)', () => {
+  /** Comparable con precio unitario: 5 unidades a $800.000. */
+  function comparableConUnitario() {
+    const cot: ProveedorCotizando = {
+      ...cotizacion(4_000_000),
+      productos_cotizados: [{ codigo_producto: 1, nombre_producto: 'Computadores portátiles', descripcion: null, cantidad: 5, precio_unitario: 800_000, monto_total_producto: 4_000_000 }],
+    };
+    return proceso('7-7-COT26', { proveedores_cotizando: [cot] });
+  }
+
+  it('sin comparables ni evidencia propia: presupuesto y plazo no evaluables, no «en rango»', async () => {
+    const objetivo = proceso('8-8-COT26');
+    const rec = await recolectarDatosAuditoria({
+      detalle: async () => objetivo,
+      buscar: async () => ({ items: [{ codigo: '8-8-COT26' }] }),
+      detallesEnParalelo: async () => [],
+    } as never, { codigo_compra: '8-8-COT26' });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    expect(rec.datos.analisis_de_brechas).toMatchObject({
+      presupuesto_insuficiente: null, plazo_insuficiente: null, diferencia_presupuesto_porcentaje: null, base_comparacion: null,
+    });
+    const html = renderAuditoriaInforme({ datos: rec.datos, generadoEn: new Date('2026-10-06T12:00:00Z') });
+    expect(html).toContain('Presupuesto: no evaluable');
+    expect(html).not.toContain('Presupuesto en rango');
+  });
+
+  it('compara por unidad cuando los comparables traen precio unitario', async () => {
+    // Objetivo: 2 portátiles con $1.259.000 → $629.500 por unidad.
+    // Comparable: 5 a $800.000. En totales ($1.259.000 vs $4.000.000) saldría −69 %.
+    const objetivo = proceso('9-9-COT26');
+    const comparable = comparableConUnitario();
+    const rec = await recolectarDatosAuditoria({
+      detalle: async (c: string) => (c === '9-9-COT26' ? objetivo : comparable),
+      buscar: async () => ({ items: [{ codigo: '7-7-COT26', institucion: {}, fechas: {} }] }),
+      detallesEnParalelo: async () => [comparable],
+    } as never, { codigo_compra: '9-9-COT26' });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    const g = rec.datos.analisis_de_brechas;
+    expect(g.base_comparacion).toBe('precio_unitario');
+    expect(g.diferencia_presupuesto_porcentaje).toBe(-21);
+    expect(g.lectura_diferencia).toBe('El presupuesto por unidad está 21 % bajo el promedio de lo cotizado por unidad en procesos comparables.');
+    expect(g.presupuesto_insuficiente).toBe(true);
+    expect(rec.datos.procesos_comparables_analizados[0].menor_precio_unitario).toBe(800_000);
+    expect(rec.datos.recomendaciones_de_optimizacion.join(' ')).toContain('Para 2 unidades, se sugiere al menos $1.680.000');
+  });
+});

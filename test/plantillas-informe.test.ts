@@ -299,7 +299,8 @@ describe('recolectarDatosAuditoria', () => {
     if (rec.kind !== 'datos') return;
     expect(rec.datos.busqueda_comparativa.sin_comparables_distintos).toBe(true);
     expect(rec.datos.busqueda_comparativa.procesos_comparables_con_cotizaciones).toBe(0);
-    expect(rec.datos.analisis_de_brechas.diferencia_presupuesto_porcentaje).toBe(0);
+    // S5: sin comparables la diferencia no es 0, es «no evaluable».
+    expect(rec.datos.analisis_de_brechas.diferencia_presupuesto_porcentaje).toBeNull();
     expect(rec.datos.recomendaciones_de_optimizacion.some((r) => /consigo mismo/.test(r))).toBe(true);
     // Sin comparables se conserva la evidencia propia: su única cotización supera el presupuesto.
     expect(rec.datos.analisis_de_brechas.presupuesto_insuficiente).toBe(true);
