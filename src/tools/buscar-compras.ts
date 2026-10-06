@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { filtrarPorPalabras } from '../utils/palabras-clave.js';
 import { esquemaRegion } from '../utils/region.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
@@ -170,35 +171,9 @@ export function registerBuscarCompras(server: McpServer, client: CompraAgilClien
         });
 
         // Formatear resultado compacto para el LLM
-        let filteredItems = response.items;
-
-        // Filtrado local por palabras_clave_requeridas (AND lógico entre los términos)
-        if (args.palabras_clave_requeridas) {
-          const reqKeywords = args.palabras_clave_requeridas
-            .split(',')
-            .map(kw => kw.trim().toLowerCase())
-            .filter(Boolean);
-          if (reqKeywords.length > 0) {
-            filteredItems = filteredItems.filter(item => {
-              const nameLower = item.nombre.toLowerCase();
-              return reqKeywords.every(kw => nameLower.includes(kw));
-            });
-          }
-        }
-
-        // Filtrado local por palabras_clave_excluidas (OR lógico entre los términos)
-        if (args.palabras_clave_excluidas) {
-          const excKeywords = args.palabras_clave_excluidas
-            .split(',')
-            .map(kw => kw.trim().toLowerCase())
-            .filter(Boolean);
-          if (excKeywords.length > 0) {
-            filteredItems = filteredItems.filter(item => {
-              const nameLower = item.nombre.toLowerCase();
-              return !excKeywords.some(kw => nameLower.includes(kw));
-            });
-          }
-        }
+        // Requeridas: todas (Y); excluidas: basta una (O). Sin tildes ni
+        // mayúsculas. Compartido con las herramientas de análisis (E7).
+        const filteredItems = filtrarPorPalabras(response.items, args).items;
 
         const summary = filteredItems.map(resumirCompraBusqueda);
 

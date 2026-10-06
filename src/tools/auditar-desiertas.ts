@@ -10,6 +10,7 @@ import { safeError } from '../utils/redact.js';
 import { describirFallosDetalle } from '../utils/presupuesto.js';
 import { parsearFechaApi } from '../utils/fechas.js';
 import { terminoComparables } from '../utils/doc-search.js';
+import { filtrarPorPalabras, esquemaPalabrasComparables, textoSinCoincidencias, type FiltroPalabras } from '../utils/palabras-clave.js';
 import type { CompraAgilItem } from '../api/compra-agil-client.js';
 
 export { terminoComparables };
@@ -38,9 +39,10 @@ const inputSchema = {
   codigo_compra: esquemaCodigoCompra().optional().describe('Código de la Compra Ágil desierta para auditar (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
   q: z.string().optional().describe('Término de búsqueda de producto/servicio para encontrar y auditar un proceso desierto reciente (ej: "resmas papel"). Opcional.'),
   limite_analisis: z.number().min(1).max(8).default(3).optional().describe('Cantidad de procesos comparables con los que contrastar (1-8, default 3). Cada uno es una consulta de cuota y una llamada de detalle — lo lento: medido en septiembre de 2026, 20-25 s cada una, con HTTP 504 intermitentes. Se piden en paralelo, así que subirlo no multiplica el tiempo, pero sí la probabilidad de que alguna falle.'),
+  ...esquemaPalabrasComparables(),
 };
 
-export interface ArgsAuditoria {
+export interface ArgsAuditoria extends FiltroPalabras {
   codigo_compra?: string;
   q?: string;
   limite_analisis?: number;
@@ -355,12 +357,15 @@ export async function recolectarDatosAuditoria(
       return [];
     }
   };
-  let encontrados = (await buscarComparables(keyword)).filter((item) => item.codigo !== targetCode);
+  // E7: los filtros de palabras se aplican a los comparables, no al proceso auditado.
+  const comparablesDe = (items: CompraAgilItem[]) =>
+    filtrarPorPalabras(items.filter((item) => item.codigo !== targetCode), args).items;
+  let encontrados = comparablesDe(await buscarComparables(keyword));
   if (encontrados.length === 0 && !busquedaComparables.fallo && !terminoDelUsuario) {
     const corto = terminoComparables(nombreBase, 1);
     if (corto && corto !== keyword) {
       keyword = corto;
-      encontrados = (await buscarComparables(keyword)).filter((item) => item.codigo !== targetCode);
+      encontrados = comparablesDe(await buscarComparables(keyword));
     }
   }
   const searchResponse = { items: encontrados };

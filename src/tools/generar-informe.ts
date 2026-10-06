@@ -9,6 +9,7 @@
  */
 
 import { z } from 'zod';
+import { esquemaPalabrasComparables } from '../utils/palabras-clave.js';
 import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { esquemaRegion } from '../utils/region.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -64,6 +65,7 @@ const inputSchema = {
   plazo_entrega_dias: z.number().optional().describe('Solo "cotizacion". Plazo de entrega en días. Si se omite, se usa el del comprador o 5.'),
   descripcion_propuesta: z.string().optional().describe('Solo "cotizacion". Mensaje comercial que entra en la carta.'),
   limite_analisis: z.number().min(1).max(15).optional().describe('Procesos históricos a revisar. En "precio", 1-15 (default 5). En "auditoria", 1-8 (default 3).'),
+  ...esquemaPalabrasComparables(),
   ruta_salida: z.string().optional().describe('Subcarpeta dentro de la carpeta de informes (ej: "radar/octubre"). Si se omite, se usa la carpeta de informes: "informes/" de la carpeta de datos del servidor, o la que fije COMPRA_AGIL_INFORMES_DIR. No acepta carpetas fuera de ella.'),
 };
 
@@ -192,6 +194,8 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
             precio_unitario_personalizado: args.precio_unitario_personalizado,
             plazo_entrega_dias: args.plazo_entrega_dias,
             descripcion_propuesta: args.descripcion_propuesta,
+            palabras_clave_requeridas: args.palabras_clave_requeridas,
+            palabras_clave_excluidas: args.palabras_clave_excluidas,
           });
           const html = renderCotizacionInforme({ borrador, generadoEn, formato });
           const nombre = `cotizacion-${slug(borrador.codigo_compra)}-${formato}-${stamp(generadoEn)}.html`;
@@ -213,6 +217,8 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
             q: args.q,
             region: args.region,
             limite_analisis: args.limite_analisis,
+            palabras_clave_requeridas: args.palabras_clave_requeridas,
+            palabras_clave_excluidas: args.palabras_clave_excluidas,
           });
           if (recoleccion.kind === 'mensaje') return texto(recoleccion.texto, recoleccion.isError);
           const datos = recoleccion.datos;
@@ -235,6 +241,8 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
             codigo_compra: args.codigo_compra,
             q: args.q,
             limite_analisis: args.limite_analisis,
+            palabras_clave_requeridas: args.palabras_clave_requeridas,
+            palabras_clave_excluidas: args.palabras_clave_excluidas,
           });
           if (recoleccion.kind === 'mensaje') return texto(recoleccion.texto, recoleccion.isError);
           const datos = recoleccion.datos;

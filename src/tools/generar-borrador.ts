@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { filtrarPorPalabras, esquemaPalabrasComparables, textoSinCoincidencias, type FiltroPalabras } from '../utils/palabras-clave.js';
 import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilDetalle } from '../api/compra-agil-client.js';
@@ -48,7 +49,8 @@ function presupuestoDelComprador(detalle: CompraAgilDetalle): number {
 export async function estimarPrecioUnitario(
   client: Pick<CompraAgilClient, 'buscar' | 'detalle' | 'detallesEnParalelo'>,
   detalle: CompraAgilDetalle,
-  precioPersonalizado?: number
+  precioPersonalizado?: number,
+  filtro: FiltroPalabras = {},
 ): Promise<EstimacionPrecio> {
   if (precioPersonalizado !== undefined && precioPersonalizado > 0) {
     return {
@@ -86,9 +88,9 @@ export async function estimarPrecioUnitario(
       // detalle (medido en septiembre 2026), así que en serie estas cinco
       // consultas bastaban para pasarse del timeout de un cliente MCP. Un
       // histórico que falla llega como `null` y no invalida el resto.
-      const detallados = await client.detallesEnParalelo(
-        (busqueda.items || []).slice(0, 5).map((item) => item.codigo)
-      );
+      // E7: el filtro de palabras se aplica antes de pedir detalles.
+      const candidatos = filtrarPorPalabras(busqueda.items || [], filtro).items.slice(0, 5);
+      const detallados = await client.detallesEnParalelo(candidatos.map((item) => item.codigo));
 
       // Se cuentan los fallos: si todas las consultas de detalle se cayeron,
       // el precio no se estimó "porque no había comparables" sino porque la
@@ -96,7 +98,7 @@ export async function estimarPrecioUnitario(
       // llevaría al proveedor a cotizar sobre una premisa falsa.
       fallosDetalle = detallados.filter((d) => d === null).length;
       intentosDetalle = detallados.length;
-      const codigos = (busqueda.items || []).slice(0, 5).map((item) => item.codigo);
+      const codigos = candidatos.map((item) => item.codigo);
       textoFallos = describirFallosDetalle(codigos.filter((_, i) => detallados[i] === null), intentosDetalle).texto;
 
       for (const det of detallados) {
@@ -156,7 +158,7 @@ export async function estimarPrecioUnitario(
   };
 }
 
-export interface ArgsBorradorCotizacion {
+export interface ArgsBorradorCotizacion extends FiltroPalabras {
   codigo_compra: string;
   rut_proveedor?: string;
   razon_social?: string;
@@ -279,7 +281,8 @@ export async function construirBorradorCotizacion(
   const estimacion = await estimarPrecioUnitario(
     client,
     targetDetail,
-    args.precio_unitario_personalizado
+    args.precio_unitario_personalizado,
+    args,
   );
   const suggestedPrice = estimacion.precio;
   const isPriceSuggested = estimacion.sugerido;
@@ -383,6 +386,7 @@ const inputSchema = {
   precio_unitario_personalizado: z.number().optional().describe('Precio unitario neto personalizado para aplicar a los ítems. Si se omite, se buscará un precio estimado de mercado.'),
   plazo_entrega_dias: z.number().optional().describe('Plazo de entrega en días corridos/hábiles. Si se omite, se adopta el sugerido por el comprador o 5 días.'),
   descripcion_propuesta: z.string().optional().describe('Mensaje comercial o aclaraciones técnicas del proveedor para adjuntar a la propuesta.'),
+  ...esquemaPalabrasComparables(),
 };
 
 export function registerGenerarBorrador(server: McpServer, client: CompraAgilClient): void {

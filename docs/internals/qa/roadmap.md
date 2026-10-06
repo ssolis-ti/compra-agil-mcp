@@ -48,7 +48,7 @@ verde, CHANGELOG, commit propio).
 | ✅ E10 | Nombre de la carpeta, sin ruta absoluta, en el rechazo de `ruta_salida` | `reports/export.ts:39` |
 | ✅ E11 | 404 que distingue compra de OC | `error-handler.ts:135` |
 
-### Bloque D — Documentos, textos y privacidad 🟡 · M
+### Bloque D — Documentos, textos y privacidad 🟡 · M · ✅ (`3032fe6`)
 | Ítem | Arreglo | Dónde |
 | :--- | :--- | :--- |
 | ✅ E6 | Guías antes que el manual en preguntas de negocio; fragmentos sin solapes; aviso cuando no hay respuesta directa | `utils/doc-search.ts` |
@@ -59,7 +59,7 @@ verde, CHANGELOG, commit propio).
 | ✅ Descartado | Aviso de cobertura distinto entre corridas: el texto refleja la causa real de cada una (detalles omitidos por el presupuesto de tiempo, sin cuota, frente a detalles que fallaron) | `auditar-desiertas.ts` |
 
 ### Bloque E — Mejoras de análisis 🟢 · S
-- **E7:** `palabras_clave_requeridas` y `palabras_clave_excluidas` en `analizar_precios_mercado`, `auditar_compras_desiertas` y el borrador, con la misma semántica que en `buscar_compras_agiles`.
+- ✅ **E7:** `palabras_clave_requeridas` y `palabras_clave_excluidas` en `analizar_precios_mercado`, `auditar_compras_desiertas` y el borrador, con la misma semántica que en `buscar_compras_agiles`.
 
 ### Bloque F — Rendimiento · M
 - Fases **1.2** (escritura diferida y atómica de la caché), **1.3** (caché del texto de los PDF) y **1.7** (poda del estado del daemon).

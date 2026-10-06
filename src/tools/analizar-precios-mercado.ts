@@ -26,6 +26,7 @@ import { logger } from '../utils/logger.js';
 import { safeError } from '../utils/redact.js';
 import { describirFallosDetalle } from '../utils/presupuesto.js';
 import { terminoComparables } from '../utils/doc-search.js';
+import { filtrarPorPalabras, esquemaPalabrasComparables, textoSinCoincidencias, type FiltroPalabras } from '../utils/palabras-clave.js';
 import type { CompraAgilDetalle, CompraAgilItem } from '../api/compra-agil-client.js';
 
 const mensajeDeError = (error: unknown) =>
@@ -52,9 +53,10 @@ const inputSchema = {
   q: z.string().optional().describe('Término de búsqueda del producto/servicio a cotizar (ej: "resmas papel", "reactivos"). Opcional si se especifica "codigo_compra".'),
   region: esquemaRegion('Código de región para acotar el análisis (1-16). Ej: "13" para Metropolitana. Si se omite, el análisis es nacional, también con "codigo_compra": la región del comprador no se aplica sola.'),
   limite_analisis: z.number().min(1).max(15).default(5).optional().describe('Cuántos procesos históricos auditar (1-15, default 5). Cada uno consume una consulta de cuota Y una llamada de detalle, que es lo lento: medido en septiembre de 2026, entre 20 y 25 segundos cada una, con HTTP 504 intermitentes. Los detalles se piden en paralelo, así que el total se parece más al más lento que a la suma — pero subir este número aumenta la probabilidad de que alguno falle. Con 5 el análisis completo ronda los 45-55 s.'),
+  ...esquemaPalabrasComparables(),
 };
 
-export interface ArgsPreciosMercado {
+export interface ArgsPreciosMercado extends FiltroPalabras {
   codigo_compra?: string;
   q?: string;
   region?: string;
@@ -81,6 +83,8 @@ export interface DatosPreciosMercado {
   region_analisis: string;
   cobertura: {
     procesos_encontrados: number;
+    /** Procesos del listado descartados por palabras_clave_requeridas/excluidas (E7). */
+    filtrados_por_palabras_clave?: number;
     procesos_revisados: number;
     procesos_que_fallaron: number;
     /** Qué procesos no se pudieron leer, para abrirlos a mano en su ficha. */
@@ -277,7 +281,12 @@ export async function recolectarDatosPrecios(
   // baja el paralelismo si aparecen 504, para no insistir contra un
   // servicio saturado; un histórico que falla llega como `null` y se
   // descarta, PERO se cuenta (ver `consultasFallidas` más abajo).
-  const seleccionados = busqueda.items.slice(0, limite);
+  // E7: el filtro se aplica al listado antes de pedir detalles (no gasta cuota).
+  const filtrado = filtrarPorPalabras(busqueda.items, args);
+  if (filtrado.items.length === 0) {
+    return { kind: 'mensaje', isError: false, texto: textoSinCoincidencias(busqueda.items.length, args) };
+  }
+  const seleccionados = filtrado.items.slice(0, limite);
   const detalles = await client.detallesEnParalelo(seleccionados.map((i) => i.codigo));
   const detallados = seleccionados.map((item, i) =>
     detalles[i] ? { item, det: detalles[i]! } : null
@@ -444,6 +453,7 @@ export async function recolectarDatosPrecios(
         : 'Todas las regiones',
     cobertura: {
       procesos_encontrados: busqueda.paginacion.total_resultados,
+      ...(filtrado.descartados > 0 ? { filtrados_por_palabras_clave: filtrado.descartados } : {}),
       procesos_revisados: consultasOk,
       procesos_que_fallaron: consultasFallidas,
       ...(consultasFallidas > 0 && {
