@@ -134,6 +134,23 @@ describe('servidor MCP por stdio', () => {
     expect(texto).not.toMatch(/conectar|red/i);
   });
 
+  // Ítem 34 del plan 2.8.0: lo que puede desincronizarse no es el log de
+  // arranque (ya se deriva del servidor) sino la documentación. Si se agrega o
+  // renombra una herramienta sin documentarla, esto falla.
+  it('el README y el manual documentan exactamente las herramientas registradas', async () => {
+    const registradas = (await cliente.listTools()).tools.map((t) => t.name).sort();
+    for (const doc of ['README.md', path.join('docs', 'api', 'manual_servidor_mcp.md')]) {
+      const texto = fs.readFileSync(path.join(RAIZ, doc), 'utf8');
+      const documentadas = [...new Set([...texto.matchAll(/^\| `([a-z]+(?:_[a-z]+)+)` \|/gm)].map((m) => m[1]))].sort();
+      expect(documentadas, doc).toEqual(registradas);
+    }
+  });
+
+  it('el log de arranque cuenta lo que de verdad se registró', () => {
+    expect(stderr).toMatch(/16 herramientas registradas: buscar_compras_agiles,/);
+    expect(stderr).toMatch(/2 prompts registrados: buscar_oportunidades_proveedor, analizar_competencia/);
+  });
+
   it('el ticket no aparece en los logs del proceso', () => {
     expect(stderr.length).toBeGreaterThan(0);
     expect(stderr).not.toContain(TICKET);

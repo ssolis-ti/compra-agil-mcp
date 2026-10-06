@@ -26,6 +26,7 @@ import { logger, setMcpServer } from './utils/logger.js';
 import { registrarSecreto } from './utils/redact.js';
 import { iniciarRelojOficial } from './utils/reloj.js';
 import { instalarFormatoDeErrores } from './utils/validacion.js';
+import { anotarRegistros } from './utils/registro.js';
 
 // Tools
 import { registerBuscarCompras } from './tools/buscar-compras.js';
@@ -118,6 +119,9 @@ async function main() {
     logger.warn('El SDK de MCP cambió: los rechazos del esquema quedan en su formato propio, no en el del servidor.');
   }
 
+  // Los nombres del log de arranque se anotan al registrar, no a mano (ítem 34).
+  const registrados = anotarRegistros(server);
+
   // 3. Registrar herramientas (Tools). Cada llamada corre con un presupuesto
   //    de tiempo bajo el corte del cliente MCP (ver utils/presupuesto.ts).
   instalarPresupuesto(server);
@@ -136,20 +140,7 @@ async function main() {
   registerVerificarTicket(server, client);
   registerVerificarHora(server);
 
-  // ⚠ Lista mantenida a mano, y por eso frágil: al agregar
-  //   `verificar_hora_oficial` esto seguía diciendo 15. Es solo un log —la
-  //   fuente autoritativa es `tools/list` del propio servidor— pero si vuelve a
-  //   desincronizarse, lo correcto es derivarla del servidor y no volver a
-  //   parcharla.
-  const TOOL_NAMES = [
-    'buscar_compras_agiles', 'obtener_detalle_compra', 'monitorear_cambios_recientes',
-    'verificar_orden_compra', 'obtener_estadisticas_uso', 'obtener_detalle_orden_compra',
-    'obtener_enlace_documento', 'descargar_y_leer_documento', 'consultar_documentos_locales',
-    'analizar_precios_mercado', 'auditar_compras_desiertas', 'generar_borrador_cotizacion',
-    'radar_oportunidades_calientes', 'generar_informe', 'verificar_ticket',
-    'verificar_hora_oficial',
-  ];
-  logger.info(`${TOOL_NAMES.length} herramientas registradas: ${TOOL_NAMES.join(', ')}`);
+  logger.info(`${registrados.herramientas.length} herramientas registradas: ${registrados.herramientas.join(', ')}`);
 
   // 4. Registrar recursos (Resources)
   registerRegionesResource(server);
@@ -157,17 +148,12 @@ async function main() {
   registerGlosarioResource(server);
   registerComprasTemplateResource(server, client);
   registerDocumentacionResource(server);
-  const RESOURCE_NAMES = [
-    'regiones', 'estados', 'glosario',
-    'compra-agil://compras/{codigo}', 'compra-agil://documentacion/{filename}',
-  ];
-  logger.info(`${RESOURCE_NAMES.length} recursos registrados: ${RESOURCE_NAMES.join(', ')}`);
+  logger.info(`${registrados.recursos.length} recursos registrados: ${registrados.recursos.join(', ')}`);
 
   // 5. Registrar prompts
   registerBuscarOportunidadesPrompt(server);
   registerAnalizarCompetenciaPrompt(server);
-  const PROMPT_NAMES = ['buscar_oportunidades_proveedor', 'analizar_competencia'];
-  logger.info(`${PROMPT_NAMES.length} prompts registrados: ${PROMPT_NAMES.join(', ')}`);
+  logger.info(`${registrados.prompts.length} prompts registrados: ${registrados.prompts.join(', ')}`);
 
   // 6. Conectar al transporte Stdio
   const transport = new StdioServerTransport();
