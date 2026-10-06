@@ -19,7 +19,7 @@ Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a 
 * **`engines` en `package.json`**: Node `>=20.16 <21 || >=22.3`, lo que exige `pdf-parse`.
 
 ### Dependencias
-* **`npm audit fix`: 0 vulnerabilidades en producción** (eran 6, 3 altas: `hono`, `@hono/node-server`, `fast-uri`, `ip-address`, `qs`, `body-parser`, todas transitivas del SDK de MCP para sus transportes HTTP, que este servidor no usa). Solo cambia `package-lock.json`. Quedan 2 moderadas en `vitest`, que es de desarrollo y no viaja en el paquete; su arreglo es un salto de versión mayor y va aparte.
+* **`npm audit fix`: 0 vulnerabilidades en producción** (eran 6, 3 altas: `hono`, `@hono/node-server`, `fast-uri`, `ip-address`, `qs`, `body-parser`, todas transitivas del SDK de MCP para sus transportes HTTP, que este servidor no usa). Solo cambia `package-lock.json`. El 6 de octubre se publicó un aviso crítico contra `proxy-addr` (GHSA-jqcg-44mw-7w3h, también transitivo vía `express`): queda en 2.0.8. Quedan 2 moderadas en `vitest`, que es de desarrollo y no viaja en el paquete; su arreglo es un salto de versión mayor y va aparte.
 
 ### Corregido
 * **Una API que no respondía colgaba la herramienta para siempre.** Ninguna consulta tenía tiempo límite: en la auditoría la llamada siguió abierta hasta que el cliente MCP se rindió a los 150 s. Ahora cada consulta se corta a los 35 s (`COMPRA_AGIL_TIMEOUT_MS`), por encima de los ~30 s en que la pasarela ya responde 504, y el mensaje dice cuánto se esperó y qué llamada fue. El timeout cuenta como congestión para el limitador de concurrencia y no queda en caché. La descarga de adjuntos se corta a los 30 s y rechaza archivos de más de 20 MB.
