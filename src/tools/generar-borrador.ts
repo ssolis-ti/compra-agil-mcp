@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
+import { enHoraDeChile } from '../utils/fechas.js';
 import { extraerPrecioUnitario, percentil } from '../utils/quotation.js';
 import { safeError } from '../utils/redact.js';
 
@@ -183,6 +184,61 @@ export interface BorradorCotizacion {
     fuente_precio_unitario: string;
     precio_unitario_sugerido_automatico: boolean;
   };
+  /**
+   * El borrador frente a lo que el comprador puede pagar. `null` si el proceso
+   * no informa presupuesto. La API no dice si el presupuesto incluye IVA, así
+   * que se compara en neto y con IVA.
+   */
+  comparacion_presupuesto: {
+    presupuesto_comprador: number;
+    valor_neto_sobre_presupuesto: boolean;
+    monto_total_sobre_presupuesto: boolean;
+    precio_unitario_maximo_neto: number;
+    precio_unitario_maximo_si_incluye_iva: number;
+  } | null;
+  fecha_cierre: string | null;
+  fecha_cierre_hora_chile: string | null;
+}
+
+/**
+ * Advierte cuando el borrador no cabe en el presupuesto del comprador.
+ *
+ * ⚠ En la simulación con agentes (6-oct) el borrador ofreció $9.148.113 con
+ *   IVA frente a un presupuesto de $9.021.000, con `_campos_a_revisar: []`: la
+ *   usuaria habría presentado una oferta sobre el máximo sin saberlo. En los
+ *   procesos desiertos, «sobrepasa el monto máximo» es causa típica de
+ *   inadmisibilidad.
+ */
+export function compararConPresupuesto(
+  presupuesto: number,
+  valorNeto: number,
+  montoTotal: number,
+  cantidadTotal: number,
+): { comparacion: NonNullable<BorradorCotizacion['comparacion_presupuesto']>; advertencia: string | null } | null {
+  if (!(presupuesto > 0) || !(cantidadTotal > 0)) return null;
+  const pesos = (n: number) => `$${n.toLocaleString('es-CL')}`;
+  const maxNeto = Math.floor(presupuesto / cantidadTotal);
+  const maxConIva = Math.floor(presupuesto / 1.19 / cantidadTotal);
+  const comparacion = {
+    presupuesto_comprador: presupuesto,
+    valor_neto_sobre_presupuesto: valorNeto > presupuesto,
+    monto_total_sobre_presupuesto: montoTotal > presupuesto,
+    precio_unitario_maximo_neto: maxNeto,
+    precio_unitario_maximo_si_incluye_iva: maxConIva,
+  };
+  let advertencia: string | null = null;
+  if (valorNeto > presupuesto) {
+    advertencia =
+      `El valor neto (${pesos(valorNeto)}) supera el presupuesto del comprador (${pesos(presupuesto)}) en ${pesos(valorNeto - presupuesto)}. ` +
+      `Una oferta sobre el monto disponible suele declararse inadmisible. Para caber, el precio unitario neto debe ser como máximo ${pesos(maxNeto)} ` +
+      `(${pesos(maxConIva)} si el presupuesto incluye IVA).`;
+  } else if (montoTotal > presupuesto) {
+    advertencia =
+      `El total con IVA (${pesos(montoTotal)}) supera el presupuesto del comprador (${pesos(presupuesto)}) en ${pesos(montoTotal - presupuesto)}; el neto sí cabe. ` +
+      `La API no informa si el presupuesto incluye IVA: si lo incluye, la oferta quedaría sobre el máximo. ` +
+      `Para caber con IVA, el precio unitario neto debe ser como máximo ${pesos(maxConIva)}. Confírmalo en la ficha del proceso.`;
+  }
+  return { comparacion, advertencia };
 }
 
 /**
@@ -248,6 +304,10 @@ export async function construirBorradorCotizacion(
     `Atentamente,\n` +
     `${razonSocial}\nRUT: ${rutProv}`;
 
+  const cantidadTotal = productosCotizados.reduce((acc, p) => acc + (p.cantidad || 0), 0);
+  const frentePresupuesto = compararConPresupuesto(presupuestoDelComprador(targetDetail), valorNeto, montoTotal, cantidadTotal);
+  if (frentePresupuesto?.advertencia) advertencias.push(frentePresupuesto.advertencia);
+
   if (!isPriceSuggested) {
     advertencias.push(`precio_unitario es un valor por defecto ($${suggestedPrice.toLocaleString('es-CL')}); no se pudo estimar de mercado. Ingresa "precio_unitario_personalizado".`);
   }
@@ -275,7 +335,10 @@ export async function construirBorradorCotizacion(
       precio_unitario_utilizado: suggestedPrice,
       fuente_precio_unitario: priceSource,
       precio_unitario_sugerido_automatico: estimacion.automatico,
-    }
+    },
+    comparacion_presupuesto: frentePresupuesto?.comparacion ?? null,
+    fecha_cierre: targetDetail.fechas?.fecha_cierre ?? null,
+    fecha_cierre_hora_chile: enHoraDeChile(targetDetail.fechas?.fecha_cierre),
   };
 }
 

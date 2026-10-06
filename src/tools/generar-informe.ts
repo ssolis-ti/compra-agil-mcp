@@ -196,9 +196,12 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
           return entregar(html, nombre, formato, args.ruta_salida, [
             `• ${borrador.codigo_compra} — ${borrador.nombre_compra}`,
             `• ${borrador.productos_cotizados.length} ítem(s), total ${clp(borrador.monto_total)} (IVA incluido)`,
-            borrador._campos_a_revisar.length > 0
-              ? `• ${borrador._campos_a_revisar.length} campo(s) por revisar antes de presentar`
-              : '• Sin placeholders marcados',
+            borrador.comparacion_presupuesto
+              ? `• Presupuesto del comprador ${clp(borrador.comparacion_presupuesto.presupuesto_comprador)}: ${borrador.comparacion_presupuesto.monto_total_sobre_presupuesto ? '⚠ el total lo SUPERA' : 'el total cabe'}`
+              : '• El proceso no informa presupuesto',
+            ...(borrador._campos_a_revisar.length > 0
+              ? [`• ${borrador._campos_a_revisar.length} advertencia(s) antes de presentar:`, ...borrador._campos_a_revisar.map((a) => `  - ${a}`)]
+              : ['• Sin advertencias']),
           ]);
         }
 
