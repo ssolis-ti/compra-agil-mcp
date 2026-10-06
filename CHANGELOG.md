@@ -6,6 +6,20 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-06
+
+Auditoría QA de la 2.6.1, dos simulaciones de uso con agentes y la validación contra la API real (etapa 1). Lo que impedía llevar el servidor a producción y lo que llevaba a un modelo a dar un consejo equivocado. 458 tests (eran 345), CI en Ubuntu y Windows con Node 20 y 22.
+
+> **En npm la versión anterior publicada es la 2.5.0**: la 2.6.0 y la 2.6.1 no llegaron al registro. Quien actualice desde npm recibe también sus cambios (secciones de abajo).
+
+**Cambios de comportamiento** (detalle en cada sección):
+* La carpeta de datos (caché, estado de cuota, daemon, `informes/`) ya no depende de la carpeta desde la que se lanza el servidor. Ver «fase 1.0».
+* `ruta_salida` de `generar_informe` solo acepta subcarpetas de la carpeta de informes; para otra carpeta, `COMPRA_AGIL_INFORMES_DIR`.
+* `region` fuera de 1-16 se rechaza en el servidor, sin consultar la API.
+* Una herramienta que antes esperaba hasta ~60 s en el límite propio de consultas por minuto ahora responde enseguida («reintenta en ~N s») o con resultados parciales.
+* En `auditar_compras_desiertas`, `analisis_de_brechas` puede traer `null` (no evaluable); la evidencia del propio proceso va primero en las recomendaciones.
+* `analizar_precios_mercado` con `codigo_compra` es nacional salvo que se pase `region`.
+
 ### Corregido — rutas independientes del directorio de trabajo (fase 1.0)
 * **Lanzado por un cliente MCP como indicaba el README, el servidor no encontraba el `.env` y repartía su estado por la carpeta del cliente.** Todo se resolvía con `process.cwd()`, y Claude Desktop lanza el servidor desde su propia carpeta: sin el ticket en texto plano en la config del cliente, terminaba al arrancar (medido el 5 de octubre; se rodeaba con `cmd /c cd /d <proyecto> && …`). Ahora el `.env` se busca en la carpeta de trabajo, la del proyecto y la de datos, y caché, estado de cuota, estado del daemon e informes van a una carpeta de datos fija: `COMPRA_AGIL_DATA_DIR`, la del proyecto si es un clon, o una del usuario si se instaló con `npx`. El README ya no pide el ticket en la config del cliente.
   * ⚠ **Cambio de comportamiento:** quien lanzaba el servidor desde otra carpeta encontrará la caché, el estado y los `informes/` en la carpeta de datos, no en esa carpeta.
