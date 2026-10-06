@@ -4,9 +4,10 @@
  *
  * Esperado tras el Sprint 0: "busqueda nulls" ok, "JSON corrupto" y los
  * cuelgues con mensaje claro, "informe ruta fuera de la raíz" ERROR, y
- * ningún TICKETLEAK. La batería hace más de 15 consultas, así que alguna de
- * las últimas queda retenida hasta ~60 s por el freno propio de 15/min: es el
- * defecto 1.1 del roadmap (docs/internals/qa/roadmap.md), no una regresión.
+ * ningún TICKETLEAK. La batería hace más de 15 consultas: desde la fase 1.1,
+ * las que ya no caben en el límite propio de 15/min responden al instante
+ * con «habría tenido que esperar…; no se envió ni gastó cuota», en vez de
+ * quedar retenidas hasta ~60 s.
  */
 import os from 'node:os';
 

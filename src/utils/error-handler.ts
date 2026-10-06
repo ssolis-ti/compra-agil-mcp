@@ -25,7 +25,7 @@ export interface ApiErrorResponse {
  * se pudo leer. Van como `causa` y no como un status inventado: un 408 o un 0
  * se confundirían con algo que la API dijo.
  */
-export type CausaLocal = 'timeout' | 'red' | 'respuesta_invalida';
+export type CausaLocal = 'timeout' | 'red' | 'respuesta_invalida' | 'tiempo_agotado';
 
 export interface DetalleLocal {
   causa?: CausaLocal;
@@ -35,6 +35,10 @@ export interface DetalleLocal {
   origen?: unknown;
   /** Qué parte de una respuesta legible no tiene la forma esperada. */
   motivo?: string;
+  /** Espera que habría tenido la consulta en el freno propio (tiempo_agotado). */
+  esperaMs?: number;
+  /** Presupuesto de la llamada a la herramienta (tiempo_agotado). */
+  presupuestoMs?: number;
 }
 
 export class CompraAgilApiError extends Error {
@@ -68,6 +72,11 @@ function getLocalMessage(local: DetalleLocal, consulta: string): string {
     case 'timeout': {
       const seg = Math.round((local.timeoutMs ?? 0) / 1000);
       return `La API de Mercado Público no respondió en ${seg} s y la consulta se canceló.${llamada} No es un problema de tus parámetros. No reintentes en ráfaga: espera unos minutos y, si se repite, acota la búsqueda (estado, región, fechas). Este fallo no dejó nada en caché.`;
+    }
+    case 'tiempo_agotado': {
+      const espera = Math.ceil((local.esperaMs ?? 0) / 1000);
+      const presupuesto = Math.round((local.presupuestoMs ?? 0) / 1000);
+      return `Esta consulta habría tenido que esperar ~${espera} s en el límite propio de consultas por minuto, y no cabe en los ${presupuesto} s que tiene la herramienta antes de que el cliente MCP la corte.${llamada} No se envió ni gastó cuota. Reintenta en ~${espera} s, o pide menos de una vez (por ejemplo, un "limite_analisis" menor).`;
     }
     case 'red':
       return `No se pudo conectar con la API de Mercado Público (error de red: ${safeError(local.origen)}).${llamada} Se reintentó una vez. Revisa la conexión a internet o un proxy, y reintenta en unos minutos.`;

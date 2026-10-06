@@ -23,6 +23,7 @@ import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { safeError } from '../utils/redact.js';
+import { describirFallosDetalle } from '../utils/presupuesto.js';
 import {
   esGanador, esAdmisible, extraerPrecioUnitario, extraerMontoNeto,
   calcularEstadisticas,
@@ -77,7 +78,7 @@ export interface DatosPreciosMercado {
     procesos_revisados: number;
     procesos_que_fallaron: number;
     /** Qué procesos no se pudieron leer, para abrirlos a mano en su ficha. */
-    procesos_que_fallaron_detalle?: Array<{ codigo: string; ficha: string }>;
+    procesos_que_fallaron_detalle?: Array<{ codigo: string; motivo: 'api_no_respondio' | 'omitido_por_tiempo'; ficha: string }>;
     _aviso_cobertura?: string;
     procesos_con_cotizaciones: number;
     cotizaciones_totales: number;
@@ -246,6 +247,10 @@ export async function recolectarDatosPrecios(
   const consultasIntentadas = detallados.length;
   const consultasFallidas = detallados.filter((d) => d === null).length;
   const consultasOk = consultasIntentadas - consultasFallidas;
+  const fallidos = detallados
+    .map((d, i) => (d === null ? seleccionados[i].codigo : null))
+    .filter((c): c is string => c !== null);
+  const fallos = describirFallosDetalle(fallidos, consultasIntentadas);
 
   for (const entrada of detallados) {
     if (!entrada) continue;
@@ -295,12 +300,23 @@ export async function recolectarDatosPrecios(
   if (preciosUnitarios.length === 0 && montosNetos.length === 0) {
     // Sin datos hay dos causas muy distintas y no deben confundirse:
     // que la API no respondiera, o que respondiera sin precios.
+    if (consultasOk === 0 && fallos.porTiempo.length === consultasIntentadas) {
+      return {
+        kind: 'mensaje',
+        isError: true,
+        texto: [
+          `No alcanzó el tiempo para consultar el detalle de ninguno de los ${consultasIntentadas} procesos que coinciden con "${keyword}": el límite propio de consultas por minuto ya estaba lleno por consultas recientes, y esperar habría pasado el corte del cliente MCP.`,
+          '',
+          '⚠ Esto NO dice nada del mercado ni de la API, y no gastó cuota. Reintenta en un minuto, o baja "limite_analisis" para pedir menos de una vez.',
+        ].join('\n'),
+      };
+    }
     if (consultasOk === 0) {
       return {
         kind: 'mensaje',
         isError: true,
         texto: [
-          `No se pudo consultar el detalle de ninguno de los ${consultasIntentadas} procesos que coinciden con "${keyword}": las ${consultasFallidas} consultas fallaron.`,
+          `No se pudo consultar el detalle de ninguno de los ${consultasIntentadas} procesos que coinciden con "${keyword}". ${fallos.texto}`,
           '',
           '⚠ Esto NO significa que no haya precios publicados para este rubro: significa que la API no respondió. No saques conclusiones de mercado desde este resultado.',
           consultasIntentadas <= 1
@@ -314,7 +330,7 @@ export async function recolectarDatosPrecios(
     }
 
     const aviso = consultasFallidas > 0
-      ? `\n⚠ Además, ${consultasFallidas} de las ${consultasIntentadas} consultas de detalle fallaron, así que la cobertura real fue menor a la pedida.`
+      ? `\n⚠ Además, ${fallos.texto} La cobertura real fue menor a la pedida.`
       : '';
 
     return {
@@ -350,9 +366,6 @@ export async function recolectarDatosPrecios(
     ? `⚠ MUESTRA MUY DISPERSA: el precio máximo (${base.maximo.toLocaleString('es-CL')}) es ${Math.round(dispersion)} veces la mediana (${base.mediana.toLocaleString('es-CL')}). El término "${keyword}" probablemente está mezclando productos o servicios de naturaleza distinta, así que este precio sugerido tiene poco valor. Acota la búsqueda con un término más específico o usa "codigo_compra" para partir del producto exacto.`
     : undefined;
 
-  const fallidos = detallados
-    .map((d, i) => (d === null ? seleccionados[i].codigo : null))
-    .filter((c): c is string => c !== null);
   const compradores = new Set(cotizaciones.map((c) => c.institucion).filter(Boolean)).size;
   const nPrecios = preciosUnitarios.length;
   const nivel: DatosPreciosMercado['suficiencia_muestra']['nivel'] =
@@ -387,9 +400,10 @@ export async function recolectarDatosPrecios(
       ...(consultasFallidas > 0 && {
         procesos_que_fallaron_detalle: fallidos.map((codigo) => ({
           codigo,
+          motivo: fallos.porTiempo.includes(codigo) ? 'omitido_por_tiempo' as const : 'api_no_respondio' as const,
           ficha: `https://buscador.mercadopublico.cl/ficha?code=${codigo}`,
         })),
-        _aviso_cobertura: `${consultasFallidas} de ${consultasIntentadas} consultas de detalle fallaron (la API no respondió): ${fallidos.join(', ')}. La muestra es más chica que la pedida; no lo interpretes como escasez de datos del rubro. Sus cotizaciones se pueden ver en la ficha pública de cada uno.`,
+        _aviso_cobertura: `${fallos.texto} La muestra es más chica que la pedida; no lo interpretes como escasez de datos del rubro. Sus cotizaciones se pueden ver en la ficha pública de cada uno.`,
       }),
       procesos_con_cotizaciones: procesosConDatos,
       cotizaciones_totales: cotizaciones.length,

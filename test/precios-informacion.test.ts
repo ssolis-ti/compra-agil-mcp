@@ -36,7 +36,7 @@ describe('analizar_precios_mercado: información para decidir (S9)', () => {
     const rec = await recolectarDatosPrecios(c as never, { q: 'toner' });
     if (rec.kind !== 'datos') throw new Error('se esperaban datos');
     expect(rec.datos.cobertura.procesos_que_fallaron_detalle).toEqual([
-      { codigo: '3851-115-COT26', ficha: 'https://buscador.mercadopublico.cl/ficha?code=3851-115-COT26' },
+      { codigo: '3851-115-COT26', motivo: 'api_no_respondio', ficha: 'https://buscador.mercadopublico.cl/ficha?code=3851-115-COT26' },
     ]);
     expect(rec.datos.cobertura._aviso_cobertura).toContain('3851-115-COT26');
   });
