@@ -55,6 +55,22 @@ cuelgues se corten rápido) y `SNIP=0` (solo la tabla).
 Con `QA_API_REAL=1` el mismo cliente apunta a la API real usando tu `.env`
 (ver [validacion-api-real.md](validacion-api-real.md)).
 
+### Simulación de uso con agentes
+
+Para que varios agentes (o subagentes de Claude Code) usen el servidor como
+lo haría un modelo, compartiendo una sola instancia:
+
+```powershell
+$env:CATALOGO = "sintetico"; $env:FALLA_DETALLE = "0.4"; $env:LATENCIA_MS = "400"
+node scripts/qa/mock-api.mjs          # terminal 1: ~40 procesos sintéticos, 40 % de detalles con 504
+node scripts/qa/puente-mcp.mjs        # terminal 2: puente HTTP en el puerto 8770
+```
+
+Los agentes leen `GET /contexto` (instrucciones y herramientas, lo mismo que ve
+un modelo al conectar), llaman con `POST /llamar` y `GET /registro` devuelve
+todas las llamadas con su tiempo. Con `QA_API_REAL=1` el puente usa la API
+real y gasta cuota.
+
 ## Contexto que no está en el repositorio
 
 - **graphify:** se usó para generar un grafo del proyecto (`.graphifyignore`, commit `39b44f6`). La salida, `graphify-out/`, está en `.gitignore` y solo existe en tu equipo. Sirve para contrastar la arquitectura antes del Sprint 1.

@@ -17,6 +17,14 @@
  *   XSS-*       HTML/JS en nombre y razón social de los cotizantes
  *
  * GET /__stats devuelve las llamadas recibidas (y si el ticket vino por header).
+ *
+ * Modo realista (para simulaciones de uso, scripts/qa/puente-mcp.mjs):
+ *   FALLA_DETALLE=0.5   probabilidad de que un detalle responda 504, como la
+ *                       pasarela real (medido: 1 de 3 en sept., 4 de 4 el 5-oct)
+ *   LATENCIA_MS=300     demora base de cada respuesta
+ *   CATALOGO=sintetico  ~40 procesos vigentes, desiertos y cerrados de varios
+ *                       rubros y regiones, con filtros q/estado/region/página
+ *                       (scripts/qa/catalogo-sintetico.mjs)
  */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -28,6 +36,11 @@ const leer = (f) => JSON.parse(fs.readFileSync(path.join(RAIZ, 'test', 'fixtures
 const listado = leer('compra-agil-listado.json');
 const cot = leer('cotizaciones-reales.json');
 
+import { crearCatalogo, buscarEnCatalogo } from './catalogo-sintetico.mjs';
+
+const catalogo = process.env.CATALOGO === 'sintetico' ? crearCatalogo() : null;
+const FALLA_DETALLE = Number(process.env.FALLA_DETALLE || 0);
+const LATENCIA_MS = Number(process.env.LATENCIA_MS || 0);
 let hits = 0;
 const log = [];
 const send = (res, code, body, headers = {}) => {
@@ -36,6 +49,13 @@ const send = (res, code, body, headers = {}) => {
 };
 
 http.createServer((req, res) => {
+  if (LATENCIA_MS > 0 && !req.url.startsWith('/__')) {
+    return setTimeout(() => atender(req, res), LATENCIA_MS * (0.5 + Math.random()));
+  }
+  atender(req, res);
+}).listen(Number(process.env.PORT || 8765), () => console.error(`API simulada en http://127.0.0.1:${process.env.PORT || 8765}`));
+
+function atender(req, res) {
   hits++;
   const u = new URL(req.url, 'http://x');
   const q = u.searchParams.get('q') || '';
@@ -46,6 +66,17 @@ http.createServer((req, res) => {
   if (q === 'E504') return send(res, 504, 'Gateway Timeout');
   if (q === 'E429') return send(res, 429, { success: 'NOK', errors: [{ codigo: '429', mensaje: 'rate' }] }, { 'retry-after': '60' });
   if (q === 'BADJSON') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end('{"payload": [trunc'); }
+
+  if (catalogo && u.pathname === '/v2/compra-agil') {
+    return send(res, 200, { success: 'OK', payload: buscarEnCatalogo(catalogo, u.searchParams) });
+  }
+  const enCatalogo = catalogo && u.pathname.startsWith('/v2/compra-agil/')
+    ? catalogo.find((p) => p.item.codigo === decodeURIComponent(u.pathname.split('/').pop()))
+    : null;
+  if (enCatalogo) {
+    if (FALLA_DETALLE > 0 && Math.random() < FALLA_DETALLE) return send(res, 504, 'Gateway Timeout');
+    return send(res, 200, { success: 'OK', payload: { ...structuredClone(enCatalogo.item), ...structuredClone(enCatalogo.detalle) } });
+  }
 
   if (u.pathname === '/v2/compra-agil') {
     const p = structuredClone(listado.payload);
@@ -61,6 +92,7 @@ http.createServer((req, res) => {
     if (codigo.startsWith('NOEXISTE')) return send(res, 404, { success: 'NOK', errors: [{ codigo: '404', mensaje: 'No encontrado' }] });
     if (codigo.startsWith('HANG')) return;
     if (codigo.startsWith('SLOW')) return setTimeout(() => send(res, 504, 'x'), 100);
+    if (FALLA_DETALLE > 0 && Math.random() < FALLA_DETALLE) return send(res, 504, 'Gateway Timeout');
     const base = structuredClone(listado.payload.items[0]);
     const xss = codigo.startsWith('XSS');
     if (xss) base.nombre = '<script>alert(1)</script><img src=x onerror=alert(2)>';
@@ -77,4 +109,4 @@ http.createServer((req, res) => {
     } });
   }
   send(res, 404, { success: 'NOK', errors: [{ codigo: '404', mensaje: 'ruta' }] });
-}).listen(Number(process.env.PORT || 8765), () => console.error(`API simulada en http://127.0.0.1:${process.env.PORT || 8765}`));
+}
