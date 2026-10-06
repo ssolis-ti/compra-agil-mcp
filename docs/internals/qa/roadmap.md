@@ -24,6 +24,9 @@ verde, CHANGELOG, commit propio).
 
 ### Bloque A — Hora de Chile 🔴 · L
 - **Fase 1.10** completa (ver abajo). Incluye `cierre_segundo_llamado` con su hora de Chile y `ultimo_cambio_hora_chile` en el monitoreo.
+- **Reloj de referencia del SHOA (`ntp.shoa.cl`).** Hoy el NTP solo lo usa `verificar_hora_oficial`; los plazos, el radar y las ventanas restan `Date.now()` de la máquina sin contrastarlo. Medir el desfase contra el SHOA al arrancar y cada ~30 min, sin bloquear, y aplicarlo en un único `ahora()` que usen todas las herramientas y el daemon. Si el UDP 123 está bloqueado, seguir con el reloj local y decirlo en la respuesta; si el desfase pasa de 1 minuto, advertirlo en toda respuesta con plazos, no solo en la herramienta dedicada.
+- **El NTP no entrega la zona horaria.** Da la hora UTC exacta; el desfase UTC-3/UTC-4 sale de la base de zonas de Node (`process.versions.tz`, hoy `2026a`), y Chile fija sus cambios de horario por decreto. Tests con los días de cambio (abril y septiembre); `verificar_hora_oficial` informa la versión de la base de zonas y advierte si es anterior al último cambio de reglas conocido.
+- **Evidencia:** durante las pruebas del 6-oct el SHOA confirmó el reloj de la máquina con 102–121 ms de desfase, así que las 3 horas venían de la API y no del reloj. La aceptación del bloque usa la hora del SHOA como referencia del «ahora».
 - Al cerrarlo, comprobar contra la API real que `monitorear_cambios_recientes` con `minutos: 60` trae resultados en horario hábil.
 
 ### Bloque B — Conclusiones correctas 🟠 · M
@@ -83,7 +86,7 @@ La 2.8.0 se publica cuando se cumple todo esto:
 2. Cobertura sobre los umbrales del bloque G, verificada en la CI.
 3. Ningún defecto conocido de severidad media o alta abierto en este roadmap.
 4. Contra la API real: `scripts/qa/escenarios-reales.mjs` sin errores atribuibles al servidor; monitoreo de 60 min con resultados en horario hábil.
-5. Enjambre de agentes repetido con presupuesto ≤ 60 consultas: 0 fugas del ticket, 0 hallazgos altos nuevos, y las estadísticas de precios recalculadas a mano sobre datos reales.
+5. Enjambre de agentes repetido con presupuesto ≤ 60 consultas: 0 fugas del ticket, 0 hallazgos altos nuevos, y las estadísticas de precios recalculadas a mano sobre datos reales. Correrlo en un horario en que la API no esté degradada: el 6-oct los 504 del detalle impidieron obtener precios.
 6. Etapa 2 hecha desde Claude Desktop.
 7. README, `docs/api/manual_servidor_mcp.md`, glosario, instrucciones al conectar, `CLAUDE.md`, CHANGELOG y este punto de retome al día.
 8. Publicada en npm con tag `v2.8.0` y release en GitHub.
@@ -219,7 +222,7 @@ Ver «Segunda corrida» en [resultado-simulacion-agentes.md](resultado-simulacio
 - **S12 🟠** Precios por código: si falla el detalle de referencia, usar el nombre del listado o sugerir reintentar con `q`.
 - **S13 🟠** Auditoría: advertir cuando hay un solo comparable; aclarar neto vs. IVA en la comparación.
 - **S14 🟠** Auditoría: término de comparables más amplio que el nombre completo del producto, o sugerirlo cuando no hay comparables.
-- **S15 🟡** Documentos: ampliar el contexto de los fragmentos para no cortar cifras.
+- ✅ **S15 🟡** Documentos: ampliar el contexto de los fragmentos para no cortar cifras. Resuelto en la práctica: en el enjambre del 6-oct la tasa de la multa por atraso salió completa.
 - ✅ **S16 🟡** Informe `precio`: mostrar suficiencia, cobertura y «solo admisibles».
 - **S17–S18 🟡** Formato de errores de esquema, enlace a la ficha en el 504 del detalle, procedencia del precio del borrador, `tiene_orden_compra` sin dato como `null`, ejemplo de fecha con `-03:00`.
 
