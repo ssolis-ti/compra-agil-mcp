@@ -27,6 +27,8 @@ interface Entrada {
   /** Momento (epoch ms) en que la entrada deja de ser válida. */
   expira: number;
   valor: unknown;
+  /** Momento (epoch ms) en que se guardó. Falta en archivos de versiones anteriores. */
+  creado?: number;
 }
 
 export interface OpcionesCache {
@@ -68,6 +70,16 @@ export class ResponseCache {
     return Boolean(e && Date.now() < e.expira);
   }
 
+  /**
+   * Segundos desde que se guardó una entrada vigente, sin contarla como
+   * acierto. `undefined` si no está, venció o no se sabe cuándo se creó.
+   */
+  edad(clave: string): number | undefined {
+    const e = this.entradas.get(clave);
+    if (!e || Date.now() >= e.expira || typeof e.creado !== 'number') return undefined;
+    return Math.max(0, Math.round((Date.now() - e.creado) / 1000));
+  }
+
   /** Devuelve el valor vigente, o `undefined` si no está o ya venció. */
   obtener<T>(clave: string): T | undefined {
     const e = this.entradas.get(clave);
@@ -89,7 +101,8 @@ export class ResponseCache {
 
   guardar(clave: string, valor: unknown, ttlSegundos: number): void {
     if (ttlSegundos <= 0) return;
-    this.entradas.set(clave, { expira: Date.now() + ttlSegundos * 1000, valor });
+    const ahora = Date.now();
+    this.entradas.set(clave, { expira: ahora + ttlSegundos * 1000, valor, creado: ahora });
     this.purgar();
     this.persistir();
   }
