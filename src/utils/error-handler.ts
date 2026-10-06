@@ -5,7 +5,7 @@
  * exactamente qué salió mal y qué acción tomar.
  */
 
-import { redact } from './redact.js';
+import { redact, safeError } from './redact.js';
 
 export interface ApiError {
   codigo: string;
@@ -20,21 +20,64 @@ export interface ApiErrorResponse {
   errors: ApiError[];
 }
 
+/**
+ * Fallos que no traen un HTTP de la API porque la respuesta nunca llegó o no
+ * se pudo leer. Van como `causa` y no como un status inventado: un 408 o un 0
+ * se confundirían con algo que la API dijo.
+ */
+export type CausaLocal = 'timeout' | 'red' | 'respuesta_invalida';
+
+export interface DetalleLocal {
+  causa?: CausaLocal;
+  /** Límite que se agotó, para que el mensaje nombre el número real. */
+  timeoutMs?: number;
+  /** Error original de red, ya redactado al formatear. */
+  origen?: unknown;
+  /** Qué parte de una respuesta legible no tiene la forma esperada. */
+  motivo?: string;
+}
+
 export class CompraAgilApiError extends Error {
   public readonly httpStatus: number;
   public readonly apiErrors: ApiError[];
   public readonly actionableMessage: string;
   /** Llamada que falló, ya sin ticket. Vacío cuando el error es local (cuota). */
   public readonly consulta: string;
+  /** Presente solo si la API no alcanzó a dar una respuesta legible. */
+  public readonly causa?: CausaLocal;
+  public readonly local: DetalleLocal;
 
-  constructor(httpStatus: number, apiErrors: ApiError[] = [], consulta = '') {
-    const actionable = getActionableMessage(httpStatus, apiErrors, consulta);
+  constructor(httpStatus: number, apiErrors: ApiError[] = [], consulta = '', local: DetalleLocal = {}) {
+    const actionable = local.causa
+      ? getLocalMessage(local, consulta)
+      : getActionableMessage(httpStatus, apiErrors, consulta);
     super(actionable);
     this.name = 'CompraAgilApiError';
     this.httpStatus = httpStatus;
     this.apiErrors = apiErrors;
     this.consulta = consulta;
+    this.causa = local.causa;
+    this.local = local;
     this.actionableMessage = actionable;
+  }
+}
+
+function getLocalMessage(local: DetalleLocal, consulta: string): string {
+  const llamada = consulta ? ` La llamada que falló: ${redact(consulta)}.` : '';
+  switch (local.causa) {
+    case 'timeout': {
+      const seg = Math.round((local.timeoutMs ?? 0) / 1000);
+      return `La API de Mercado Público no respondió en ${seg} s y la consulta se canceló.${llamada} No es un problema de tus parámetros. No reintentes en ráfaga: espera unos minutos y, si se repite, acota la búsqueda (estado, región, fechas). Este fallo no dejó nada en caché.`;
+    }
+    case 'red':
+      return `No se pudo conectar con la API de Mercado Público (error de red: ${safeError(local.origen)}).${llamada} Se reintentó una vez. Revisa la conexión a internet o un proxy, y reintenta en unos minutos.`;
+    case 'respuesta_invalida':
+      if (local.motivo) {
+        return `La API de Mercado Público respondió con una forma inesperada (${redact(local.motivo)}).${llamada} No es un problema de tus parámetros y no quedó en caché. Si se repite, la API pudo haber cambiado: confirma el proceso en la ficha pública.`;
+      }
+      return `La API de Mercado Público respondió, pero con un cuerpo que no es JSON válido (respuesta cortada o página de error de la pasarela).${llamada} No es un problema de tus parámetros y no quedó en caché. Reintenta en unos minutos.`;
+    default:
+      return `Error inesperado al consultar la API de Compra Ágil.${llamada}`;
   }
 }
 
@@ -118,7 +161,14 @@ function formatRateLimitMessage(detail: string): string {
  */
 export async function handleApiResponse(response: Response): Promise<unknown> {
   if (response.ok) {
-    const json = await response.json() as { success?: string; payload?: unknown };
+    let json: { success?: string; payload?: unknown };
+    try {
+      json = await response.json() as { success?: string; payload?: unknown };
+    } catch (e) {
+      // Un 200 con cuerpo cortado o HTML de la pasarela. Sin esto salía como
+      // "Error inesperado: Unexpected token…", un texto de JavaScript crudo.
+      throw new CompraAgilApiError(response.status, [], '', { causa: 'respuesta_invalida', origen: e });
+    }
     if (json && json.success === 'NOK') {
       throw new CompraAgilApiError(response.status, (json as unknown as ApiErrorResponse).errors);
     }

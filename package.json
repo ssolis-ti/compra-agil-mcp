@@ -49,6 +49,9 @@
     "licitaciones"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=20.16.0 <21 || >=22.3.0"
+  },
   "publishConfig": {
     "access": "public"
   }

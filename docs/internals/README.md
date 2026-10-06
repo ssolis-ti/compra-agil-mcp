@@ -16,4 +16,5 @@ Documentación de **ingeniería del servidor MCP**, no del mecanismo Compra Ági
 
 | Documento | Para qué sirve |
 | :--- | :--- |
+| [qa/README.md](qa/README.md) | **Punto de retome:** auditoría QA de la 2.6.1, Sprint 0 hecho, roadmap de sprints pendientes y plan de validación contra la API real |
 | [hallazgos-api.md](hallazgos-api.md) | Comportamiento **real** de la API medido empíricamente vs. lo que promete la documentación oficial |

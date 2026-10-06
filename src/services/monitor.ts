@@ -101,7 +101,10 @@ async function runCheck() {
       if (item.resumen.total_ofertas_recibidas !== 0) continue;
 
       // Filtro 3: Debe superar el presupuesto mínimo
-      if (item.montos.monto_disponible_clp < MIN_BUDGET) continue;
+      // Sin monto publicado no se alerta: `undefined < MIN_BUDGET` es false y
+      // dejaba pasar el proceso hasta un toLocaleString() sobre undefined.
+      const presupuesto = item.montos.monto_disponible_clp;
+      if (typeof presupuesto !== 'number' || presupuesto < MIN_BUDGET) continue;
 
       // Filtro 4: Coincidencia de palabras clave en el nombre
       const nameLower = item.nombre.toLowerCase();
@@ -122,7 +125,7 @@ async function runCheck() {
         const cierreTexto = cierreChile
           ? `${cierreChile} (hora de Chile; la API entrega "${item.fechas.fecha_cierre}" sin zona horaria)`
           : String(item.fechas.fecha_cierre);
-        const alertMsg = `[${new Date().toISOString()}] [ALERTA] Código: ${item.codigo} | Presupuesto: $${item.montos.monto_disponible_clp.toLocaleString('es-CL')} CLP | Cierre: ${cierreTexto} | Institución: ${item.institucion.organismo_comprador} | Coincidencia: "${matchedKeyword}" | Nombre: ${item.nombre.trim()}\n`;
+        const alertMsg = `[${new Date().toISOString()}] [ALERTA] Código: ${item.codigo} | Presupuesto: $${presupuesto.toLocaleString('es-CL')} CLP | Cierre: ${cierreTexto} | Institución: ${item.institucion.organismo_comprador} | Coincidencia: "${matchedKeyword}" | Nombre: ${item.nombre.trim()}\n`;
 
         // Escribir en alerts.log
         fs.appendFileSync(ALERTS_LOG_PATH, alertMsg, 'utf8');
