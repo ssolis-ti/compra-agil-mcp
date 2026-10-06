@@ -53,6 +53,13 @@ export class LimitadorConcurrencia {
   private tandas = 0;
   private congestiones = 0;
   private ultimoHttp: number | null = null;
+  /**
+   * Consultas en vuelo de TODAS las tandas. Antes cada tanda contaba solo las
+   * suyas, y dos herramientas simultáneas sumaban el doble del límite.
+   */
+  private enVueloTotal = 0;
+  /** Tandas esperando un cupo: se las despierta cuando una consulta termina. */
+  private readonly despertadores = new Set<() => void>();
 
   /** Último HTTP visto en la tanda en curso. Null si esa tanda no falló con un status. */
   get ultimoHttpVisto(): number | null {
@@ -117,9 +124,10 @@ export class LimitadorConcurrencia {
 
     await new Promise<void>((resolve) => {
       const lanzar = () => {
-        while (enVuelo < this.limite && siguiente < tareas.length) {
+        while (this.enVueloTotal < this.limite && siguiente < tareas.length) {
           const i = siguiente++;
           enVuelo++;
+          this.enVueloTotal++;
           tareas[i]()
             .then((valor) => { resultados[i] = valor; })
             .catch((e) => {
@@ -133,11 +141,17 @@ export class LimitadorConcurrencia {
             })
             .finally(() => {
               enVuelo--;
-              if (siguiente >= tareas.length && enVuelo === 0) resolve();
-              else lanzar();
+              this.enVueloTotal--;
+              if (siguiente >= tareas.length && enVuelo === 0) {
+                this.despertadores.delete(lanzar);
+                resolve();
+              }
+              // El cupo liberado puede ser de otra tanda que espera.
+              for (const despertar of [...this.despertadores]) despertar();
             });
         }
       };
+      this.despertadores.add(lanzar);
       lanzar();
     });
 

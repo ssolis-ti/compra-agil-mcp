@@ -6,6 +6,7 @@ import { logger } from '../utils/logger.js';
 import { esAdmisible, extraerMontoNeto, extraerPrecioUnitario } from '../utils/quotation.js';
 import type { CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { safeError } from '../utils/redact.js';
+import { describirFallosDetalle } from '../utils/presupuesto.js';
 
 const TOOL_NAME = 'auditar_compras_desiertas';
 
@@ -288,6 +289,7 @@ export async function recolectarDatosAuditoria(
   const successUnitPrices: number[] = [];
   const processedCases: ProcesoComparable[] = [];
   let fallosDetalle = 0;
+  let textoFallos = '';
   let intentosDetalle = 0;
   const itemsToProcess = (searchResponse.items || [])
     .filter((item) => item.codigo !== targetCode)
@@ -310,6 +312,10 @@ export async function recolectarDatosAuditoria(
 
     intentosDetalle = detallados.length;
     fallosDetalle = detallados.filter((d) => d === null).length;
+    textoFallos = describirFallosDetalle(
+      itemsToProcess.filter((_, i) => detallados[i] === null).map((i) => i.codigo),
+      intentosDetalle,
+    ).texto;
 
     for (const entrada of detallados) {
       if (!entrada) continue;
@@ -531,7 +537,7 @@ export async function recolectarDatosAuditoria(
       // que la API no respondió, y son cosas muy distintas: la primera
       // habla del mercado, la segunda solo de la infraestructura.
       ...(fallosDetalle > 0 && {
-        _aviso_cobertura: `${fallosDetalle} de ${intentosDetalle} consultas de detalle fallaron (la API no respondió). La comparación se basa en menos procesos de los pedidos; no lo interpretes como escasez de datos del rubro.`,
+        _aviso_cobertura: `${textoFallos} La comparación se basa en menos procesos de los pedidos; no lo interpretes como escasez de datos del rubro.`,
       }),
       estadisticas_montos_cotizados: successPrices.length > 0 ? {
         minimo_cotizado: minPrice,

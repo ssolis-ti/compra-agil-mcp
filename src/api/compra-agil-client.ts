@@ -15,6 +15,7 @@ import { LimitadorConcurrencia } from '../utils/concurrencia.js';
 import path from 'path';
 import { registrarSecreto } from '../utils/redact.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
+import { contextoActual, tiempoRestante } from '../utils/presupuesto.js';
 import { normalizarDetalle, normalizarListado, normalizarOrdenCompra, RespuestaInvalidaError } from './normalizar.js';
 
 // ─── Tipos ──────────────────────────────────────────────────────────
@@ -284,6 +285,9 @@ function esTimeout(error: unknown): boolean {
 
 const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Por debajo de esto no vale la pena enviar: la respuesta no alcanzaría a llegar. */
+const MINIMO_UTIL_MS = 5_000;
+
 export class CompraAgilClient {
   private readonly baseUrl: string;
   private readonly ticket: string;
@@ -365,9 +369,6 @@ export class CompraAgilClient {
       }]);
     }
 
-    // Throttle proactivo: espaciar solicitudes bajo el máximo por minuto para no gatillar 429 por ráfagas
-    await this.rateLimiter.throttle();
-
     // Construir URL con query params
     const base = path.startsWith('/servicios') ? 'https://api.mercadopublico.cl' : this.baseUrl;
     const url = new URL(path, base);
@@ -387,6 +388,23 @@ export class CompraAgilClient {
       sanitizedUrl.searchParams.set('ticket', 'REDACTED');
     }
     const consulta = `GET ${sanitizedUrl.pathname}${sanitizedUrl.search}`;
+    // Dentro de una herramienta, la espera en el freno tiene que caber en su
+    // presupuesto de tiempo (ver utils/presupuesto.ts). Si no cabe, no se
+    // envía: mejor una respuesta parcial que una herramienta cortada por el
+    // cliente MCP. Comprobar y reservar el turno ocurre sin `await` en medio.
+    const restante = tiempoRestante();
+    if (restante !== undefined) {
+      const espera = this.rateLimiter.esperaPrevista();
+      if (espera + MINIMO_UTIL_MS > restante) {
+        throw new CompraAgilApiError(0, [], consulta, {
+          causa: 'tiempo_agotado', esperaMs: espera, presupuestoMs: contextoActual()?.presupuestoMs,
+        });
+      }
+    }
+
+    // Throttle proactivo: espaciar solicitudes bajo el máximo por minuto para no gatillar 429 por ráfagas
+    await this.rateLimiter.throttle();
+
     logger.debug(`API Request: GET ${sanitizedUrl.toString()}`);
 
     const response = await this.enviar(url.toString(), consulta);
@@ -430,22 +448,32 @@ export class CompraAgilClient {
    *   fallo de red (conexión cortada, DNS) es inmediato y suele ser
    *   transitorio, así que un segundo intento es barato.
    */
+  /**
+   * El corte de la consulta: el configurado, o lo que le queda a la
+   * herramienta si es menos (sin bajar de MINIMO_UTIL_MS).
+   */
+  private timeoutEfectivo(): number {
+    const restante = tiempoRestante();
+    return restante === undefined ? this.timeoutMs : Math.max(MINIMO_UTIL_MS, Math.min(this.timeoutMs, restante));
+  }
+
   private async enviar(url: string, consulta: string): Promise<Response> {
     for (let intento = 1; ; intento++) {
       try {
         return await fetch(url, {
           method: 'GET',
           headers: { 'ticket': this.ticket },
-          signal: AbortSignal.timeout(this.timeoutMs),
+          signal: AbortSignal.timeout(this.timeoutEfectivo()),
         });
       } catch (error) {
         if (esTimeout(error)) {
           // La consulta salió: la API pudo contarla contra la cuota.
           this.rateLimiter.recordRequest();
-          throw new CompraAgilApiError(0, [], consulta, { causa: 'timeout', timeoutMs: this.timeoutMs });
+          throw new CompraAgilApiError(0, [], consulta, { causa: 'timeout', timeoutMs: this.timeoutEfectivo() });
         }
         if (!esFalloDeRed(error)) throw error;
-        if (intento >= 2) {
+        // Sin tiempo para un segundo intento útil, no se reintenta.
+        if (intento >= 2 || (tiempoRestante() ?? Infinity) < MINIMO_UTIL_MS * 2) {
           throw new CompraAgilApiError(0, [], consulta, { causa: 'red', origen: error });
         }
         logger.warn(`Fallo de red en ${consulta}; se reintenta una vez.`);
@@ -470,8 +498,17 @@ export class CompraAgilClient {
    * distinguir "la API no respondió" de "no había datos".
    */
   async detallesEnParalelo(codigos: string[]): Promise<Array<CompraAgilDetalle | null>> {
+    const ctx = contextoActual();
     const resultados = await this.concurrencia.ejecutar(
-      codigos.map((codigo) => () => this.detalle(codigo))
+      codigos.map((codigo) => () => this.detalle(codigo).catch((e: unknown) => {
+        // Se anota por llamada a herramienta: el limitador es compartido y su
+        // «último HTTP» podía ser de otra herramienta que corría a la vez.
+        if (ctx && e instanceof CompraAgilApiError) {
+          if (e.causa === 'tiempo_agotado') ctx.omitidas.push(codigo);
+          else if (e.httpStatus > 0) ctx.ultimoHttp = e.httpStatus;
+        }
+        throw e;
+      }))
     );
     const fallidos = resultados.filter((r) => r === null).length;
     if (fallidos > 0) {
@@ -633,7 +670,8 @@ export class CompraAgilClient {
 
   /** HTTP del último fallo de la tanda de detalles en paralelo. Null si no hubo status. */
   ultimoHttpDeConcurrencia(): number | null {
-    return this.concurrencia.ultimoHttpVisto;
+    const ctx = contextoActual();
+    return ctx ? ctx.ultimoHttp : this.concurrencia.ultimoHttpVisto;
   }
 
   /**

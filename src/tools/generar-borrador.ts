@@ -4,6 +4,7 @@ import { CompraAgilClient, CompraAgilDetalle } from '../api/compra-agil-client.j
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { enHoraDeChile } from '../utils/fechas.js';
+import { describirFallosDetalle } from '../utils/presupuesto.js';
 import { extraerPrecioUnitario, percentil } from '../utils/quotation.js';
 import { safeError } from '../utils/redact.js';
 
@@ -61,6 +62,7 @@ export async function estimarPrecioUnitario(
   const precios: number[] = [];
   let fallosDetalle = 0;
   let intentosDetalle = 0;
+  let textoFallos = '';
 
   if (keyword) {
     try {
@@ -93,6 +95,8 @@ export async function estimarPrecioUnitario(
       // llevaría al proveedor a cotizar sobre una premisa falsa.
       fallosDetalle = detallados.filter((d) => d === null).length;
       intentosDetalle = detallados.length;
+      const codigos = (busqueda.items || []).slice(0, 5).map((item) => item.codigo);
+      textoFallos = describirFallosDetalle(codigos.filter((_, i) => detallados[i] === null), intentosDetalle).texto;
 
       for (const det of detallados) {
         if (!det) continue;
@@ -129,8 +133,8 @@ export async function estimarPrecioUnitario(
     return {
       precio: Math.round((presupuesto * 0.9) / cantidadTotal),
       fuente: intentosDetalle > 0 && fallosDetalle === intentosDetalle
-        ? `Sugerencia automática: presupuesto del comprador descontado 10%. ⚠ NO se pudo consultar el mercado — las ${fallosDetalle} consultas de detalle fallaron (la API no respondió). Esto no significa que no existan comparables: reintenta más tarde para obtener un precio de mercado.`
-        : `Sugerencia automática: presupuesto del comprador descontado 10% (no se encontraron cotizaciones de mercado comparables${fallosDetalle > 0 ? `; además ${fallosDetalle} de ${intentosDetalle} consultas fallaron` : ''})`,
+        ? `Sugerencia automática: presupuesto del comprador descontado 10%. ⚠ NO se pudo consultar el mercado — ${textoFallos} Esto no significa que no existan comparables: reintenta más tarde para obtener un precio de mercado.`
+        : `Sugerencia automática: presupuesto del comprador descontado 10% (no se encontraron cotizaciones de mercado comparables${fallosDetalle > 0 ? `; además, ${textoFallos}` : ''})`,
       sugerido: true,
       automatico: true,
     };
