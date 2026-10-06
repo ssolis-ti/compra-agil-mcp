@@ -10,6 +10,8 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { ventanaUltimosMinutos } from '../utils/fechas.js';
+import { ahora } from '../utils/reloj.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { safeError, pista } from '../utils/redact.js';
 
@@ -45,13 +47,16 @@ export function registerVerificarTicket(server: McpServer, client: CompraAgilCli
       }
 
       try {
-        // Consulta de humo mínima: ventana de cambios de 1 hora.
+        // Consulta de humo mínima: cambios de los últimos 10 minutos.
         //
         // IMPORTANTE: la API NO acepta consultas sin filtros — devuelve HTTP 500
         // (verificado contra el servicio real). Debe enviarse al menos un filtro.
-        // `ttl_cambio_ms` es el más liviano: responde en ~1s aunque no haya
-        // resultados, y un 200 basta para probar que el ticket es válido.
-        const resp = await client.buscar({ ttl_cambio_ms: 3_600_000, tamano_pagina: 10, numero_pagina: 1 });
+        //
+        // ⚠ Hasta la 2.7.0 se usaba `ttl_cambio_ms` de 1 hora, "el más liviano:
+        //   ~1 s". Lo era porque volvía siempre vacío: la API compara sus marcas
+        //   (hora de Chile con "Z") contra la hora UTC real. Informaba "0 cambios
+        //   en la última hora" en pleno horario hábil. Ver utils/fechas.ts.
+        const resp = await client.buscar({ ...ventanaUltimosMinutos(10, ahora()), tamano_pagina: 10, numero_pagina: 1 });
         return {
           content: [{
             type: 'text' as const,
@@ -59,10 +64,10 @@ export function registerVerificarTicket(server: McpServer, client: CompraAgilCli
               '✅ Ticket válido y operativo.',
               '',
               `Ticket configurado: ${referencia}`,
-              `Consulta de prueba: cambios en la última hora → ${resp.paginacion.total_resultados} resultado(s).`,
+              `Consulta de prueba: cambios en los últimos 10 minutos → ${resp.paginacion.total_resultados} resultado(s).`,
               `Conteo local del día UTC, compartido por todos los procesos de esta instalación: ${client.getRateLimitStats().requestsToday} request(s). No es el saldo del ticket ni la cuota de este chat.`,
               '',
-              'Nota: un total de 0 es normal si no hubo movimientos en la última hora;',
+              'Nota: fuera del horario hábil un total de 0 es normal;',
               'lo relevante es que la API respondió correctamente con este ticket.',
             ].join('\n'),
           }],

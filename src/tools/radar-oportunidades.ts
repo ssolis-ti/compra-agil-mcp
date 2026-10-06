@@ -6,11 +6,12 @@ import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { safeError } from '../utils/redact.js';
 import { parsearFechaApi, enHoraDeChile, NOTA_ZONA_HORARIA } from '../utils/fechas.js';
+import { ahora, avisoReloj } from '../utils/reloj.js';
 
 const TOOL_NAME = 'radar_oportunidades_calientes';
 
 const TOOL_DESCRIPTION = `Escanea procesos de Compra Ágil publicados y los ordena con un puntaje.
-El puntaje usa datos del listado: 0 ofertas, el presupuesto, las horas hasta el cierre según la lectura UTC y si el proceso va en segundo llamado. 0 ofertas y la falta de adjuntos no son hechos de la ficha.
+El puntaje usa datos del listado: 0 ofertas, el presupuesto, las horas hasta el cierre (hora de Chile, contra el reloj oficial del SHOA) y si el proceso va en segundo llamado. 0 ofertas y la falta de adjuntos no son hechos de la ficha.
 Cada resultado incluye "llamado" (1 = primero, 2 = segundo) y los factores del puntaje. Si q no está en el título, la fila lo dice.`;
 
 const inputSchema = {
@@ -58,12 +59,12 @@ export function evaluarOportunidad(
   const budget = item.montos?.monto_disponible_clp || item.montos?.monto_disponible || 0;
   if (budget < minBudget) return null;
 
-  // ⚠ La fecha se interpreta con `parsearFechaApi`, NO con `new Date()`. La API
-  //   entrega "2026-09-11 12:00" sin zona horaria, y V8 lo leería en la del
-  //   servidor: medido, el mismo dato daba 15:00Z desplegado en Chile y 12:00Z
-  //   en UTC. Es decir, `horas_restantes` —y con ella hasta 30 puntos de
-  //   urgencia— cambiaban según dónde corriera el proceso. Ahora el resultado
-  //   es el mismo en cualquier parte.
+  // ⚠ La fecha se interpreta con `parsearFechaApi`, NO con `new Date()`: la API
+  //   entrega hora de Chile sin decirlo, y V8 la leería en la zona del servidor.
+  //   Hasta la 2.7.0 se leía como UTC: cada cierre quedaba 3 h antes y este
+  //   filtro (`hoursLeft <= 0`) descartaba los procesos que cerraban en las 3 h
+  //   siguientes — justo los más urgentes. `now` viene de `ahora()`, la hora
+  //   de esta máquina corregida contra el SHOA (utils/reloj.ts).
   let hoursLeft = 0;
   const cierre = parsearFechaApi(item.fechas?.fecha_cierre);
   if (cierre) {
@@ -90,7 +91,7 @@ export function evaluarOportunidad(
   // Factor 2: Urgencia del Cierre — Máx 30 pts
   if (hoursLeft <= 4) {
     score += 30;
-    factors.push('Urgencia crítica: cierra en menos de 4 horas según la lectura UTC (+30 pts)');
+    factors.push('Urgencia crítica: cierra en menos de 4 horas (+30 pts)');
   } else if (hoursLeft <= 12) {
     score += 20;
     factors.push('Cierre inminente: cierra en menos de 12 horas (+20 pts)');
@@ -197,7 +198,7 @@ export interface RadarDatos {
 export async function recolectarDatosRadar(
   client: CompraAgilClient,
   params: RadarParams,
-  now: number = Date.now()
+  now: number = ahora()
 ): Promise<RadarDatos> {
   const maxPaginas = params.max_paginas || 3;
   logger.info(`radar: escaneando procesos activos (hasta ${maxPaginas} pág.) region="${params.region || 'Todas'}" q="${params.q || 'Todos'}"`);
@@ -265,6 +266,7 @@ export function registerRadarOportunidades(server: McpServer, client: CompraAgil
           // alcanza a cotizar necesita leerlo. `horas_restantes` se calcula
           // sobre esta misma interpretación.
           _nota_horaria: NOTA_ZONA_HORARIA,
+          ...(avisoReloj() ? { _aviso_reloj: avisoReloj() } : {}),
           total_resultados_api: datos.totalResultadosApi,
           paginas_pedidas: datos.paginasPedidas,
           paginas_leidas: datos.paginasLeidas,

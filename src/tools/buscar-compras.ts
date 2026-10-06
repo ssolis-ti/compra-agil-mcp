@@ -19,7 +19,7 @@ const TOOL_NAME = 'buscar_compras_agiles';
 const TOOL_DESCRIPTION = `Busca procesos de Compra Ágil en Mercado Público de Chile.
 Permite filtrar por palabras clave, estado del proceso, región geográfica y rango de fechas de publicación.
 Retorna un listado resumido con código, nombre, estado, presupuesto e institución compradora.
-La fecha de cierre llega sin zona horaria: la respuesta incluye "_nota_horaria" y "fecha_cierre_hora_chile", calculada asumiendo UTC. Confirma el plazo en la ficha del proceso.
+Las fechas de la API están en hora de Chile: la respuesta trae "fecha_cierre_hora_chile". Confirma el plazo en la ficha del proceso.
 Cada resultado trae el RUT del organismo y fecha_ultimo_cambio. motivo_seleccion solo aparece si la API lo envió con texto; un valor presente no prueba que haya un proveedor adjudicado.
 Hay que enviar al menos un filtro de la API: estado, region, q, id, publicado_desde o publicado_hasta. Sin ninguno, esta herramienta no hace la llamada. El orden, la página y las palabras clave locales no cuentan: las palabras se aplican después, sobre la respuesta.
 Nota: los parámetros 'q' (búsqueda por texto) e 'id' (código exacto) son mutuamente excluyentes.
@@ -79,7 +79,7 @@ const MENSAJE_SIN_FILTRO = [
   'El orden, el tamaño de página y palabras_clave_requeridas/excluidas no cuentan: se aplican aquí, después de que la API responde.',
 ].join(' ');
 
-/** Listado que ve el modelo. El cierre crudo se conserva; al lado va la hora de Chile bajo la suposición UTC. */
+/** Listado que ve el modelo. El cierre crudo se conserva; al lado va su lectura validada en hora de Chile. */
 export function resumirCompraBusqueda(item: CompraAgilItem) {
   const resumen = {
     codigo: item.codigo,

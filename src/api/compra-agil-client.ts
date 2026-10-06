@@ -657,16 +657,6 @@ export class CompraAgilClient {
   }
 
   /**
-   * Buscar cambios recientes en los últimos N milisegundos.
-   */
-  async cambiosRecientes(ttlMs: number, filtros?: Partial<BuscarParams>): Promise<BuscarResponse> {
-    return this.buscar({
-      ttl_cambio_ms: ttlMs,
-      ...filtros,
-    });
-  }
-
-  /**
    * Obtener estadísticas del rate limiter.
    */
   getRateLimitStats() {

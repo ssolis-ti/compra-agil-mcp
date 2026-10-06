@@ -162,7 +162,7 @@ function formatRateLimitMessage(detail: string): string {
   // La cuota se comporta como un token bucket que se recarga solo (glosario de
   // la guía oficial): medido en producción, la API volvió a responder ~13 min
   // después de un 429. Por eso no se aconseja esperar al día siguiente.
-  return `Se agotaron temporalmente los tokens de cuota de la API. No es necesario esperar al día siguiente: la cuota se recarga sola, así que reintenta en unos minutos. Para gastar menos: usa filtros más específicos (estado, región, fechas), baja 'limite_analisis'/'max_paginas' en las herramientas de análisis, y prefiere 'ttl_cambio_ms' o un rango 'cambio_desde'/'cambio_hasta' para sincronización incremental en vez de descargas completas. Si el 429 persiste durante horas, la cuota diaria del ticket sí puede estar agotada: contacta a ChileCompra para uno de mayor límite.${detail}`;
+  return `Se agotaron temporalmente los tokens de cuota de la API. No es necesario esperar al día siguiente: la cuota se recarga sola, así que reintenta en unos minutos. Para gastar menos: usa filtros más específicos (estado, región, fechas), baja 'limite_analisis'/'max_paginas' en las herramientas de análisis, y prefiere monitorear_cambios_recientes (ventana de cambios) para sincronización incremental en vez de descargas completas. Si el 429 persiste durante horas, la cuota diaria del ticket sí puede estar agotada: contacta a ChileCompra para uno de mayor límite.${detail}`;
 }
 
 /**

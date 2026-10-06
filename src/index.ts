@@ -24,6 +24,7 @@ const { version: PKG_VERSION } = require('../package.json') as { version: string
 import { CompraAgilClient } from './api/compra-agil-client.js';
 import { logger, setMcpServer } from './utils/logger.js';
 import { registrarSecreto, pista } from './utils/redact.js';
+import { iniciarRelojOficial } from './utils/reloj.js';
 
 // Tools
 import { registerBuscarCompras } from './tools/buscar-compras.js';
@@ -82,6 +83,11 @@ async function main() {
 
   // 1. Crear cliente HTTP para la API de Mercado Público
   const client = new CompraAgilClient(VALID_TICKET, BASE_URL, { persistir: true });
+
+  // Plazos, radar y ventanas de cambios usan la hora del SHOA (utils/reloj.ts).
+  // En segundo plano: si el UDP 123 está bloqueado, se sigue con el reloj local.
+  // COMPRA_AGIL_NTP=off lo desactiva; bajo Vitest no corre, para no salir a la red.
+  if (process.env.COMPRA_AGIL_NTP !== 'off' && !process.env.VITEST) iniciarRelojOficial();
   logger.info(`Cliente API configurado → ${BASE_URL}`);
 
   // 2. Crear servidor MCP

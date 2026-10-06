@@ -379,7 +379,7 @@ const resources = await client.listResources();
 | `obtener_detalle_orden_compra` | Desglose de productos y facturación de una OC. ⚠ **El código debe venir de otra fuente** (la OC que te emitieron, un correo, la ficha pública): consulta la API legada de Órdenes de Compra, y la de Compra Ágil no entrega códigos de OC. |
 | `obtener_estadisticas_uso` | Cuántas consultas lleva esta instalación en el día UTC y si ya recibió un 429. ⚠ Es un **conteo local**, no el saldo del ticket: la API no publica cuánta cuota queda. Persiste entre reinicios. |
 | `verificar_ticket` | Comprueba que el ticket configurado funcione contra la API real **sin revelar su valor** (solo muestra `••••1234`). Primer diagnóstico recomendado. |
-| `verificar_hora_oficial` | Contrasta el reloj de esta máquina con la hora oficial de Chile (`ntp.shoa.cl`, del SHOA). Importa porque `horas_restantes` y el puntaje de urgencia se calculan restando la hora local: un reloj desviado los falsea aunque los datos sean correctos. No consume cuota de Mercado Público. |
+| `verificar_hora_oficial` | Contrasta el reloj de esta máquina con la hora oficial de Chile (`ntp.shoa.cl`, del SHOA). El servidor ya corrige sus plazos con esa hora cuando puede medirla; esta herramienta muestra el desfase, si la corrección está activa y la versión de la base de zonas horarias que da el paso a UTC-3/UTC-4. No consume cuota de Mercado Público. |
 | `obtener_enlace_documento` | Entrega el enlace a la **ficha pública** del proceso, que es donde el adjunto sí es accesible (en un navegador). El enlace heredado de descarga directa se ofrece advirtiendo que hoy responde 404. |
 | `descargar_y_leer_documento` | ⚠ **Hoy no puede descargar los adjuntos de Compra Ágil**: el portal dejó de servirlos por enlace directo (404 verificado) y en la ficha el archivo lo genera JavaScript, sin URL que pedir. Para IDs numéricos responde de inmediato con el enlace a la ficha, sin gastar el intento. Los UUID sí se intentan. |
 | `consultar_documentos_locales` | Busca dentro de los PDF/TXT/MD de `docs/`. Admite **preguntas en lenguaje natural** ("¿qué multas me pueden aplicar?"), no solo palabras sueltas: descompone la consulta en términos, ignora acentos y palabras vacías, y ordena por densidad de coincidencias. Devuelve como máximo 3 archivos y nombra los que quedaron fuera. ⚠ Requiere una carpeta `docs/` con contenido: **no viene en el paquete de npm** (ver [nota](#-la-documentación-no-viaja-en-el-paquete-de-npm)). |
@@ -423,6 +423,15 @@ Las herramientas que consultan la API no dependen de esa carpeta. La limitación
 ## ⚠️ Limitaciones conocidas de la API
 
 Estos hallazgos fueron **verificados empíricamente** contra el servicio real de Mercado Público (julio 2026, 45 procesos y 52 cotizaciones inspeccionados; **re-confirmados en septiembre de 2026** junto a una auditoría de las 15 herramientas de esa pasada). `verificar_hora_oficial`, añadida en la 2.5.0, no consulta esta API. La [Guía oficial API Compra Ágil v2](docs/api/) documenta un comportamiento distinto en cada uno de estos puntos.
+
+### 🔴 Las fechas están en hora de Chile, aunque digan "Z"
+
+| La documentación sugiere | La API real hace |
+| :--- | :--- |
+| `fecha_ultimo_cambio` con "Z" es UTC | Es la **hora de Chile** con una "Z" que no le corresponde |
+| `ttl_cambio_ms` = cambios de los últimos N ms | Compara esas marcas contra la hora UTC real: **una ventana menor a 3 horas vuelve vacía** |
+
+Medido el 6 de octubre de 2026 con el reloj verificado contra el SHOA: a las 15:42 de Chile el cambio más reciente decía `15:40Z`, y 89 de 92 cierres caen en horario de oficina leídos como hora de Chile. **Hasta la 2.7.0 este servidor los leía como UTC**: mostraba cada cierre 3 horas antes, el radar ocultaba los procesos que cerraban en las 3 horas siguientes y el monitoreo de menos de 3 horas venía vacío. Desde la 2.8.0 se leen como hora de Chile y las ventanas se mandan como la API compara.
 
 ### 🔴 La API no publica adjudicaciones
 

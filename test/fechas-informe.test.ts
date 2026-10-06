@@ -5,7 +5,9 @@ import { enHoraDeChile } from '../src/utils/fechas.js';
 /**
  * Los informes imprimen el plazo de cierre. Antes dependía de la zona horaria
  * del servidor: el mismo cierre salía 12:00, 15:00 o 17:00 según dónde corría
- * el proceso (auditoría QA, octubre 2026).
+ * el proceso (auditoría QA, octubre 2026). Y hasta la 2.7.0 se leía como UTC,
+ * con lo que el informe imprimía cada cierre 3 h antes: la API entrega hora de
+ * Chile (medido el 6-oct-2026; ver utils/fechas.ts).
  */
 
 const TZ_ORIGINAL = process.env.TZ;
@@ -16,22 +18,22 @@ afterEach(() => {
 });
 
 describe('fecha() de los informes', () => {
-  it('un valor sin zona se lee como UTC y se muestra en hora de Chile (invierno, UTC-4)', () => {
-    expect(fecha('2026-07-15 13:30')).toBe('15-07-2026 09:30');
+  it('el valor de la API es hora de Chile: se imprime tal cual, en invierno y en verano', () => {
+    expect(fecha('2026-07-15 13:30')).toBe('15-07-2026 13:30');
+    expect(fecha('2026-01-15 13:30')).toBe('15-01-2026 13:30');
   });
 
-  it('en horario de verano de Chile resta 3 horas', () => {
-    expect(fecha('2026-01-15 13:30')).toBe('15-01-2026 10:30');
+  it('la "Z" de la API no cambia la hora: también es hora de Chile', () => {
+    expect(fecha('2026-07-15T13:30:00Z')).toBe('15-07-2026 13:30');
   });
 
-  it('respeta una fecha que ya declara su zona', () => {
-    expect(fecha('2026-07-15T13:30:00Z')).toBe('15-07-2026 09:30');
+  it('un offset numérico explícito sí se respeta', () => {
     expect(fecha('2026-07-15T13:30:00-04:00')).toBe('15-07-2026 13:30');
+    expect(fecha('2026-07-15T13:30:00+00:00')).toBe('15-07-2026 09:30');
   });
 
-  it('el cambio de día también se calcula en Chile', () => {
-    // 02:00 UTC del 16 = 22:00 del 15 en Chile.
-    expect(fecha('2026-07-16 02:00', false)).toBe('15-07-2026');
+  it('el día impreso es el del valor, sin correrse por la zona', () => {
+    expect(fecha('2026-07-16 02:00', false)).toBe('16-07-2026');
   });
 
   it('da lo mismo en cualquier zona horaria del servidor', () => {

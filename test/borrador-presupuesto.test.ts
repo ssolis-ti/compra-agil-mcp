@@ -76,7 +76,7 @@ describe('construirBorradorCotizacion frente al presupuesto (S2)', () => {
     expect(b.comparacion_presupuesto?.monto_total_sobre_presupuesto).toBe(true);
     expect(b._campos_a_revisar).toHaveLength(1);
     expect(b._campos_a_revisar[0]).toMatch(/supera el presupuesto del comprador/);
-    expect(b.fecha_cierre_hora_chile).toBe('2026-10-07 00:18');
+    expect(b.fecha_cierre_hora_chile).toBe('2026-10-07 03:18');
   });
 
   it('dentro del presupuesto no agrega advertencias', async () => {
@@ -90,7 +90,7 @@ describe('construirBorradorCotizacion frente al presupuesto (S2)', () => {
     const html = renderCotizacionInforme({ borrador: b, generadoEn: new Date('2026-10-06T01:21:00Z') });
     expect(html).toContain('Presupuesto del comprador: <b>$9.021.000</b>');
     expect(html).toContain('El total supera el presupuesto');
-    expect(html).toContain('07-10-2026 00:18');
+    expect(html).toContain('07-10-2026 03:18');
     expect(html).toContain('Campos por revisar');
   });
 });

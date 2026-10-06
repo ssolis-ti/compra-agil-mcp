@@ -7,6 +7,20 @@ import { esAdmisible, extraerMontoNeto, extraerPrecioUnitario } from '../utils/q
 import type { CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { safeError } from '../utils/redact.js';
 import { describirFallosDetalle } from '../utils/presupuesto.js';
+import { parsearFechaApi } from '../utils/fechas.js';
+
+/**
+ * Días entre la publicación y el cierre, con una decimal. `null` si falta una de
+ * las dos o no se entiende. Usa `parsearFechaApi`: con `new Date()` un valor
+ * sin zona se leía en la del servidor y uno con "Z" en UTC, y si el par mezclaba
+ * formatos la duración salía corrida en horas.
+ */
+export function duracionEnDias(publicacion: string | null | undefined, cierre: string | null | undefined): number | null {
+  const inicio = parsearFechaApi(publicacion);
+  const fin = parsearFechaApi(cierre);
+  if (!inicio || !fin) return null;
+  return Math.round(((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) * 10) / 10;
+}
 
 const TOOL_NAME = 'auditar_compras_desiertas';
 
@@ -269,12 +283,7 @@ export async function recolectarDatosAuditoria(
   const targetName = targetDetail.nombre || 'Sin nombre';
   const targetBudget = targetDetail.presupuesto?.monto_disponible_clp || targetDetail.presupuesto?.monto_disponible || 0;
   
-  let targetDuration = 0;
-  if (targetDetail.fechas?.fecha_cierre && targetDetail.fechas?.fecha_publicacion) {
-    const start = new Date(targetDetail.fechas.fecha_publicacion).getTime();
-    const end = new Date(targetDetail.fechas.fecha_cierre).getTime();
-    targetDuration = Math.round(((end - start) / (1000 * 60 * 60 * 24)) * 10) / 10;
-  }
+  const targetDuration = duracionEnDias(targetDetail.fechas?.fecha_publicacion, targetDetail.fechas?.fecha_cierre) ?? 0;
 
   if (targetDetail.institucion?.region !== null) {
     region = String(targetDetail.institucion.region);
@@ -369,13 +378,8 @@ export async function recolectarDatosAuditoria(
         const menorUnitario = unitarios.length > 0 ? Math.min(...unitarios) : null;
         if (menorUnitario !== null) successUnitPrices.push(menorUnitario);
 
-        let successDuration = 0;
-        if (detail.fechas?.fecha_cierre && detail.fechas?.fecha_publicacion) {
-          const start = new Date(detail.fechas.fecha_publicacion).getTime();
-          const end = new Date(detail.fechas.fecha_cierre).getTime();
-          successDuration = Math.round(((end - start) / (1000 * 60 * 60 * 24)) * 10) / 10;
-          successDurations.push(successDuration);
-        }
+        const successDuration = duracionEnDias(detail.fechas?.fecha_publicacion, detail.fechas?.fecha_cierre);
+        if (successDuration !== null) successDurations.push(successDuration);
 
         processedCases.push({
           codigo: item.codigo,
@@ -386,7 +390,7 @@ export async function recolectarDatosAuditoria(
           menor_monto_cotizado: menorNeto,
           mayor_monto_cotizado: Math.max(...netos),
           menor_precio_unitario: menorUnitario,
-          duracion_dias: successDuration,
+          duracion_dias: successDuration ?? 0,
           fecha_cierre: item.fechas?.fecha_cierre,
           motivo_desierta: detail.motivos?.motivo_desierta ?? null,
         });

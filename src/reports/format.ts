@@ -32,7 +32,7 @@ export function porcentaje(valor: number | null | undefined, decimales = 1): str
 
 /**
  * Formatea una fecha de la API a formato legible chileno, en HORA DE CHILE.
- * Ej: "2026-07-15 13:30" (sin zona, se asume UTC) → "15-07-2026 09:30".
+ * Ej: "2026-07-15 13:30" (hora de Chile, aunque la API no lo diga) → "15-07-2026 13:30".
  *
  * ⚠ Antes usaba `new Date(iso)` y `getHours()`: interpretaba el valor sin zona
  *   como hora del servidor y lo mostraba en la hora del servidor. El mismo

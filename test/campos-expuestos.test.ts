@@ -59,17 +59,17 @@ function cotizante(justificacion: string | null): ProveedorCotizando {
 }
 
 describe('buscar expone RUT, último cambio y el motivo solo si hay texto', () => {
-  it('trae el RUT del organismo y el último cambio en UTC y en hora de Chile', () => {
+  it('trae el RUT del organismo y el último cambio con su lectura en hora de Chile', () => {
     const r = resumirCompraBusqueda(item());
     expect(r.rut_organismo).toBe('60.000.000-0');
     expect(r.fecha_ultimo_cambio).toBe('2026-09-10T09:00:00Z');
-    expect(r.fecha_ultimo_cambio_hora_chile).toBe('2026-09-10 06:00');
+    expect(r.fecha_ultimo_cambio_hora_chile).toBe('2026-09-10 09:00');
     expect(r).not.toHaveProperty('motivo_seleccion');
     expect(r.estado_codigo).toBe('publicada');
     expect(r.estado_convocatoria).toBe(1);
     expect(r.tipo_cambio).toBeNull();
     expect(r.tipo_cambio_nota).toMatch(/CLP/);
-    expect(r.fecha_publicacion_hora_chile).toBe('2026-09-10 06:00');
+    expect(r.fecha_publicacion_hora_chile).toBe('2026-09-10 09:00');
     expect(r._nota_ofertas).toMatch(/listado informa 0 ofertas/);
   });
 
@@ -95,7 +95,7 @@ describe('detalle expone estado, llamado, tipo de cambio e inadmisibilidad', () 
       },
     });
     expect(r.ultimo_cambio).toBe('2026-09-10T09:00:00Z');
-    expect(r.ultimo_cambio_hora_chile).toBe('2026-09-10 06:00');
+    expect(r.ultimo_cambio_hora_chile).toBe('2026-09-10 09:00');
   });
 
   it('en CLP no agrega el tipo de cambio', () => {

@@ -6,6 +6,23 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Corregido — la API entrega hora de Chile, no UTC
+* **Los cierres se mostraban 3 horas antes (4 en invierno).** La API entrega `fecha_cierre`, `fecha_publicacion` y `fecha_ultimo_cambio` en hora de Chile, esta última con una "Z" que no le corresponde. Hasta la 2.7.0 se leían como UTC. Medido el 6 de octubre contra la API real, con el reloj verificado contra el SHOA: a las 15:42 de Chile el cambio más reciente decía `15:40Z`, y 89 de 92 cierres caen en horario de oficina leídos como hora de Chile (leídos como UTC aparecían cierres a las 03:00 y 05:00). La validación de la 2.7.0 había concluido lo contrario porque supuso que el filtro de la API compara bien las horas; comete el mismo error ahí.
+* **El radar ocultaba los procesos que cerraban en las 3 horas siguientes**, justo los más urgentes: los daba por cerrados. Ahora los muestra, con su puntaje de urgencia.
+* **`monitorear_cambios_recientes` con menos de 180 minutos volvía siempre vacío**, y con más devolvía una ventana 3 h más corta: `ttl_cambio_ms` compara las marcas de la API contra la hora UTC real. Las dos ventanas se mandan ahora como rango `cambio_desde`/`cambio_hasta` escrito como la API compara. Verificado: los últimos 60 minutos trajeron 1.517 cambios, el más reciente de hace 2 minutos.
+* **Un rango `cambio_desde`/`cambio_hasta` salía corrido 3 horas**, y los dos extremos se comparaban como texto: `10:00-03:00` parecía anterior a `12:00Z`. Ahora se comparan instantes.
+* **`verificar_ticket` informaba «0 cambios en la última hora» en pleno horario hábil**, por el mismo filtro. Ahora consulta los últimos 10 minutos.
+* **El daemon de monitoreo cubría 21 de las 24 horas pedidas** por el mismo motivo.
+* **La auditoría calculaba la duración de los procesos con `new Date()`**, que depende de la zona del servidor.
+
+### Añadido
+* **El servidor usa la hora del SHOA como referencia.** Mide el desfase contra `ntp.shoa.cl` al arrancar y cada 30 minutos, en segundo plano, y corrige con eso los plazos, el radar, las ventanas del monitoreo y el daemon (`utils/reloj.ts`). Si el UDP 123 está bloqueado sigue con el reloj local; si el desfase pasa de un minuto, lo advierte (`_aviso_reloj`) en toda respuesta con fechas. `COMPRA_AGIL_NTP=off` lo desactiva.
+* **`verificar_hora_oficial` informa el reloj que usa el servidor y la base de zonas horarias.** El NTP da la hora UTC exacta, no la zona: el paso a UTC-3/UTC-4 sale de la base de zonas de Node, y Chile cambia su horario por decreto. Advierte si la base es anterior a la 2025b.
+* **El detalle trae la hora de Chile de los cierres de cada llamado**, y el monitoreo la del último cambio.
+
+### Eliminado
+* `CompraAgilClient.cambiosRecientes()`: no tenía usos y mandaba la ventana defectuosa.
+
 ### Cambiado
 * **`publicar.yml` ya no falla si la versión se publicó a mano.** La 2.7.0 se publicó con `npm publish` desde el equipo del desarrollador; al empujar después el tag, el workflow se detenía en «ya está en npm» y no creaba la release. Ahora, si la versión ya está en npm, se salta el token, la instalación y la publicación, y solo crea la release con las notas del CHANGELOG.
 

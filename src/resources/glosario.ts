@@ -46,7 +46,7 @@ export const GLOSARIO = [
   },
   {
     termino: 'Sincronización incremental',
-    definicion: 'Técnica para obtener solo los datos que han cambiado desde la última consulta, evitando descargas completas. Se logra usando los parámetros ttl_cambio_ms o cambio_desde/cambio_hasta.',
+    definicion: 'Técnica para obtener solo los datos que han cambiado desde la última consulta, evitando descargas completas. Se logra con cambio_desde/cambio_hasta. Ojo: la API marca los cambios con la hora de Chile y una "Z", y su ttl_cambio_ms los compara contra la hora UTC real, así que una ventana relativa menor a 3 horas vuelve vacía; monitorear_cambios_recientes ya lo compensa.',
   },
   {
     termino: 'Paginación',

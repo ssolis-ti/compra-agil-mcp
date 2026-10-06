@@ -3,7 +3,9 @@ import { readFileSync } from 'node:fs';
 import { evaluarOportunidad } from '../src/tools/radar-oportunidades.js';
 import type { CompraAgilItem } from '../src/api/compra-agil-client.js';
 
-const NOW = new Date('2026-07-15T12:00:00Z').getTime();
+// 12:00 de Chile del 15 de julio (invierno, UTC-4). Las fechas de los fixtures son hora de Chile,
+// como las entrega la API aunque algunas digan "Z" (ver utils/fechas.ts).
+const NOW = new Date('2026-07-15T16:00:00Z').getTime();
 
 function item(overrides: Partial<CompraAgilItem> = {}): CompraAgilItem {
   const base: CompraAgilItem = {

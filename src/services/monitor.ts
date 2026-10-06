@@ -11,7 +11,8 @@ import { loadEnvManual } from '../utils/env-loader.js';
 import { rutaDeDatos } from '../utils/rutas.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { safeError, registrarSecreto } from '../utils/redact.js';
-import { enHoraDeChile } from '../utils/fechas.js';
+import { enHoraDeChile, ventanaUltimosMinutos } from '../utils/fechas.js';
+import { ahora, iniciarRelojOficial } from '../utils/reloj.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
 
 // Inicializar entorno
@@ -72,20 +73,24 @@ console.log(`Destino de alertas     : ${ALERTS_LOG_PATH}`);
 console.log('========================================================');
 
 const client = new CompraAgilClient(TICKET, BASE_URL, { persistir: true });
+// La ventana de cada ciclo se calcula con la hora del SHOA, no solo con el reloj local.
+iniciarRelojOficial();
 
 async function runCheck() {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] Iniciando ciclo de búsqueda de cambios...`);
 
   try {
-    // Definir ttl en base al intervalo de ejecución + un margen de 5 minutos por solapamiento de APIs
+    // Ventana = intervalo de ejecución + 5 minutos de solapamiento entre ciclos.
+    // ⚠ Rango absoluto, no `ttl_cambio_ms`: la API compara sus marcas (hora de
+    //   Chile con "Z") contra la hora UTC real, y el ttl dejaba fuera las tres
+    //   horas más recientes. Ver utils/fechas.ts.
     const bufferMinutes = 5;
-    const ttlMs = (INTERVAL_MINUTES + bufferMinutes) * 60 * 1000;
 
     // Hasta 10 páginas de 10. Una de 50 agota la pasarela (HTTP 504).
     // El ciclo cubre como máximo 100 procesos.
     const items = await client.buscarTodo({
-      ttl_cambio_ms: ttlMs,
+      ...ventanaUltimosMinutos(INTERVAL_MINUTES + bufferMinutes, ahora()),
       estado: 'publicada',
       tamano_pagina: TAMANO_PAGINA_SEGURO,
     });
@@ -117,14 +122,12 @@ async function runCheck() {
         alertedCodes.add(item.codigo);
 
         alertCount++;
-        // El cierre se informa en hora de Chile además del valor crudo: la API
-        // no declara zona horaria en ese campo y se interpreta como UTC, así
-        // que leer el crudo como hora local haría creer que quedan tres horas
-        // más de las reales. En una alerta cuyo propósito es avisar a tiempo,
-        // esa confusión sería justamente el fallo que se quiere evitar.
+        // El cierre se informa declarando la zona: la API lo entrega en hora de
+        // Chile sin decirlo (ver utils/fechas.ts). En una alerta cuyo propósito
+        // es avisar a tiempo, una hora sin zona es justo la confusión a evitar.
         const cierreChile = enHoraDeChile(item.fechas.fecha_cierre);
         const cierreTexto = cierreChile
-          ? `${cierreChile} (hora de Chile; la API entrega "${item.fechas.fecha_cierre}" sin zona horaria)`
+          ? `${cierreChile} (hora de Chile)`
           : String(item.fechas.fecha_cierre);
         const alertMsg = `[${new Date().toISOString()}] [ALERTA] Código: ${item.codigo} | Presupuesto: $${presupuesto.toLocaleString('es-CL')} CLP | Cierre: ${cierreTexto} | Institución: ${item.institucion.organismo_comprador} | Coincidencia: "${matchedKeyword}" | Nombre: ${item.nombre.trim()}\n`;
 
