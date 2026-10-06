@@ -11,10 +11,9 @@ import { rutaDeDatos } from '../utils/rutas.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { safeError, registrarSecreto } from '../utils/redact.js';
-import { enHoraDeChile, ventanaUltimosMinutos } from '../utils/fechas.js';
+import { ejecutarCiclo } from './ciclo-monitor.js';
 import { ahora, iniciarRelojOficial } from '../utils/reloj.js';
 import { leerEstadoMonitor, podarEstado, serializarEstado } from '../utils/estado-monitor.js';
-import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
 
 // Inicializar entorno
 loadEnvManual();
@@ -81,67 +80,23 @@ async function runCheck() {
   console.log(`[${timestamp}] Iniciando ciclo de búsqueda de cambios...`);
 
   try {
-    // Ventana = intervalo de ejecución + 5 minutos de solapamiento entre ciclos.
-    // ⚠ Rango absoluto, no `ttl_cambio_ms`: la API compara sus marcas (hora de
-    //   Chile con "Z") contra la hora UTC real, y el ttl dejaba fuera las tres
-    //   horas más recientes. Ver utils/fechas.ts.
-    const bufferMinutes = 5;
+    // El ciclo vive en ciclo-monitor.ts para poder probarlo (fase 1.6). La
+    // ventana se calcula con la hora del SHOA (ahora()), no solo con el reloj local.
+    const { revisados, alertas } = await ejecutarCiclo(
+      client,
+      { intervaloMinutos: INTERVAL_MINUTES, presupuestoMinimo: MIN_BUDGET, palabrasClave: KEYWORDS },
+      alertedCodes,
+      ahora(),
+    );
+    console.log(`[${timestamp}] Se encontraron ${revisados} procesos modificados/creados recientemente.`);
 
-    // Hasta 10 páginas de 10. Una de 50 agota la pasarela (HTTP 504).
-    // El ciclo cubre como máximo 100 procesos.
-    const items = await client.buscarTodo({
-      ...ventanaUltimosMinutos(INTERVAL_MINUTES + bufferMinutes, ahora()),
-      estado: 'publicada',
-      tamano_pagina: TAMANO_PAGINA_SEGURO,
-    });
-
-    console.log(`[${timestamp}] Se encontraron ${items.length} procesos modificados/creados recientemente.`);
-
-    let alertCount = 0;
-
-    for (const item of items) {
-      // Filtro 1: Debe estar en estado "publicada"
-      if (item.estado.codigo !== 'publicada') continue;
-
-      // Filtro 2: Debe tener 0 ofertas recibidas
-      if (item.resumen.total_ofertas_recibidas !== 0) continue;
-
-      // Filtro 3: Debe superar el presupuesto mínimo
-      // Sin monto publicado no se alerta: `undefined < MIN_BUDGET` es false y
-      // dejaba pasar el proceso hasta un toLocaleString() sobre undefined.
-      const presupuesto = item.montos.monto_disponible_clp;
-      if (typeof presupuesto !== 'number' || presupuesto < MIN_BUDGET) continue;
-
-      // Filtro 4: Coincidencia de palabras clave en el nombre
-      const nameLower = item.nombre.toLowerCase();
-      const matchedKeyword = KEYWORDS.find(kw => nameLower.includes(kw));
-
-      if (matchedKeyword) {
-        // Deduplicación: no re-alertar un proceso ya notificado en ciclos previos
-        if (alertedCodes.has(item.codigo)) continue;
-        alertedCodes.set(item.codigo, Date.now());
-
-        alertCount++;
-        // El cierre se informa declarando la zona: la API lo entrega en hora de
-        // Chile sin decirlo (ver utils/fechas.ts). En una alerta cuyo propósito
-        // es avisar a tiempo, una hora sin zona es justo la confusión a evitar.
-        const cierreChile = enHoraDeChile(item.fechas.fecha_cierre);
-        const cierreTexto = cierreChile
-          ? `${cierreChile} (hora de Chile)`
-          : String(item.fechas.fecha_cierre);
-        const alertMsg = `[${new Date().toISOString()}] [ALERTA] Código: ${item.codigo} | Presupuesto: $${presupuesto.toLocaleString('es-CL')} CLP | Cierre: ${cierreTexto} | Institución: ${item.institucion.organismo_comprador} | Coincidencia: "${matchedKeyword}" | Nombre: ${item.nombre.trim()}\n`;
-
-        // Escribir en alerts.log
-        fs.appendFileSync(ALERTS_LOG_PATH, alertMsg, 'utf8');
-
-        // Mostrar alerta en consola
-        console.log(`\x1b[33m${alertMsg.trim()}\x1b[0m`);
-      }
+    for (const alerta of alertas) {
+      fs.appendFileSync(ALERTS_LOG_PATH, alerta.linea, 'utf8');
+      console.log(`\x1b[33m${alerta.linea.trim()}\x1b[0m`);
     }
+    if (alertas.length > 0) persistAlertedCodes();
 
-    if (alertCount > 0) persistAlertedCodes();
-
-    console.log(`[${timestamp}] Ciclo completado. Alertas nuevas en este ciclo: ${alertCount}\n`);
+    console.log(`[${timestamp}] Ciclo completado. Alertas nuevas en este ciclo: ${alertas.length}\n`);
 
   } catch (error) {
     const errorMsg = error instanceof CompraAgilApiError ? error.actionableMessage : safeError(error);

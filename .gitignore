@@ -47,3 +47,4 @@ debug/
 
 # Grafo local de trabajo. No forma parte del servidor.
 graphify-out/
+coverage/

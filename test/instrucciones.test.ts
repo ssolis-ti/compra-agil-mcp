@@ -10,7 +10,7 @@ describe('instrucciones que recibe el agente al conectar', () => {
   });
 
   it('el servidor las publica en el initialize', () => {
-    const src = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
+    const src = readFileSync(new URL('../src/servidor.ts', import.meta.url), 'utf8');
     expect(src).toContain('instructions: INSTRUCCIONES');
   });
 });

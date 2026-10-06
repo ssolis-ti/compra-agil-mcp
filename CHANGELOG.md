@@ -62,6 +62,10 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
   Además: errores relanzados que perdían su causa, imports sin uso y una promesa del daemon sin capturar.
 
+* **Cobertura medida y con umbral (fase 1.6): 93 % de líneas**, cada herramienta sobre el 80 %. Antes era 77 % y varias herramientas estaban en 0 % porque la única prueba completa levantaba el servidor en otro proceso. La construcción del servidor pasó a `servidor.ts` y el ciclo del daemon a `services/ciclo-monitor.ts`, así que los tests levantan el servidor REAL en el mismo proceso —transporte en memoria del SDK, el cliente HTTP de verdad y la API simulada— y ejercen cada herramienta, recurso y prompt de punta a punta, incluidos los caminos de error (API caída, OC presente, adjunto con 404, 403, corrupto o demasiado grande). `npm run test:coverage` falla bajo los umbrales y corre antes de publicar.
+* **Los recursos se verifican contra lo que hacen las herramientas (ítem 36)**: 16 regiones, la limitación de `proveedor_seleccionado` y `oc_emitida`, el token bucket, y ningún resto del «máx. 50» ni de la cuota por día calendario.
+* **Los nombres registrados se derivan del servidor (ítem 34)**, y una prueba compara las tablas de herramientas del README y del manual con `tools/list`: falla si se agrega o renombra una herramienta sin documentarla.
+
 ### Rendimiento
 * **La caché escribe a disco una vez por ráfaga, y de forma atómica (fase 1.2).** Antes cada respuesta reescribía el JSON entero —hasta 500 entradas— con una escritura síncrona: una tanda de 20 detalles eran 20 escrituras que bloqueaban el proceso. Ahora se agrupan en una sola, ~1 s después de la última respuesta, a un archivo temporal que luego se renombra: un corte a mitad deja el archivo anterior completo. Lo pendiente se escribe al cerrar el proceso.
 * **El texto de los PDF locales se memoriza (fase 1.3).** `consultar_documentos_locales` y el recurso de documentación extraían los 7 PDF en cada consulta (0,8–1 s); ahora la segunda lectura tarda menos de 100 ms, y un archivo se relee si cambia su fecha o su tamaño.

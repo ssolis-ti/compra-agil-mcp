@@ -12,9 +12,12 @@ loadEnvManual();
  * procesos de compra pública del Estado de Chile.
  *
  * Transporte: Stdio (compatible con Claude Desktop, Cursor, OpenClaw, etc.)
+ *
+ * Este archivo solo lee el entorno, valida el ticket y abre el transporte. La
+ * construcción del servidor vive en `servidor.ts`, para poder probarla en el
+ * mismo proceso.
  */
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createRequire } from 'module';
 
@@ -25,37 +28,7 @@ import { CompraAgilClient } from './api/compra-agil-client.js';
 import { logger, setMcpServer } from './utils/logger.js';
 import { registrarSecreto } from './utils/redact.js';
 import { iniciarRelojOficial } from './utils/reloj.js';
-import { instalarFormatoDeErrores } from './utils/validacion.js';
-import { anotarRegistros } from './utils/registro.js';
-
-// Tools
-import { registerBuscarCompras } from './tools/buscar-compras.js';
-import { registerDetalleCompra } from './tools/detalle-compra.js';
-import { registerMonitorearCambios } from './tools/monitorear-cambios.js';
-import { registerVerificarOC } from './tools/verificar-oc.js';
-import { registerEstadisticasUso } from './tools/estadisticas-uso.js';
-import { registerDetalleOC } from './tools/detalle-oc.js';
-import { registerDocumentosTools } from './tools/documentos.js';
-import { registerAnalizarPreciosMercado } from './tools/analizar-precios-mercado.js';
-import { registerAuditarDesiertas } from './tools/auditar-desiertas.js';
-import { registerGenerarBorrador } from './tools/generar-borrador.js';
-import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
-import { registerGenerarInforme } from './tools/generar-informe.js';
-import { registerVerificarTicket } from './tools/verificar-ticket.js';
-import { registerVerificarHora } from './tools/verificar-hora.js';
-import { INSTRUCCIONES } from './instrucciones.js';
-import { instalarPresupuesto } from './utils/presupuesto.js';
-
-// Resources
-import { registerRegionesResource } from './resources/regiones.js';
-import { registerEstadosResource } from './resources/estados.js';
-import { registerGlosarioResource } from './resources/glosario.js';
-import { registerComprasTemplateResource } from './resources/compras-template.js';
-import { registerDocumentacionResource } from './resources/documentacion.js';
-
-// Prompts
-import { registerBuscarOportunidadesPrompt } from './prompts/buscar-oportunidades.js';
-import { registerAnalizarCompetenciaPrompt } from './prompts/analizar-competencia.js';
+import { crearServidor } from './servidor.js';
 
 // ─── Configuración ──────────────────────────────────────────────────
 
@@ -83,7 +56,6 @@ const VALID_TICKET: string = TICKET;
 async function main() {
   logger.info('Iniciando servidor MCP Compra Ágil v2...');
 
-  // 1. Crear cliente HTTP para la API de Mercado Público
   const client = new CompraAgilClient(VALID_TICKET, BASE_URL, { persistir: true });
 
   // Plazos, radar y ventanas de cambios usan la hora del SHOA (utils/reloj.ts).
@@ -92,74 +64,14 @@ async function main() {
   if (process.env.COMPRA_AGIL_NTP !== 'off' && !process.env.VITEST) iniciarRelojOficial();
   logger.info(`Cliente API configurado → ${BASE_URL}`);
 
-  // 2. Crear servidor MCP
-  const server = new McpServer(
-    {
-      name: 'mcp-compra-agil',
-      version: PKG_VERSION,
-    },
-    {
-      // ⚠ SIN ESTA DECLARACIÓN LOS LOGS NUNCA LLEGAN AL CLIENTE. El servidor
-      //   llamaba a `sendLoggingMessage()` desde utils/logger.ts, pero no
-      //   declaraba la capacidad `logging`, así que el SDK rechazaba cada envío
-      //   y el `.catch()` del logger se lo tragaba en silencio. Verificado en
-      //   auditoría (8 de septiembre de 2026): el servidor anunciaba solo
-      //   `tools, resources, prompts`, `logging/setLevel` respondía "Method not
-      //   found" y llegaban 0 notificaciones pese a LOG_LEVEL=debug. La
-      //   característica que el README anuncia como "Logs Nativos en el
-      //   Protocolo" nunca había funcionado.
-      capabilities: { logging: {} },
-      instructions: INSTRUCCIONES,
-    }
-  );
-
-  // Un solo formato para todo rechazo de una entrada, con o sin consulta a la
-  // API (E5). Debe ir antes de registrar las herramientas.
-  if (!instalarFormatoDeErrores(server)) {
-    logger.warn('El SDK de MCP cambió: los rechazos del esquema quedan en su formato propio, no en el del servidor.');
-  }
-
-  // Los nombres del log de arranque se anotan al registrar, no a mano (ítem 34).
-  const registrados = anotarRegistros(server);
-
-  // 3. Registrar herramientas (Tools). Cada llamada corre con un presupuesto
-  //    de tiempo bajo el corte del cliente MCP (ver utils/presupuesto.ts).
-  instalarPresupuesto(server);
-  registerBuscarCompras(server, client);
-  registerDetalleCompra(server, client);
-  registerMonitorearCambios(server, client);
-  registerVerificarOC(server, client);
-  registerEstadisticasUso(server, client);
-  registerDetalleOC(server, client);
-  registerDocumentosTools(server); // registra 3 tools de documentos
-  registerAnalizarPreciosMercado(server, client);
-  registerAuditarDesiertas(server, client);
-  registerGenerarBorrador(server, client);
-  registerRadarOportunidades(server, client);
-  registerGenerarInforme(server, client);
-  registerVerificarTicket(server, client);
-  registerVerificarHora(server);
-
+  const { server, registrados } = crearServidor(client, PKG_VERSION);
   logger.info(`${registrados.herramientas.length} herramientas registradas: ${registrados.herramientas.join(', ')}`);
-
-  // 4. Registrar recursos (Resources)
-  registerRegionesResource(server);
-  registerEstadosResource(server);
-  registerGlosarioResource(server);
-  registerComprasTemplateResource(server, client);
-  registerDocumentacionResource(server);
   logger.info(`${registrados.recursos.length} recursos registrados: ${registrados.recursos.join(', ')}`);
-
-  // 5. Registrar prompts
-  registerBuscarOportunidadesPrompt(server);
-  registerAnalizarCompetenciaPrompt(server);
   logger.info(`${registrados.prompts.length} prompts registrados: ${registrados.prompts.join(', ')}`);
 
-  // 6. Conectar al transporte Stdio
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  await server.connect(new StdioServerTransport());
 
-  // 7. Enlazar logger con la instancia del servidor conectado para logs nativos
+  // Enlazar logger con la instancia del servidor conectado para logs nativos
   setMcpServer(server);
 
   logger.info('Servidor MCP Compra Ágil v2 listo y escuchando via Stdio.');
@@ -169,4 +81,3 @@ main().catch((error) => {
   logger.error('Error fatal al iniciar el servidor MCP:', error);
   process.exit(1);
 });
-
