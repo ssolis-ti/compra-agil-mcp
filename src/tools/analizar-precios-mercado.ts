@@ -42,7 +42,7 @@ LIMITACIONES IMPORTANTES, verificadas contra la API real (julio 2026):
 const inputSchema = {
   codigo_compra: z.string().optional().describe('Código de una Compra Ágil para extraer sus palabras clave automáticamente (ej: "1057539-228-COT26"). Opcional si se especifica "q".'),
   q: z.string().optional().describe('Término de búsqueda del producto/servicio a cotizar (ej: "resmas papel", "reactivos"). Opcional si se especifica "codigo_compra".'),
-  region: z.string().optional().describe('Código de región para acotar el análisis (1-16). Ej: "13" para Metropolitana.'),
+  region: z.string().optional().describe('Código de región para acotar el análisis (1-16). Ej: "13" para Metropolitana. Si se omite, el análisis es nacional, también con "codigo_compra": la región del comprador no se aplica sola.'),
   limite_analisis: z.number().min(1).max(15).default(5).optional().describe('Cuántos procesos históricos auditar (1-15, default 5). Cada uno consume una consulta de cuota Y una llamada de detalle, que es lo lento: medido en septiembre de 2026, entre 20 y 25 segundos cada una, con HTTP 504 intermitentes. Los detalles se piden en paralelo, así que el total se parece más al más lento que a la suma — pero subir este número aumenta la probabilidad de que alguno falle. Con 5 el análisis completo ronda los 45-55 s.'),
 };
 
@@ -110,7 +110,8 @@ export async function recolectarDatosPrecios(
   args: ArgsPreciosMercado,
 ): Promise<RecoleccionPrecios> {
   let keyword = args.q || '';
-  let region = args.region || '';
+  const region = args.region || '';
+  let regionDelComprador = '';
   let contextoProceso = '';
 
   // 1. Si dan un código, extraer keyword y región de ese proceso
@@ -125,8 +126,16 @@ export async function recolectarDatosPrecios(
       keyword = activa.nombre;
       contextoProceso = `Proceso: "${activa.nombre}"`;
     }
-    if (!region && activa.institucion.region !== null) {
-      region = String(activa.institucion.region);
+    // ⚠ La región del comprador NO se aplica como filtro. Antes se imponía sin
+    //   decirlo: en la simulación con agentes (6-oct) un proceso de
+    //   Valparaíso respondió «No se encontraron procesos… en la región 5.
+    //   Prueba… quita el filtro de región», un filtro que el usuario no había
+    //   puesto, mientras `generar_borrador_cotizacion` sobre el mismo código
+    //   (que busca en todo el país) sí encontraba precios. Las desiertas con
+    //   cotizaciones son escasas: acotar por región deja la muestra vacía.
+    //   Quien quiera el análisis regional lo pide con `region`.
+    if (!region && activa.institucion.region !== null && activa.institucion.region !== undefined) {
+      regionDelComprador = String(activa.institucion.region);
     }
   }
 
@@ -169,7 +178,9 @@ export async function recolectarDatosPrecios(
     return {
       kind: 'mensaje',
       isError: false,
-      texto: `No se encontraron procesos históricos con cotizaciones publicadas que coincidan con "${keyword}"${region ? ` en la región ${region}` : ''}. Prueba con un término más general o quita el filtro de región.`,
+      texto: region
+        ? `No se encontraron procesos históricos con cotizaciones publicadas que coincidan con "${keyword}" en la región ${region}. Prueba con un término más general o sin el parámetro "region" (análisis nacional).`
+        : `No se encontraron procesos históricos con cotizaciones publicadas que coincidan con "${keyword}" en todo el país. Prueba con un término más general o con "q" en vez de "codigo_compra".`,
     };
   }
 
@@ -319,7 +330,11 @@ export async function recolectarDatosPrecios(
     ].join(' '),
     contexto: contextoProceso || undefined,
     termino_busqueda: keyword,
-    region_analisis: region ? `Región ${region}` : 'Todas las regiones',
+    region_analisis: region
+      ? `Región ${region}`
+      : regionDelComprador
+        ? `Todas las regiones (el comprador es de la región ${regionDelComprador}; pasa "region": "${regionDelComprador}" para acotar)`
+        : 'Todas las regiones',
     cobertura: {
       procesos_encontrados: busqueda.paginacion.total_resultados,
       procesos_revisados: consultasOk,
