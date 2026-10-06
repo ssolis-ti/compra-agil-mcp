@@ -10,10 +10,11 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/logger.js';
+import { carpetaDatos } from '../utils/rutas.js';
 
-/** Directorio de salida por defecto: ./informes en el cwd del servidor. */
+/** Directorio de salida por defecto: informes/ en la carpeta de datos (ver utils/rutas.ts). */
 export function defaultOutputDir(): string {
-  return path.resolve(process.cwd(), 'informes');
+  return path.join(carpetaDatos(), 'informes');
 }
 
 /**
