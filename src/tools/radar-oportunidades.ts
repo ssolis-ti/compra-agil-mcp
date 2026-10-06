@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { esquemaRegion } from '../utils/region.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -13,7 +14,7 @@ El puntaje usa datos del listado: 0 ofertas, el presupuesto, las horas hasta el 
 Cada resultado incluye "llamado" (1 = primero, 2 = segundo) y los factores del puntaje. Si q no está en el título, la fila lo dice.`;
 
 const inputSchema = {
-  region: z.string().optional().describe('Código de la región para filtrar (1-16). Ej: "13" para Metropolitana.'),
+  region: esquemaRegion('Código de la región para filtrar (1-16). Ej: "13" para Metropolitana.'),
   q: z.string().optional().describe('Término de búsqueda opcional para acotar a un rubro o producto específico (ej: "licencias").'),
   presupuesto_minimo: z.number().optional().describe('Filtrar solo procesos con presupuesto disponible mayor o igual a este monto en CLP.'),
   limite_resultados: z.number().min(1).max(20).default(10).optional().describe('Cantidad máxima de oportunidades destacadas a retornar (1-20, default 10).'),
