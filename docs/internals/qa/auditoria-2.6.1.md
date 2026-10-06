@@ -47,6 +47,7 @@ prompts.
 | 6 | 🟡 Media | Rendimiento: la caché reescribe el JSON entero de forma síncrona en cada respuesta; `consultar_documentos_locales` re-parsea los 7 PDF en cada consulta (~1 s); la contabilidad del limitador de concurrencia se mezcla entre herramientas simultáneas | ⏳ Sprint 1, fases 1 y 2 |
 | 7 | 🟡 Baja | Higiene: sin CI, sin linter, sin `engines`, deduplicación del daemon sin límite, módulos de entrada sin tests, `docs/` no viaja en npm | CI y `engines` ✅ Sprint 0; resto ⏳ Sprint 1 y 2 |
 | 8 | 🟡 Baja | 6 vulnerabilidades de producción | ✅ Sprint 0, fase 5 (quedan 2 moderadas en `vitest`, dev) |
+| 9 | 🟠 Media | El servidor resuelve `.env`, caché, estado de cuota, daemon e informes contra el cwd: lanzado por un cliente MCP como indica el README, no encuentra el `.env` y reparte su estado en la carpeta del cliente. Hallado al preparar la validación local (etapa 2) | ⏳ Sprint 1, fase 1.0 |
 
 ## Hallazgo de proceso
 
