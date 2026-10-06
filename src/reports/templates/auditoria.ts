@@ -17,7 +17,9 @@ export interface AuditoriaInformeData {
   formato?: FormatoPapel;
 }
 
-function marca(activa: boolean, si: string, no: string): string {
+/** `null` es «no evaluable»: sin comparables ni evidencia no se afirma que esté en rango. */
+function marca(activa: boolean | null, si: string, no: string, tema: string): string {
+  if (activa === null) return badge(`${tema}: no evaluable`, 'neutro');
   return badge(activa ? si : no, activa ? 'critico' : 'exito');
 }
 
@@ -49,10 +51,11 @@ ${kpiRow([
 ])}
 
 <p>
-  ${marca(g.presupuesto_insuficiente, 'Presupuesto bajo', 'Presupuesto en rango')}
-  ${marca(g.plazo_insuficiente, 'Plazo corto', 'Plazo en rango')}
-  ${marca(g.requisitos_complejos, 'Requisitos exigentes', 'Sin requisito extra')}
+  ${marca(g.presupuesto_insuficiente, 'Presupuesto bajo', 'Presupuesto en rango', 'Presupuesto')}
+  ${marca(g.plazo_insuficiente, 'Plazo corto', 'Plazo en rango', 'Plazo')}
+  ${marca(g.requisitos_complejos, 'Requisitos exigentes', 'Sin requisito extra', 'Requisitos')}
 </p>
+${g.lectura_diferencia ? `<p><small>${esc(g.lectura_diferencia)}</small></p>` : ''}
 
 ${callout('Motivo de deserción', `<p style="margin:0">${esc(p.motivo_desierta)}</p>`, p.motivo_desierta === 'No especificado en el sistema' ? 'neutro' : 'alerta')}
 
