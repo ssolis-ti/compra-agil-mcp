@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { esquemaRegion } from '../utils/region.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilItem } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -35,8 +36,9 @@ export const inputSchema = {
   estado: z.string().optional().describe(
     'Estado(s) que devuelven filas, separados por coma: publicada, cerrada, desierta, cancelada. proveedor_seleccionado devuelve 0 filas. oc_emitida responde HTTP 400.'
   ),
-  region: z.string().optional().describe(
-    'Código(s) de región del organismo comprador, separados por coma (1-16). Ej: "13" para Metropolitana, "13,5" para Metropolitana y Valparaíso.'
+  region: esquemaRegion(
+    'Código(s) de región del organismo comprador, separados por coma (1-16). Ej: "13" para Metropolitana, "13,5" para Metropolitana y Valparaíso.',
+    { multiple: true },
   ),
   publicado_desde: z.string().optional().describe(
     'Fecha mínima de publicación en formato ISO-8601. Ej: "2026-01-01T00:00:00Z".'

@@ -58,6 +58,17 @@ describe('resolverDirectorioSalida', () => {
     expect(resolverDirectorioSalida('..borradores')).toBe(path.join(raiz, '..borradores'));
   });
 
+  it('S8: una ruta de Windows es externa en cualquier sistema, no una carpeta con ese nombre', () => {
+    // Simulación 6-oct: en Linux creó informes/C:\\Users\\funcionario\\Desktop/ y respondió ✅.
+    for (const r of ['C:\\Users\\funcionario\\Desktop', 'C:\\\\Users\\\\funcionario', 'd:/informes', '\\\\servidor\\compartida']) {
+      expect(() => resolverDirectorioSalida(r), r).toThrow(RutaSalidaError);
+    }
+  });
+
+  it('S8: una subcarpeta con barras de Windows es una subcarpeta', () => {
+    expect(resolverDirectorioSalida('radar\\octubre')).toBe(path.join(raiz, 'radar', 'octubre'));
+  });
+
   it('el mensaje explica cómo guardar en otra parte', () => {
     expect(() => resolverDirectorioSalida('../x')).toThrow(/COMPRA_AGIL_INFORMES_DIR/);
   });

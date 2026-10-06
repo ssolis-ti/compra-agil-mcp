@@ -6,7 +6,11 @@ import { CompraAgilClient } from '../src/api/compra-agil-client.js';
 
 describe('textoPagina', () => {
   it('no dice "1 de 0" cuando la API no tiene páginas', () => {
-    expect(textoPagina(1, 0)).toBe('sin resultados en esta ventana');
+    expect(textoPagina(1, 0)).toBe('sin resultados para estos filtros');
+  });
+
+  it('solo habla de ventana cuando la consulta tenía una (el monitor)', () => {
+    expect(textoPagina(1, 0, true)).toBe('sin resultados en esta ventana');
   });
 
   it('conserva una página real', () => {
@@ -17,7 +21,7 @@ describe('textoPagina', () => {
 
 describe('camposPagina', () => {
   it('una ventana vacía no se puede leer como 1 de 0', () => {
-    expect(camposPagina(1, 0, 0, 0)).toEqual({
+    expect(camposPagina(1, 0, 0, 0, true)).toEqual({
       total_resultados: 0,
       total_filtrados_en_pagina: 0,
       numero_pagina: 0,

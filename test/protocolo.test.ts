@@ -93,6 +93,16 @@ describe('servidor MCP por stdio', () => {
     expect((await cliente.listTools()).tools.length).toBe(16);
   });
 
+  it('una región inexistente se rechaza en el servidor, no en la API', async () => {
+    // La URL de la API apunta a un puerto cerrado: si la llamada saliera, el
+    // error sería de conexión. Debe ser la validación local.
+    for (const herramienta of ['radar_oportunidades_calientes', 'analizar_precios_mercado']) {
+      const r = await cliente.callTool({ name: herramienta, arguments: { region: '17', q: 'resmas' } });
+      expect(r.isError, herramienta).toBe(true);
+      expect(JSON.stringify(r.content)).toContain('Región inválida');
+    }
+  });
+
   it('el ticket no aparece en los logs del proceso', () => {
     expect(stderr.length).toBeGreaterThan(0);
     expect(stderr).not.toContain(TICKET);
