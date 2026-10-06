@@ -267,7 +267,8 @@ describe('recolectarDatosAuditoria', () => {
     if (rec.kind !== 'datos') return;
     expect(rec.datos.analisis_de_brechas.presupuesto_insuficiente).toBe(true);
     expect(rec.datos.analisis_de_brechas.plazo_insuficiente).toBe(true);
-    expect(rec.datos.recomendaciones_de_optimizacion[0]).toContain('Aumentar el presupuesto disponible');
+    // La evidencia del propio proceso va primero (S1); la de mercado sigue presente.
+    expect(rec.datos.recomendaciones_de_optimizacion.some((r) => r.includes('Aumentar el presupuesto disponible'))).toBe(true);
     expect(rec.datos._nota_metodologica).toBe(
       'La comparación usa el MENOR monto cotizado de cada proceso similar (cerrado o desierto), no montos adjudicados: la API de Mercado Público no expone qué oferta ganó. Revisa también "motivo_desierta": muchas deserciones se explican por incumplimientos formales (garantías, certificados) y no por precio.',
     );
@@ -299,7 +300,10 @@ describe('recolectarDatosAuditoria', () => {
     expect(rec.datos.busqueda_comparativa.sin_comparables_distintos).toBe(true);
     expect(rec.datos.busqueda_comparativa.procesos_comparables_con_cotizaciones).toBe(0);
     expect(rec.datos.analisis_de_brechas.diferencia_presupuesto_porcentaje).toBe(0);
-    expect(rec.datos.recomendaciones_de_optimizacion[0]).toMatch(/consigo mismo/);
+    expect(rec.datos.recomendaciones_de_optimizacion.some((r) => /consigo mismo/.test(r))).toBe(true);
+    // Sin comparables se conserva la evidencia propia: su única cotización supera el presupuesto.
+    expect(rec.datos.analisis_de_brechas.presupuesto_insuficiente).toBe(true);
+    expect(rec.datos.recomendaciones_de_optimizacion[0]).toMatch(/única cotización de este mismo proceso superó/);
   });
 });
 

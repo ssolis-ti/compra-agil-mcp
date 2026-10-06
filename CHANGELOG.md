@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Corregido — hallazgos de la simulación de uso con agentes (fase 1.8)
+* **S1 · `auditar_compras_desiertas` concluía lo contrario de la evidencia del propio proceso.** Solo comparaba contra otros procesos: uno desierto por «Ofertas sobre el presupuesto disponible», con una cotización 33 % sobre su presupuesto, recibía «No se detectaron discrepancias… amarrados a una única marca». Ahora empieza por el motivo oficial (clasificado en presupuesto, requisitos, plazo o sin ofertas, sin inventar una causa si no se reconoce) y por las cotizaciones del proceso frente a su presupuesto, incluido el caso en que la oferta cabe en neto pero no con IVA. La nueva `evidencia_del_proceso_auditado` y el informe impreso lo muestran. Sin comparables distintos ya no se borra esa evidencia, y la sugerencia genérica sobre las bases solo aparece cuando no hay ninguna otra pista, sin atribuir causa.
+
 Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a producción.
 
 ### Seguridad
