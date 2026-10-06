@@ -12,8 +12,7 @@ herramientas de ingeniería, no hacen falta para usarlo.
 
 El estado del proyecto, lo hecho y lo pendiente está en
 [`docs/internals/qa/README.md`](docs/internals/qa/README.md). Léelo antes de
-proponer cambios: la 2.7.0 ya está validada contra la API real; lo siguiente
-es publicarla y luego el Sprint 1 de [`docs/internals/qa/roadmap.md`](docs/internals/qa/roadmap.md).
+proponer cambios: la 2.7.0 está publicada en npm; lo siguiente es el Sprint 1 de [`docs/internals/qa/roadmap.md`](docs/internals/qa/roadmap.md).
 
 ## Comandos
 

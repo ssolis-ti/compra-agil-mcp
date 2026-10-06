@@ -23,15 +23,6 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Hay token de npm
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NPM_TOKEN" ]; then
-            echo "::error::Falta el secret NPM_TOKEN (Settings → Secrets and variables → Actions)."
-            exit 1
-          fi
-
       - name: El tag coincide con package.json
         run: |
           VERSION="$(node -p "require('./package.json').version")"
@@ -41,10 +32,22 @@ jobs:
           fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
-      - name: La versión no está publicada
+      # Si la versión ya se publicó a mano (npm publish desde un equipo), el tag
+      # solo crea la release: npm no deja volver a publicar el mismo número.
+      - name: ¿La versión ya está en npm?
         run: |
           if npm view "@ssolis-ti/mcp-compra-agil@$VERSION" version >/dev/null 2>&1; then
-            echo "::error::@ssolis-ti/mcp-compra-agil@$VERSION ya está en npm."
+            echo "::notice::@ssolis-ti/mcp-compra-agil@$VERSION ya está en npm: no se vuelve a publicar, solo se crea la release."
+            echo "YA_PUBLICADA=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Hay token de npm
+        if: env.YA_PUBLICADA != '1'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::error::Falta el secret NPM_TOKEN (Settings → Secrets and variables → Actions)."
             exit 1
           fi
 
@@ -52,12 +55,15 @@ jobs:
         run: node scripts/notas-version.mjs "$VERSION" > notas.md
 
       - run: npm ci
+        if: env.YA_PUBLICADA != '1'
 
       - name: Auditoría de dependencias de producción
+        if: env.YA_PUBLICADA != '1'
         run: npm audit --omit=dev --audit-level=high
 
       # prepublishOnly corre build y tests antes de subir nada.
       - name: Publicar
+        if: env.YA_PUBLICADA != '1'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public ${{ github.event.repository.private == false && '--provenance' || '' }}

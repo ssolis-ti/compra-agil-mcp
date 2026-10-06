@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Cambiado
+* **`publicar.yml` ya no falla si la versión se publicó a mano.** La 2.7.0 se publicó con `npm publish` desde el equipo del desarrollador; al empujar después el tag, el workflow se detenía en «ya está en npm» y no creaba la release. Ahora, si la versión ya está en npm, se salta el token, la instalación y la publicación, y solo crea la release con las notas del CHANGELOG.
+
 ### Corregido
 * **`npm publish` fallaba en el equipo del desarrollador** por un test que no estaba aislado de su `.env`: `test/rutas.test.ts` arranca el servidor y este también lee el `.env` de la raíz del paquete, donde está el ticket real y, como trae `.env.example`, `COMPRA_AGIL_BASE_URL` de la API real. El test consultaba la API real con el ticket real (gastando cuota) y se cortaba a los 5 s. En la CI no hay `.env` y pasaba. Ahora el servidor del test corre desde una copia del paquete sin `.env`.
 

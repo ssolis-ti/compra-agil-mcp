@@ -14,8 +14,8 @@ sesión local.
 | Validación contra la API real | ✅ Etapa 1 de la 2.7.0 hecha (6-oct), sin bloqueantes; `fecha_cierre` confirmada como UTC — [resultado-api-real.md](resultado-api-real.md). Falta la etapa 2 (uso desde un cliente MCP) |
 | Simulación de uso con 3 agentes (API simulada) | ✅ Dos corridas — [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md): la primera halló S1–S9 (corregidos en los PR #9 y #10); la segunda no los reprodujo y halló S1b y S11–S18 (fase 1.9) |
 | Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #13 |
-| Versión 2.7.0 | 🟡 En `main` y validada contra la API real; **sin publicar en npm** (npm sigue en la 2.5.0). Falta cargar `NPM_TOKEN` y empujar el tag `v2.7.0` |
-| Publicación automática en npm | 🟡 PR [#14](https://github.com/ssolis-ti/compra-agil-mcp/pull/14): `publicar.yml` publica al empujar un tag `v*`; requiere el secreto `NPM_TOKEN` |
+| Versión 2.7.0 | ✅ Publicada en npm el 6-oct (`latest`); probada instalándola con `npx` desde una carpeta vacía. Tag `v2.7.0` y release en GitHub |
+| Publicación automática en npm | ✅ `publicar.yml`: un tag `v*` publica (requiere el secreto `NPM_TOKEN`); si la versión ya se publicó a mano, solo crea la release |
 | Resto del Sprint 1, fase 1.9 y Sprint 2 | ⏳ Pendientes — [roadmap.md](roadmap.md) |
 
 Todo lo de la 2.7.0 se probó contra una API **simulada** con fallas
@@ -37,9 +37,9 @@ npm test            # todos deben pasar (458 en la 2.7.0)
 
 Después, en este orden:
 
-1. **Validar contra la API real** → [validacion-api-real.md](validacion-api-real.md). Si algo sale mal, se corrige en un PR antes de publicar.
-2. **Publicar la 2.7.0** → fase 0 del [roadmap](roadmap.md) y la sección 6 de `CONTRIBUTING.md`.
-3. **Sprint 1** → [roadmap.md](roadmap.md), fase por fase (quedan 1.2–1.7 y la 1.9).
+1. **Sprint 1** → [roadmap.md](roadmap.md), fase por fase (quedan 1.2–1.7 y la 1.9).
+2. **Etapa 2 de la validación real** (uso desde un cliente MCP) → [validacion-api-real.md](validacion-api-real.md).
+3. Cada versión nueva se publica según la sección 6 de `CONTRIBUTING.md`.
 
 ## Banco de pruebas sin ticket
 
