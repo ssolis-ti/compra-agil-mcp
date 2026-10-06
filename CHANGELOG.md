@@ -6,16 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
-### Añadido
-* **Publicación automática en npm** (`.github/workflows/publicar.yml`): al empujar un tag `vX.Y.Z`, comprueba que exista el secret `NPM_TOKEN`, que el tag coincida con `package.json`, que esa versión no esté publicada y que el CHANGELOG tenga su sección; publica (con build y tests por `prepublishOnly`, y procedencia firmada si el repositorio es público) y crea la release de GitHub con esa sección como notas.
-
-### Documentación
-* README: la instalación manual empieza con `git clone` e indica la versión de Node, y la opción `npx` avisa que npm puede ir atrás del repositorio (hoy sirve la 2.5.0). El punto de retome de QA (`docs/internals/qa/README.md`) y la fase 0 del roadmap reflejan que los PR #8 a #13 ya están en `main` y que falta la validación real y el tag.
-* Validación de la 2.7.0 contra la API real (`docs/internals/qa/resultado-api-real.md`): sin bloqueantes, 17 consultas y ningún 429. Queda confirmado que `fecha_cierre` sin zona es UTC: el estado pasa a `cerrada` en el primer ciclo de 5 minutos después del cierre, en el mismo reloj que `fecha_ultimo_cambio`, y la ventana relativa `ttl_cambio_ms` prueba que ese reloj es UTC real. De noche la API puede dejar un proceso `publicada` con el cierre ya vencido.
-
 ## [2.7.0] - 2026-10-06
 
-Auditoría QA de la 2.6.1, dos simulaciones de uso con agentes y la validación contra la API real (etapa 1). Lo que impedía llevar el servidor a producción y lo que llevaba a un modelo a dar un consejo equivocado. 458 tests (eran 345), CI en Ubuntu y Windows con Node 20 y 22.
+Auditoría QA de la 2.6.1, dos simulaciones de uso con agentes y la validación contra la API real (etapa 1). Lo que impedía llevar el servidor a producción y lo que llevaba a un modelo a dar un consejo equivocado. 463 tests (eran 345), CI en Ubuntu y Windows con Node 20 y 22.
 
 > **En npm la versión anterior publicada es la 2.5.0**: la 2.6.0 y la 2.6.1 no llegaron al registro. Quien actualice desde npm recibe también sus cambios (secciones de abajo).
 
@@ -26,6 +19,16 @@ Auditoría QA de la 2.6.1, dos simulaciones de uso con agentes y la validación 
 * Una herramienta que antes esperaba hasta ~60 s en el límite propio de consultas por minuto ahora responde enseguida («reintenta en ~N s») o con resultados parciales.
 * En `auditar_compras_desiertas`, `analisis_de_brechas` puede traer `null` (no evaluable); la evidencia del propio proceso va primero en las recomendaciones.
 * `analizar_precios_mercado` con `codigo_compra` es nacional salvo que se pase `region`.
+
+### Corregido — paquete de npm
+* **El paquete no traía las guías ni los manuales.** `files` de `package.json` solo incluía `dist/`, así que con `npx` o `npm install -g` la carpeta `docs/` no existía: `consultar_documentos_locales` y el recurso `compra-agil://documentacion/…` quedaban vacíos sin decir por qué. Ahora se publican `docs/api/` y `docs/guias/`; `docs/internals/` (notas de ingeniería) sigue fuera. Lo detectó la revisión del contenido del paquete antes de publicar; `test/paquete.test.ts` lo comprueba con `npm pack --dry-run`.
+
+### Añadido — publicación
+* **Publicación automática en npm** (`.github/workflows/publicar.yml`): al empujar un tag `vX.Y.Z`, comprueba que exista el secret `NPM_TOKEN`, que el tag coincida con `package.json`, que esa versión no esté publicada y que el CHANGELOG tenga su sección; publica (con build y tests por `prepublishOnly`, y procedencia firmada si el repositorio es público) y crea la release de GitHub con esa sección como notas.
+
+### Documentación — validación y retome
+* README: la instalación manual empieza con `git clone` e indica la versión de Node, y la opción `npx` avisa que npm puede ir atrás del repositorio (hoy sirve la 2.5.0). El punto de retome de QA (`docs/internals/qa/README.md`) y la fase 0 del roadmap reflejan que los PR #8 a #13 ya están en `main` y que falta la validación real y el tag.
+* Validación de la 2.7.0 contra la API real (`docs/internals/qa/resultado-api-real.md`): sin bloqueantes, 17 consultas y ningún 429. Queda confirmado que `fecha_cierre` sin zona es UTC: el estado pasa a `cerrada` en el primer ciclo de 5 minutos después del cierre, en el mismo reloj que `fecha_ultimo_cambio`, y la ventana relativa `ttl_cambio_ms` prueba que ese reloj es UTC real. De noche la API puede dejar un proceso `publicada` con el cierre ya vencido.
 
 ### Corregido — rutas independientes del directorio de trabajo (fase 1.0)
 * **Lanzado por un cliente MCP como indicaba el README, el servidor no encontraba el `.env` y repartía su estado por la carpeta del cliente.** Todo se resolvía con `process.cwd()`, y Claude Desktop lanza el servidor desde su propia carpeta: sin el ticket en texto plano en la config del cliente, terminaba al arrancar (medido el 5 de octubre; se rodeaba con `cmd /c cd /d <proyecto> && …`). Ahora el `.env` se busca en la carpeta de trabajo, la del proyecto y la de datos, y caché, estado de cuota, estado del daemon e informes van a una carpeta de datos fija: `COMPRA_AGIL_DATA_DIR`, la del proyecto si es un clon, o una del usuario si se instaló con `npx`. El README ya no pide el ticket en la config del cliente.
