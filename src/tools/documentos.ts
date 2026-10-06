@@ -9,6 +9,11 @@ import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
 
+/** Corte de la descarga de un adjunto. Sin él, un portal que no responde colgaba la herramienta. */
+const TIMEOUT_DESCARGA_MS = 30_000;
+/** Un PDF de bases rara vez pasa de unos MB; más que esto no cabe en el contexto de todos modos. */
+const MAX_BYTES_ADJUNTO = 20 * 1024 * 1024;
+
 /** La ficha es el camino. La descarga heredada responde 404 y no se ofrece. */
 export function textoEnlaceAdjunto(idDocumento: string, codigoCompra: string): string {
   const fichaUrl = `https://buscador.mercadopublico.cl/ficha?code=${codigoCompra}`;
@@ -102,11 +107,27 @@ export function registerDocumentosTools(server: McpServer): void {
         const url = `https://adjunto.mercadopublico.cl/adjunto-compra-agil/descargar/${args.id_documento}`;
 
         // Descargar PDF
-        const response = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          }
-        });
+        let response: Response;
+        try {
+          response = await fetch(url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            signal: AbortSignal.timeout(TIMEOUT_DESCARGA_MS),
+          });
+        } catch (e) {
+          if ((e as { name?: string } | null)?.name !== 'TimeoutError') throw e;
+          const ficha = args.codigo_compra
+            ? ` Ábrelo desde la ficha pública: https://buscador.mercadopublico.cl/ficha?code=${args.codigo_compra}`
+            : '';
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `El portal no entregó el adjunto ${args.id_documento} en ${TIMEOUT_DESCARGA_MS / 1000} s y la descarga se canceló.${ficha}`,
+            }],
+            isError: true,
+          };
+        }
  
         // ⚠ 404 se trata igual que 401/403 y no como un fallo inesperado:
         //   verificado contra el servicio real (septiembre 2026) que el endpoint
@@ -133,6 +154,17 @@ export function registerDocumentosTools(server: McpServer): void {
           };
         }
         
+        const declarado = Number(response.headers.get('content-length'));
+        if (Number.isFinite(declarado) && declarado > MAX_BYTES_ADJUNTO) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `El adjunto ${args.id_documento} pesa ${(declarado / 1024 / 1024).toFixed(1)} MB, sobre el máximo de ${MAX_BYTES_ADJUNTO / 1024 / 1024} MB que se procesa. Ábrelo desde la ficha pública del proceso.`,
+            }],
+            isError: true,
+          };
+        }
+
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         
