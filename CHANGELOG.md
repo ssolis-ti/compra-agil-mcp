@@ -36,6 +36,17 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El precio del borrador no decía de qué muestra salía (S18).** Ahora nombra el término con que se buscaron los procesos comparables.
 * **El rechazo de `ruta_salida` mostraba la ruta absoluta de la carpeta de informes (E10)**, con el usuario del sistema. Ahora muestra solo su nombre.
 
+### Corregido — documentos, textos y privacidad
+* **La búsqueda en documentos ponía el manual técnico antes que las guías en preguntas de negocio (E6).** «¿Qué es un segundo llamado?» traía primero la tabla de herramientas del manual del servidor y dejaba fuera la guía que lo explica. Ahora el manual va primero solo en preguntas sobre el servidor o la API; en las de negocio, a igual relevancia, mandan las guías sobre todo lo de `docs/api/`. Probado con los documentos reales: las cuatro preguntas del enjambre abren con una guía, y la de segundo llamado trae la explicación del primer y el segundo llamado.
+* **Los fragmentos se repetían (E6).** Dos coincidencias en líneas vecinas se incluían una a la otra como contexto, y un título repetido en cada página del PDF salía cinco veces. Ahora no se repite contexto ni línea.
+* **Palabras de relleno como «cuántos», «tengo» o «puedo» contaban como términos (E6)**, y si el mejor fragmento reúne menos de la mitad de los términos, la respuesta advierte que los documentos pueden no responder la pregunta de forma directa.
+* **El informe de competencia copiaba teléfonos y correos personales (E8)** de la descripción libre de las cotizaciones. Ahora se omiten.
+* **`motivo_seleccion` aparecía en procesos desiertos sin ninguna marca (E9).** La fila trae `_nota_motivo`: es un criterio del comprador, no prueba una adjudicación. Y si la moneda no es CLP, `_nota_moneda` aclara que `presupuesto_clp` ya está en pesos.
+* **La carta del borrador prometía «Cumplimiento garantizado con todas las especificaciones» (S10)** sin conocerlas, y decía «No ha sido enviado» en el texto dirigido al comprador. Ahora deja un espacio para que el proveedor detalle el cumplimiento, y lo recuerda en `_campos_a_revisar`.
+* **La auditoría decía «Región 5» donde el detalle dice «Región de Valparaíso» (S10).**
+* **El nombre de los archivos de informe usaba la hora del servidor (S10)** y no coincidía con la hora impresa adentro. En un servidor en Punta Arenas (UTC-3 todo el año) el nombre salía con una hora de más en invierno.
+* **El pie de los cinco informes imprimía la hora de generación 3 horas corrida** al pasar un instante del servidor por el lector de fechas de la API. Era una regresión del cambio horario de esta misma versión; se detectó y corrigió antes de publicarla.
+
 ### Añadido
 * **El servidor usa la hora del SHOA como referencia.** Mide el desfase contra `ntp.shoa.cl` al arrancar y cada 30 minutos, en segundo plano, y corrige con eso los plazos, el radar, las ventanas del monitoreo y el daemon (`utils/reloj.ts`). Si el UDP 123 está bloqueado sigue con el reloj local; si el desfase pasa de un minuto, lo advierte (`_aviso_reloj`) en toda respuesta con fechas. `COMPRA_AGIL_NTP=off` lo desactiva.
 * **`verificar_hora_oficial` informa el reloj que usa el servidor y la base de zonas horarias.** El NTP da la hora UTC exacta, no la zona: el paso a UTC-3/UTC-4 sale de la base de zonas de Node, y Chile cambia su horario por decreto. Advierte si la base es anterior a la 2025b.

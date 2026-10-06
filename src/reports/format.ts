@@ -49,6 +49,20 @@ export function fecha(iso: string | null | undefined, conHora = true): string {
   return `${p.day}-${p.month}-${p.year} ${p.hour}:${p.minute}`;
 }
 
+/**
+ * Un instante del servidor (p. ej. cuándo se generó el informe), en hora de
+ * Chile: "06-10-2026 15:42".
+ *
+ * ⚠ No usar `fecha()` para esto: `fecha()` lee valores de la API, que vienen
+ *   en hora de Chile aunque digan "Z". Un `toISOString()` del servidor sí es
+ *   UTC: pasado por `fecha()` el pie de los informes salía 3 h corrido
+ *   (regresión del cambio horario de la 2.8.0, detectada antes de publicarla).
+ */
+export function instante(d: Date): string {
+  const p = partesEnChile(d);
+  return `${p.day}-${p.month}-${p.year} ${p.hour}:${p.minute}`;
+}
+
 /** Fecha larga para portadas, según el calendario de Chile. Ej: "15 de julio de 2026" */
 export function fechaLarga(d: Date = new Date()): string {
   return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: ZONA_CHILE });

@@ -10,7 +10,7 @@ import {
   portada, kpiRow, tabla, badge, callout, barChartSVG, pieDoc, esc,
   type TonoBadge,
 } from '../components.js';
-import { clp, numero, fecha, fechaLarga, horasRestantes } from '../format.js';
+import { clp, numero, fecha, fechaLarga, instante, horasRestantes } from '../format.js';
 import { TOKENS, PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 
 /** Forma mínima que el informe necesita de cada oportunidad. */
@@ -203,7 +203,7 @@ ${callout(
   `<p style="margin:0">Fórmula ponderada sobre 115 puntos: baja competencia (hasta 50 pts) + urgencia de cierre (hasta 30 pts) + tamaño de presupuesto (hasta 20 pts) + ausencia de bases adjuntas (5 pts) + segundo llamado (10 pts). Una puntuación alta indica un proceso con pocos oferentes, cierre próximo y monto atractivo. El segundo llamado suma porque el comprador vuelve con urgencia tras no lograr adjudicar, pero no implica menos competencia: esa la mide el primer factor.</p>`
 )}
 
-${pieDoc(`Informe generado automáticamente por mcp-compra-agil el ${fecha(data.generadoEn.toISOString())} a partir de datos públicos de la API Compra Ágil v2 de Mercado Público (ChileCompra). Los datos reflejan el estado al momento de la consulta y pueden variar. · Formato de impresión: ${PAPEL[formato].glosa}`)}
+${pieDoc(`Informe generado automáticamente por mcp-compra-agil el ${instante(data.generadoEn)} a partir de datos públicos de la API Compra Ágil v2 de Mercado Público (ChileCompra). Los datos reflejan el estado al momento de la consulta y pueden variar. · Formato de impresión: ${PAPEL[formato].glosa}`)}
 `.trim();
 
   return renderDocumento({

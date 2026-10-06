@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { esc, tabla, badge, barChartSVG, kpiRow } from '../src/reports/components.js';
-import { clp, numero, porcentaje, fecha, rut, horasRestantes } from '../src/reports/format.js';
+import { clp, numero, porcentaje, fecha, rut, horasRestantes, instante } from '../src/reports/format.js';
 import { slug, stamp } from '../src/reports/export.js';
 import { renderRadarInforme, tonoScore, type OportunidadInforme } from '../src/reports/templates/radar-oportunidades.js';
 import { baseCSS, PAPEL, FORMATO_POR_DEFECTO } from '../src/reports/theme.js';
@@ -145,7 +145,14 @@ describe('export — nombres de archivo', () => {
   });
 
   it('stamp produce marca temporal ordenable', () => {
-    expect(stamp(new Date('2026-07-15T09:05:00'))).toBe('20260715-0905');
+    // 13:05 UTC del 15 de julio = 09:05 en Santiago (invierno, UTC-4). Con la hora
+    // local del servidor el nombre variaba: en Punta Arenas (UTC-3 todo el año)
+    // salía 10:05, y no coincidía con la hora impresa dentro del informe (S10).
+    expect(stamp(new Date('2026-07-15T13:05:00Z'))).toBe('20260715-0905');
+  });
+
+  it('el pie del informe imprime la hora de generación en hora de Chile, no corrida 3 h', () => {
+    expect(instante(new Date('2026-10-06T18:42:00Z'))).toBe('06-10-2026 15:42');
   });
 });
 

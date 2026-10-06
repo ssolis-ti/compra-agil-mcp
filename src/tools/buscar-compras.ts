@@ -105,12 +105,25 @@ export function resumirCompraBusqueda(item: CompraAgilItem) {
     fecha_ultimo_cambio_hora_chile: enHoraDeChile(item.fechas.fecha_ultimo_cambio),
     ofertas_recibidas: item.resumen.total_ofertas_recibidas,
   };
+  // Enjambre (6-oct): «presupuesto_clp» junto a «moneda: UTM» hacía dudar de la unidad.
+  const enOtraMoneda = (item.montos.moneda ?? '').trim().toUpperCase() !== 'CLP' && (item.montos.moneda ?? '').trim() !== '';
+  if (enOtraMoneda) {
+    (resumen as Record<string, unknown>)._nota_moneda =
+      `presupuesto_clp ya viene convertido a pesos chilenos; la moneda original del proceso es ${item.montos.moneda}.`;
+  }
   const conOfertas = item.resumen.total_ofertas_recibidas === 0
     ? { ...resumen, _nota_ofertas: 'El listado informa 0 ofertas. No es un hecho de la ficha.' }
     : resumen;
   const motivo = item.motivos.motivo_seleccion?.trim();
   if (!motivo) return conOfertas;
-  return { ...conOfertas, motivo_seleccion: motivo };
+  // E9 (enjambre, 6-oct): un proceso DESIERTO traía «su precio total fue el
+  // más bajo» sin ninguna marca en la fila. La descripción lo advertía, la
+  // fila no; y la API no publica adjudicaciones.
+  return {
+    ...conOfertas,
+    motivo_seleccion: motivo,
+    _nota_motivo: `Proceso "${item.estado.glosa}": este texto es un criterio que declaró el comprador, no prueba que haya un proveedor adjudicado.`,
+  };
 }
 
 export function registerBuscarCompras(server: McpServer, client: CompraAgilClient): void {

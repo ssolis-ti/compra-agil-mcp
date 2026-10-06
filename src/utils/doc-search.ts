@@ -26,6 +26,12 @@ const VACIAS = new Set([
   'puede', 'pueden', 'debe', 'deben', 'tiene', 'tienen', 'mas', 'más',
   'pero', 'sus', 'les', 'nos', 'mis', 'tus', 'muy', 'ya', 'les', 'algun',
   'algún', 'alguna', 'todo', 'toda', 'todos', 'todas', 'otro', 'otra',
+  // Relleno de preguntas en lenguaje natural (E6, enjambre 6-oct): en
+  // «¿Cuántos días tengo para cotizar?» «cuantos» y «tengo» sumaban puntaje a
+  // cualquier línea y tapaban la que habla de plazos.
+  'cuanto', 'cuantos', 'cuanta', 'cuantas', 'tengo', 'tienes', 'puedo', 'puedes',
+  'debo', 'debes', 'necesito', 'quiero', 'hacer', 'hago', 'saber', 'favor',
+  'estoy', 'estar', 'soy', 'eres',
 ]);
 
 /**
@@ -96,6 +102,8 @@ export function tokenizar(query: string): string[] {
 export interface Fragmento {
   /** Línea que coincidió, con su contexto inmediato. */
   texto: string;
+  /** Índice de la línea que coincidió, para no repetir contexto solapado. */
+  linea?: number;
   /** Términos de la consulta presentes en la línea. */
   terminos: string[];
   puntaje: number;
@@ -156,11 +164,29 @@ export function buscarEnTexto(
       texto: contexto.join('\n'),
       terminos: presentes,
       puntaje: presentes.length + bonus,
+      linea: i,
     });
   }
 
+  // ⚠ E6 (enjambre, 6-oct): dos coincidencias en líneas vecinas se incluían
+  //   una a la otra como contexto, y un título repetido en cada página del PDF
+  //   salía cinco veces seguidas: se gastaba el límite de caracteres en lo
+  //   mismo. Se descarta lo que se solapa con un fragmento ya elegido o repite
+  //   su línea.
   candidatos.sort((a, b) => b.puntaje - a.puntaje);
-  return { fragmentos: candidatos.slice(0, maxFragmentos), terminos, ausentes };
+  const elegidos: Fragmento[] = [];
+  const lineasTomadas = new Set<number>();
+  const textosTomados = new Set<string>();
+  for (const c of candidatos) {
+    if (elegidos.length >= maxFragmentos) break;
+    const i = c.linea ?? -10;
+    const clave = normalizadas[i]?.trim() ?? c.texto;
+    if (lineasTomadas.has(i) || lineasTomadas.has(i - 1) || lineasTomadas.has(i + 1) || textosTomados.has(clave)) continue;
+    elegidos.push(c);
+    lineasTomadas.add(i);
+    textosTomados.add(clave);
+  }
+  return { fragmentos: elegidos, terminos, ausentes };
 }
 
 /** Nombre del manual que describe el comportamiento medido de este servidor. */
@@ -221,6 +247,37 @@ export function deduplicarDocumentos<T extends ResultadoArchivo>(resultados: T[]
 export function consultaSensible(query: string): boolean {
   const texto = normalizar(query);
   return /orden de compra|oc emitida|adjunto|adjudic|proveedor seleccion|ganador/.test(texto);
+}
+
+/**
+ * ¿La consulta es sobre este servidor o la API? Solo entonces el manual medido
+ * va primero.
+ *
+ * ⚠ E6 (enjambre, 6-oct): el manual se anteponía siempre que coincidiera con
+ *   dos términos. «¿Qué es un segundo llamado?» traía primero la tabla de
+ *   herramientas (el radar «suma puntos por segundo llamado») y las guías que
+ *   explican el concepto quedaban fuera.
+ */
+export function consultaTecnica(query: string): boolean {
+  if (consultaSensible(query)) return true;
+  return /herramient|\bapi\b|ticket|cuota|\b4\d\d\b|\b5\d\d\b|endpoint|parametr|\bmcp\b|servidor|informe|monitore|\bradar\b|token/.test(normalizar(query));
+}
+
+/** Documentación de la API o del servidor (carpeta `api/`), no guías de negocio. */
+export function esDocumentoTecnico(archivo: string): boolean {
+  const ruta = archivo.replace(/\\/g, '/').toLowerCase();
+  return /(^|\/)api\//.test(ruta) || esManualServidor(archivo) || esGuiaOficial(archivo);
+}
+
+/**
+ * Para preguntas de negocio: a igual puntaje, las guías antes que los
+ * documentos de la API (manual, guía oficial, síntesis). `recortarArchivos`
+ * desempata por esta posición. Probado con los documentos reales: sin la
+ * síntesis aquí, «¿Qué es un segundo llamado?» la traía primero.
+ */
+export function relegarDocumentosTecnicos<T extends ResultadoArchivo>(resultados: T[]): T[] {
+  const tecnico = (r: T) => esDocumentoTecnico(r.archivo);
+  return [...resultados.filter((r) => !tecnico(r)), ...resultados.filter(tecnico)];
 }
 
 export function anteponerManualServidor<T extends ResultadoArchivo>(

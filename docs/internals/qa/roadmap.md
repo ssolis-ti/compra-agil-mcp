@@ -39,7 +39,7 @@ verde, CHANGELOG, commit propio).
 | ✅ S13 | Advertencia con un solo comparable; neto frente a IVA explícito | `auditar-desiertas.ts` |
 | ✅ Verificado | El borrador no recorta: cotiza todo lo que lista la API. El defecto era no avisar que el pedido completo puede estar en los adjuntos; ahora lo advierte | `generar-borrador.ts` |
 
-### Bloque C — Cuota y errores 🟡 · M
+### Bloque C — Cuota y errores 🟡 · M · ✅ (`ed6dc18`)
 | Ítem | Arreglo | Dónde |
 | :--- | :--- | :--- |
 | ✅ E4 | Validación local del código de compra y de OC; error 400 específico | `detalle-compra.ts`, `detalle-oc.ts`, `error-handler.ts:129` |
@@ -51,11 +51,11 @@ verde, CHANGELOG, commit propio).
 ### Bloque D — Documentos, textos y privacidad 🟡 · M
 | Ítem | Arreglo | Dónde |
 | :--- | :--- | :--- |
-| E6 | Guías antes que el manual en preguntas de negocio; fragmentos sin solapes; aviso cuando no hay respuesta directa | `utils/doc-search.ts` |
-| E8 | El informe de competencia no copia contactos personales de la descripción libre | `templates/competencia.ts:58` |
-| E9 | Marca en la fila cuando `motivo_seleccion` aparece en un proceso no adjudicado | `buscar-compras.ts:111` |
-| S10 | Carta sin «Cumplimiento garantizado»; región por nombre en todas partes; notas largas una vez por respuesta; nombre de archivo en hora de Chile | varias |
-| — | `presupuesto_clp` aclara que ya viene en pesos; el listado de documentos no menciona `docs/internals/` | `buscar-compras.ts:91`, `documentos.ts:285` |
+| ✅ E6 | Guías antes que el manual en preguntas de negocio; fragmentos sin solapes; aviso cuando no hay respuesta directa | `utils/doc-search.ts` |
+| ✅ E8 | El informe de competencia no copia contactos personales de la descripción libre | `templates/competencia.ts:58` |
+| ✅ E9 | Marca en la fila cuando `motivo_seleccion` aparece en un proceso no adjudicado | `buscar-compras.ts:111` |
+| ✅ S10 | Carta sin «Cumplimiento garantizado»; región por nombre en todas partes; notas largas una vez por respuesta; nombre de archivo en hora de Chile | varias |
+| ✅ | `presupuesto_clp` aclara que ya viene en pesos; el listado de documentos no menciona `docs/internals/` | `buscar-compras.ts:91`, `documentos.ts:285` |
 | ✅ Descartado | Aviso de cobertura distinto entre corridas: el texto refleja la causa real de cada una (detalles omitidos por el presupuesto de tiempo, sin cuota, frente a detalles que fallaron) | `auditar-desiertas.ts` |
 
 ### Bloque E — Mejoras de análisis 🟢 · S

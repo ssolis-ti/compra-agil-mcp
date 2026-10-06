@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor, anteponerSanciones, consultaSensible, deduplicarDocumentos, recortarArchivos, recortarEnPalabra, agruparCatalogo, marcarSiEsGuiaOficial, MARCA_DESCRIPCION_PROMETIDA } from '../src/utils/doc-search.js';
+import { normalizar, tokenizar, buscarEnTexto, anteponerManualServidor, anteponerSanciones, consultaSensible, deduplicarDocumentos, recortarArchivos, recortarEnPalabra, agruparCatalogo, consultaTecnica, relegarDocumentosTecnicos, esDocumentoTecnico, marcarSiEsGuiaOficial, MARCA_DESCRIPCION_PROMETIDA } from '../src/utils/doc-search.js';
 import { textoEnlaceAdjunto } from '../src/tools/documentos.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -94,7 +94,7 @@ describe('buscarEnTexto — el fallo que motivó el módulo', () => {
   });
 
   it('respeta el máximo de fragmentos', () => {
-    const largo = Array(50).fill('el proveedor incumple el plazo').join('\n');
+    const largo = Array.from({ length: 50 }, (_, i) => `el proveedor ${i} incumple el plazo`).join('\n');
     const r = buscarEnTexto(largo, 'proveedor', 5);
     expect(r.fragmentos.length).toBe(5);
   });
@@ -281,5 +281,62 @@ describe('multas, guía prometida, recorte y catálogo', () => {
     expect(texto).toContain('404');
     expect(texto).not.toContain('probablemente');
     expect(texto).not.toContain('RetornaDocumento');
+  });
+});
+
+describe('E6 (enjambre, 6-oct) — búsqueda en documentos para preguntas de negocio', () => {
+  it('no repite una línea que ya salió como contexto de otro fragmento', () => {
+    const texto = ['Introducción', 'Participar en una cotización', 'Participar en una cotización', 'Participar en una cotización', 'Fin'].join('\n');
+    const r = buscarEnTexto(texto, 'participar cotización');
+    expect(r.fragmentos).toHaveLength(1);
+  });
+
+  it('no elige dos fragmentos de líneas vecinas, que se incluyen una a la otra', () => {
+    const texto = ['a', 'multa por atraso', 'multa por incumplimiento', 'b', 'c', 'd', 'otra multa'].join('\n');
+    const lineas = buscarEnTexto(texto, 'multa').fragmentos.map((f) => f.linea);
+    for (const x of lineas) for (const y of lineas) if (x !== y) expect(Math.abs((x ?? 0) - (y ?? 0))).toBeGreaterThan(1);
+  });
+
+  it('el relleno de una pregunta no cuenta como término', () => {
+    expect(tokenizar('¿Cuántos días tengo para enviar una cotización?')).toEqual(['dias', 'enviar', 'cotizacion']);
+  });
+
+  it('consultaTecnica distingue preguntas del servidor de preguntas de negocio', () => {
+    expect(consultaTecnica('¿Qué es un segundo llamado?')).toBe(false);
+    expect(consultaTecnica('¿Puedo cotizar sin estar en el Registro de Proveedores?')).toBe(false);
+    expect(consultaTecnica('¿qué multas me pueden aplicar?')).toBe(false);
+    expect(consultaTecnica('¿por qué la API devuelve 504?')).toBe(true);
+    expect(consultaTecnica('¿cómo funciona el radar?')).toBe(true);
+    expect(consultaTecnica('¿se puede saber la orden de compra?')).toBe(true);
+  });
+
+  it('a igual puntaje, las guías van antes que el manual y la guía oficial de la API', () => {
+    const r = relegarDocumentosTecnicos([
+      { archivo: 'api/manual_servidor_mcp.md', mejorPuntaje: 2 },
+      { archivo: 'api/Documentacion_API_Compra_Agil.md', mejorPuntaje: 2 },
+      { archivo: 'guias/masterclass-compra-agil-proveedor.pdf', mejorPuntaje: 2 },
+    ]);
+    expect(recortarArchivos(r, false).resultados[0].archivo).toBe('guias/masterclass-compra-agil-proveedor.pdf');
+  });
+
+  it('pero la relevancia manda: un manual con más coincidencias sigue arriba', () => {
+    const r = relegarDocumentosTecnicos([
+      { archivo: 'api/manual_servidor_mcp.md', mejorPuntaje: 3 },
+      { archivo: 'guias/masterclass-compra-agil-proveedor.pdf', mejorPuntaje: 2 },
+    ]);
+    expect(recortarArchivos(r, false).resultados[0].archivo).toBe('api/manual_servidor_mcp.md');
+  });
+});
+
+describe('E6 — toda la carpeta api/ es documentación técnica', () => {
+  it('la síntesis de la API también se relega en preguntas de negocio (probado con los documentos reales)', () => {
+    expect(esDocumentoTecnico('api/sintesis_e_indice.md')).toBe(true);
+    expect(esDocumentoTecnico('api\manual_servidor_mcp.md')).toBe(true);
+    expect(esDocumentoTecnico('guias/actualizaciones-a-compra-agil.pdf')).toBe(false);
+    const r = relegarDocumentosTecnicos([
+      { archivo: 'api/sintesis_e_indice.md', mejorPuntaje: 2 },
+      { archivo: 'guias/actualizaciones-a-compra-agil.pdf', mejorPuntaje: 2 },
+    ]);
+    expect(recortarArchivos(r, false).resultados[0].archivo).toBe('guias/actualizaciones-a-compra-agil.pdf');
   });
 });

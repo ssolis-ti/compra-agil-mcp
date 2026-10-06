@@ -614,7 +614,8 @@ export async function recolectarDatosAuditoria(
     proceso_auditado: {
       codigo: targetCode,
       nombre: targetName,
-      region: region ? `Región ${region}` : 'No especificada',
+      // S10: salía «Región 5» aquí y «Región de Valparaíso» en el detalle.
+      region: targetDetail.institucion?.nombre_region?.trim() || (region ? `Región ${region}` : 'No especificada'),
       estado: targetDetail.estado?.glosa || 'Desconocido',
       presupuesto_disponible: targetBudget,
       duracion_dias: targetDuration,

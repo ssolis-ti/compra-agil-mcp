@@ -8,7 +8,7 @@
 import type { DatosAuditoria } from '../../tools/auditar-desiertas.js';
 import { renderDocumento } from '../render.js';
 import { portada, kpiRow, tabla, badge, callout, lista, pieDoc, esc } from '../components.js';
-import { clp, numero, fecha, fechaLarga } from '../format.js';
+import { clp, numero, fecha, fechaLarga, instante } from '../format.js';
 import { PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 
 export interface AuditoriaInformeData {
@@ -101,7 +101,7 @@ ${tabla(d.procesos_comparables_analizados, [
 
 ${callout('Cómo se compara', `<p style="margin:0">${esc(d._nota_metodologica)}</p>`)}
 
-${pieDoc(`Informe generado por mcp-compra-agil el ${fecha(data.generadoEn.toISOString())}. La comparación usa montos cotizados, no adjudicados. · Formato de impresión: ${PAPEL[formato].glosa}`)}
+${pieDoc(`Informe generado por mcp-compra-agil el ${instante(data.generadoEn)}. La comparación usa montos cotizados, no adjudicados. · Formato de impresión: ${PAPEL[formato].glosa}`)}
 `.trim();
 
   return renderDocumento({

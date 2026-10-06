@@ -9,7 +9,7 @@ import type { DatosPreciosMercado } from '../../tools/analizar-precios-mercado.j
 import type { EstadisticasPrecio } from '../../utils/quotation.js';
 import { renderDocumento } from '../render.js';
 import { portada, kpiRow, tabla, badge, callout, barChartSVG, pieDoc, esc } from '../components.js';
-import { clp, numero, fecha, fechaLarga } from '../format.js';
+import { clp, numero, fecha, fechaLarga, instante } from '../format.js';
 import { TOKENS, PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 
 export interface PrecioInformeData {
@@ -117,7 +117,7 @@ ${motivos.length > 0 ? callout('Motivos de inadmisibilidad', `<p style="margin:0
 
 ${callout('Cómo leer estos precios', `<p style="margin:0">${esc(nota)} ${esc(d.criterio_sugerencia)}</p>`)}
 
-${pieDoc(`Informe generado por mcp-compra-agil el ${fecha(data.generadoEn.toISOString())}. Precios cotizados en procesos desiertos, no adjudicados. · Formato de impresión: ${PAPEL[formato].glosa}`)}
+${pieDoc(`Informe generado por mcp-compra-agil el ${instante(data.generadoEn)}. Precios cotizados en procesos desiertos, no adjudicados. · Formato de impresión: ${PAPEL[formato].glosa}`)}
 `.trim();
 
   return renderDocumento({

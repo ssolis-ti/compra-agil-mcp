@@ -103,6 +103,8 @@ describe('construirBorradorCotizacion', () => {
       },
     );
     const html = renderCotizacionInforme({ borrador, generadoEn: AHORA, formato: 'carta' });
+    // Regresión de la 2.8.0: el pie pasaba un toISOString() por el lector de la API y salía 15:00.
+    expect(html).toContain('generado por mcp-compra-agil el 01-10-2026 12:00');
     expect(html).toContain('<!DOCTYPE html>');
     expect(html).not.toContain('<script');
     expect(html).toContain('&lt;script&gt;');

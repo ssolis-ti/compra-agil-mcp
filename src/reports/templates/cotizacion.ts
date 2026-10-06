@@ -8,7 +8,7 @@
 import type { BorradorCotizacion } from '../../tools/generar-borrador.js';
 import { renderDocumento } from '../render.js';
 import { badge, portada, kpiRow, tabla, callout, lista, pieDoc, esc } from '../components.js';
-import { clp, numero, fecha, fechaLarga, rut } from '../format.js';
+import { clp, numero, fecha, fechaLarga, instante, rut } from '../format.js';
 import { PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 
 export interface CotizacionInformeData {
@@ -88,7 +88,7 @@ ${callout(
   `<p style="margin:0">${esc(b.metadata_estimacion.fuente_precio_unitario)} Precio unitario usado: <b>${clp(b.metadata_estimacion.precio_unitario_utilizado)}</b>.</p>`,
 )}
 
-${pieDoc(`Borrador generado por mcp-compra-agil el ${fecha(data.generadoEn.toISOString())}. No ha sido enviado a Mercado Público. Revisa los placeholders antes de presentar la cotización real. · Formato de impresión: ${PAPEL[formato].glosa}`)}
+${pieDoc(`Borrador generado por mcp-compra-agil el ${instante(data.generadoEn)}. No ha sido enviado a Mercado Público. Revisa los placeholders antes de presentar la cotización real. · Formato de impresión: ${PAPEL[formato].glosa}`)}
 `.trim();
 
   return renderDocumento({

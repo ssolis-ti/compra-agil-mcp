@@ -90,10 +90,17 @@ export function slug(texto: string): string {
     .slice(0, 60) || 'informe';
 }
 
-/** Marca temporal compacta para nombres de archivo: 20260715-0930 */
+/**
+ * Marca temporal compacta para nombres de archivo, en hora de Chile:
+ * 20260715-0930. S10: usaba la hora del servidor, y el nombre del archivo no
+ * coincidía con la hora impresa dentro del informe.
+ */
 export function stamp(d: Date = new Date()): string {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+  const pared = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(d); // "2026-07-15 09:30"
+  return pared.replace(/-/g, '').replace(' ', '-').replace(':', '');
 }
 
 export interface EscrituraResultado {

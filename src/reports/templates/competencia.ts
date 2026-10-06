@@ -7,7 +7,8 @@
 import type { DatosCompetencia } from '../../utils/competencia.js';
 import { renderDocumento } from '../render.js';
 import { portada, kpiRow, tabla, badge, callout, pieDoc, esc } from '../components.js';
-import { clp, numero, porcentaje, fecha, fechaLarga, rut } from '../format.js';
+import { clp, numero, porcentaje, fecha, fechaLarga, instante, rut } from '../format.js';
+import { sinContactos } from '../../utils/privacidad.js';
 import { PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 
 export interface CompetenciaInformeData {
@@ -55,7 +56,8 @@ ${d.cotizantes.length === 0
         const extra = c.justificacion_inadmisibilidad
           ? `<br><small>${esc(c.justificacion_inadmisibilidad)}</small>`
           : '';
-        const desc = c.descripcion ? `<br><small>${esc(c.descripcion)}</small>` : '';
+        // E8: sin teléfonos ni correos personales de la descripción libre.
+        const desc = c.descripcion ? `<br><small>${esc(sinContactos(c.descripcion))}</small>` : '';
         return `<b>${esc(c.razon_social)}</b><br><span class="mono">${esc(rut(c.rut))}</span>${desc}${extra}`;
       },
     },
@@ -75,7 +77,7 @@ ${d.cotizantes.length === 0
 
 ${callout('Qué no dice esta tabla', `<p style="margin:0">${esc(d._nota)}</p>`)}
 
-${pieDoc(`Informe generado por mcp-compra-agil el ${fecha(data.generadoEn.toISOString())}. Orden por monto neto. No hay proveedor adjudicado en estos datos. · Formato de impresión: ${PAPEL[formato].glosa}`)}
+${pieDoc(`Informe generado por mcp-compra-agil el ${instante(data.generadoEn)}. Orden por monto neto. No hay proveedor adjudicado en estos datos. · Formato de impresión: ${PAPEL[formato].glosa}`)}
 `.trim();
 
   return renderDocumento({

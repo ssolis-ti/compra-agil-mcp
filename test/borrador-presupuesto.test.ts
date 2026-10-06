@@ -74,14 +74,16 @@ describe('construirBorradorCotizacion frente al presupuesto (S2)', () => {
     const b = await construirBorradorCotizacion(clienteCon(proceso(9_021_000)) as never, argsUsuaria);
     expect(b.monto_total).toBe(9_148_113);
     expect(b.comparacion_presupuesto?.monto_total_sobre_presupuesto).toBe(true);
-    expect(b._campos_a_revisar).toHaveLength(1);
-    expect(b._campos_a_revisar[0]).toMatch(/supera el presupuesto del comprador/);
+    const delPresupuesto = b._campos_a_revisar.filter((a) => /presupuesto del comprador/.test(a));
+    expect(delPresupuesto).toHaveLength(1);
+    expect(delPresupuesto[0]).toMatch(/supera el presupuesto del comprador/);
     expect(b.fecha_cierre_hora_chile).toBe('2026-10-07 03:18');
   });
 
   it('dentro del presupuesto no agrega advertencias', async () => {
     const b = await construirBorradorCotizacion(clienteCon(proceso(20_000_000)) as never, argsUsuaria);
-    expect(b._campos_a_revisar).toEqual([]);
+    // Solo queda el recordatorio de la carta (S10), ninguna advertencia de presupuesto.
+    expect(b._campos_a_revisar).toEqual(['La carta trae un espacio entre corchetes para detallar cómo cumples cada especificación: complétalo antes de presentar.']);
     expect(b.comparacion_presupuesto?.monto_total_sobre_presupuesto).toBe(false);
   });
 
@@ -108,5 +110,15 @@ describe('construirBorradorCotizacion con adjuntos (enjambre, 6-oct)', () => {
   it('sin adjuntos no agrega el aviso', async () => {
     const b = await construirBorradorCotizacion(clienteCon(proceso(9_021_000)) as never, argsUsuaria);
     expect(b._campos_a_revisar.some((a) => a.includes('adjunto'))).toBe(false);
+  });
+});
+
+describe('carta del borrador (S10)', () => {
+  it('no promete cumplimiento ni habla de envío en el texto dirigido al comprador', async () => {
+    const b = await construirBorradorCotizacion(clienteCon(proceso(9_021_000)) as never, argsUsuaria);
+    const carta = b.descripcion_cotizacion;
+    expect(carta).not.toMatch(/Cumplimiento garantizado/);
+    expect(carta).not.toMatch(/No ha sido enviado/);
+    expect(carta).toMatch(/\[Detalla aquí cómo cumple tu oferta cada especificación solicitada\]/);
   });
 });

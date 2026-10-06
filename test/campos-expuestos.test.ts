@@ -135,3 +135,21 @@ describe('orden de compra en el detalle (S18)', () => {
     expect(oc).toMatchObject({ tiene_oc: true, id_orden_compra: 123 });
   });
 });
+
+describe('notas en la fila de la búsqueda (enjambre, 6-oct)', () => {
+  it('E9: un motivo de selección trae su nota en la misma fila', () => {
+    const r = resumirCompraBusqueda(item('El proveedor cotizó todos los productos y su precio total fue el más bajo.'));
+    expect(r._nota_motivo).toMatch(/no prueba que haya un proveedor adjudicado/);
+  });
+
+  it('sin motivo no hay nota', () => {
+    expect(resumirCompraBusqueda(item())).not.toHaveProperty('_nota_motivo');
+  });
+
+  it('en otra moneda aclara que presupuesto_clp ya está en pesos', () => {
+    const base = item();
+    const r = resumirCompraBusqueda({ ...base, montos: { ...base.montos, moneda: 'UTM' } });
+    expect(r._nota_moneda).toMatch(/ya viene convertido a pesos chilenos; la moneda original del proceso es UTM/);
+    expect(resumirCompraBusqueda(base)).not.toHaveProperty('_nota_moneda');
+  });
+});

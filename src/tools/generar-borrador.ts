@@ -270,6 +270,7 @@ export async function construirBorradorCotizacion(
   const razonSocial = args.razon_social || 'Proveedor Demo SpA';
   if (!args.rut_proveedor) advertencias.push('rut_proveedor es un valor PLACEHOLDER; reemplázalo por el RUT real del proveedor antes de presentar.');
   if (!args.razon_social) advertencias.push('razon_social es un valor PLACEHOLDER; reemplázalo por la razón social real.');
+  advertencias.push('La carta trae un espacio entre corchetes para detallar cómo cumples cada especificación: complétalo antes de presentar.');
   let plazoEntrega = args.plazo_entrega_dias;
   if (plazoEntrega === undefined) {
     plazoEntrega = targetDetail.entrega?.plazo_entrega_dias || 5;
@@ -306,10 +307,12 @@ export async function construirBorradorCotizacion(
   // Cover letter/carta de presentación comercial
   const userDesc = args.descripcion_propuesta || '';
   const coverLetter = `Estimados ${targetDetail.institucion?.organismo_comprador || 'Sres. Compradores'},\n\n` +
-    `Junto con saludar, a través del presente documento presentamos este borrador de cotización para el proceso de Compra Ágil "${targetDetail.nombre}" (Código: ${targetDetail.codigo}). No ha sido enviado.\n\n` +
+    `Junto con saludar, a través del presente documento presentamos este borrador de cotización para el proceso de Compra Ágil "${targetDetail.nombre}" (Código: ${targetDetail.codigo}).\n\n` +
     `Detalles de nuestra propuesta:\n` +
     (userDesc ? `- ${userDesc}\n` : '') +
-    `- Cumplimiento garantizado con todas las especificaciones y características solicitadas.\n` +
+    // S10: decía «Cumplimiento garantizado con todas las especificaciones» sin
+    // conocerlas. Es el proveedor quien debe afirmarlo, punto por punto.
+    `- [Detalla aquí cómo cumple tu oferta cada especificación solicitada]\n` +
     `- Plazo de entrega: ${plazoEntrega} días corridos contados desde la recepción de la Orden de Compra.\n` +
     `- Validez de la oferta: 30 días corridos.\n\n` +
     `Agradecemos de antemano su consideración y nos mantenemos a su disposición para aclarar cualquier duda técnica o comercial.\n\n` +

@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
-import { agruparCatalogo, anteponerManualServidor, anteponerSanciones, buscarEnTexto, consultaSensible, deduplicarDocumentos, marcarSiEsGuiaOficial, recortarArchivos, recortarEnPalabra } from '../utils/doc-search.js';
+import { agruparCatalogo, anteponerManualServidor, anteponerSanciones, buscarEnTexto, consultaSensible, consultaTecnica, deduplicarDocumentos, marcarSiEsGuiaOficial, recortarArchivos, recortarEnPalabra, relegarDocumentosTecnicos } from '../utils/doc-search.js';
 import { safeError } from '../utils/redact.js';
 
 const DOCS_DIR = resolveDocsDir();
@@ -246,7 +246,7 @@ export function registerDocumentosTools(server: McpServer): void {
     {
       title: "Consultar las guías locales",
       annotations: { readOnlyHint: true, openWorldHint: false },
-      description: 'Busca en los manuales y guías locales de docs/ (.pdf, .txt, .md). Devuelve como máximo 3 archivos y nombra los que quedaron fuera. Si el manual de este servidor coincide con la consulta, va primero: describe el comportamiento medido. La guía oficial de ChileCompra describe la API prometida y puede contradecirlo.',
+      description: 'Busca en los manuales y guías locales de docs/ (.pdf, .txt, .md). Devuelve como máximo 3 archivos y nombra los que quedaron fuera. En preguntas sobre este servidor o la API, el manual del servidor va primero: describe el comportamiento medido. En preguntas de negocio (plazos, multas, requisitos) mandan las guías. La guía oficial de ChileCompra describe la API prometida y puede contradecir al manual. Si ningún fragmento reúne todos los términos, lo advierte.',
       inputSchema: {
         query: z.string().optional().describe('Qué buscar. Admite tanto un término suelto ("multas", "garantía") como una pregunta en lenguaje natural ("¿qué multas me pueden aplicar?"): la consulta se descompone en términos y se ignoran acentos y palabras vacías. Si se omite, lista los documentos disponibles.'),
         max_caracteres: z.number().min(500).max(15000).default(3000).optional().describe('Cantidad máxima de texto a retornar de cada coincidencia.'),
@@ -283,7 +283,7 @@ export function registerDocumentosTools(server: McpServer): void {
           return {
             content: [{
               type: 'text' as const,
-              text: `Documentos locales de ayuda disponibles en "docs/":\n\n${fileList}\n\nLas notas de ingeniería en docs/internals/ no se listan. El comportamiento medido está en api/manual_servidor_mcp.md.\n\nPara buscar dentro de ellos, ejecuta esta herramienta especificando el parámetro "query".`,
+              text: `Documentos locales de ayuda disponibles en "docs/":\n\n${fileList}\n\nEl comportamiento medido de este servidor está en api/manual_servidor_mcp.md.\n\nPara buscar dentro de ellos, ejecuta esta herramienta especificando el parámetro "query".`,
             }],
           };
         }
@@ -294,6 +294,7 @@ export function registerDocumentosTools(server: McpServer): void {
         // un resultado vacío en vez de afirmar que no existe información.
         const terminosEncontrados = new Set<string>();
         let terminosConsulta: string[] = [];
+        let mejorCobertura = 0;
 
         for (const file of files) {
           const filePath = path.join(DOCS_DIR, file);
@@ -314,6 +315,7 @@ export function registerDocumentosTools(server: McpServer): void {
             terminosConsulta = hallazgo.terminos;
             for (const f of hallazgo.fragmentos) {
               for (const t of f.terminos) terminosEncontrados.add(t);
+              mejorCobertura = Math.max(mejorCobertura, f.terminos.length);
             }
 
             if (hallazgo.fragmentos.length > 0) {
@@ -334,7 +336,9 @@ export function registerDocumentosTools(server: McpServer): void {
         }
 
         const unicos = deduplicarDocumentos(coincidencias);
-        const orden = anteponerManualServidor(unicos, terminosConsulta.length, consultaSensible(args.query));
+        const orden = consultaTecnica(args.query)
+          ? anteponerManualServidor(unicos, terminosConsulta.length, consultaSensible(args.query))
+          : { resultados: relegarDocumentosTecnicos(unicos), manualPrimero: false };
         const conSanciones = anteponerSanciones(orden.resultados, args.query, orden.manualPrimero);
         const recorte = recortarArchivos(conSanciones, orden.manualPrimero);
         const results = [...recorte.resultados.map((r) => r.texto), ...errores];
@@ -354,6 +358,14 @@ export function registerDocumentosTools(server: McpServer): void {
         const aviso = orden.manualPrimero
           ? '\n\nEl primer archivo es el manual de este servidor. Describe el comportamiento medido. Los otros archivos describen la API o las guías prometidas y pueden contradecirlo.'
           : '';
+        // E6: «¿Cuántos días tengo para cotizar?» devolvía fragmentos de otros
+        // temas sin advertir que ninguno respondía la pregunta.
+        // Solo con menos de la mitad: no se puede saber si un texto responde,
+        // y un aviso que salta siempre (probado: saltaba en la de multas, bien
+        // respondida) deja de leerse.
+        const avisoCobertura = terminosConsulta.length >= 2 && mejorCobertura * 2 < terminosConsulta.length
+          ? `\n\nNingún fragmento reúne todos los términos buscados (${terminosConsulta.join(', ')}): el mejor reúne ${mejorCobertura} de ${terminosConsulta.length}. Puede que los documentos no respondan esta pregunta de forma directa.`
+          : '';
         const nombresOmitidos = recorte.omitidos.map((r) => r.archivo).join(', ');
         const avisoTope = recorte.omitidos.length === 0
           ? ''
@@ -364,7 +376,7 @@ export function registerDocumentosTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: `Resultados de búsqueda para "${args.query}" en documentos locales:${aviso}${avisoTope}\n\n${results.join('\n\n====================\n\n')}`,
+            text: `Resultados de búsqueda para "${args.query}" en documentos locales:${aviso}${avisoCobertura}${avisoTope}\n\n${results.join('\n\n====================\n\n')}`,
           }],
         };
       } catch (error: any) {
