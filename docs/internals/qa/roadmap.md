@@ -13,7 +13,7 @@ Referencias a hallazgos: [auditoria-2.6.1.md](auditoria-2.6.1.md).
 
 1. **Validar contra la API real** → [validacion-api-real.md](validacion-api-real.md). Si aparece un problema, se corrige en la rama del PR #8.
 2. **Fusionar el PR #8.**
-3. **Publicar 2.7.0:** mover `[Unreleased]` del CHANGELOG a `[2.7.0]`, subir `version` en `package.json`, `npm publish` (corre build y tests por `prepublishOnly`). Es minor y no patch por el cambio de comportamiento de `ruta_salida`.
+3. **Publicar 2.7.0** (PR de versión preparado: `claude/release-2.7.0`): mover `[Unreleased]` del CHANGELOG a `[2.7.0]`, subir `version` en `package.json`, `npm publish` (corre build y tests por `prepublishOnly`). Es minor y no patch por el cambio de comportamiento de `ruta_salida`.
 
 ---
 
