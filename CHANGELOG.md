@@ -12,6 +12,11 @@ Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a 
 * **`generar_informe` escribía en cualquier carpeta del disco.** `ruta_salida` lo elige el modelo después de leer textos de terceros (nombres de procesos, razones sociales), y se aceptaba cualquier ruta: en la auditoría se escribió un informe fuera del directorio de trabajo con solo pedirlo. Ahora todo queda dentro de la carpeta de informes (`informes/` o `COMPRA_AGIL_INFORMES_DIR`), y `ruta_salida` es una subcarpeta de ella. Se rechazan `..`, rutas absolutas externas, otra unidad y enlaces simbólicos que salen. La carpeta se valida antes de consultar la API, así que un rechazo no gasta cuota.
   * ⚠ **Cambio de comportamiento:** quien pasaba una ruta absoluta fuera de `informes/` debe configurar `COMPRA_AGIL_INFORMES_DIR`.
 
+### Añadido
+* **CI en GitHub Actions** (`.github/workflows/ci.yml`): tipos, build y tests en Ubuntu y Windows con Node 20 y 22, más `npm audit` de producción con nivel alto. El repositorio no tenía ninguna verificación automática antes de un merge.
+* **Prueba de humo por el protocolo MCP** (`test/protocolo.test.ts`): arranca el servidor real por stdio y comprueba versión, capacidades, las 16 herramientas, recursos, prompts, una llamada válida, una inválida y que el ticket no salga en los logs. Hasta ahora ningún test verificaba que el servidor arrancara.
+* **`engines` en `package.json`**: Node `>=20.16 <21 || >=22.3`, lo que exige `pdf-parse`.
+
 ### Dependencias
 * **`npm audit fix`: 0 vulnerabilidades en producción** (eran 6, 3 altas: `hono`, `@hono/node-server`, `fast-uri`, `ip-address`, `qs`, `body-parser`, todas transitivas del SDK de MCP para sus transportes HTTP, que este servidor no usa). Solo cambia `package-lock.json`. Quedan 2 moderadas en `vitest`, que es de desarrollo y no viaja en el paquete; su arreglo es un salto de versión mayor y va aparte.
 
