@@ -160,6 +160,12 @@ COMPRA_AGIL_TICKET=tu_ticket_aqui
 # URL Base para las llamadas a la API v2 (por defecto api2.mercadopublico.cl)
 COMPRA_AGIL_BASE_URL=https://api2.mercadopublico.cl
 
+# Corte de cada consulta en ms (por defecto 35000, sobre los ~30 s de la pasarela)
+# COMPRA_AGIL_TIMEOUT_MS=35000
+
+# Carpeta raíz de los informes (por defecto ./informes). ruta_salida no sale de ella.
+# COMPRA_AGIL_INFORMES_DIR=C:/Users/tu-usuario/Documents/informes-compra-agil
+
 # Nivel de log: debug | info | warn | error
 LOG_LEVEL=info
 
@@ -465,6 +471,8 @@ Por eso este servidor **no bloquea hasta el día siguiente**: honra `Retry-After
 > El oficio chileno **no** equivale al `legal` de CSS (216 × 356 mm, US Legal): usarlo agregaría 26 mm de alto. Va declarado con dimensiones explícitas.
 
 Abre el archivo en tu navegador y usa **Ctrl+P** para exportarlo a PDF, seleccionando el papel correspondiente en el diálogo de impresión.
+
+Los informes se guardan en `informes/` del directorio de trabajo, o en la carpeta que fije `COMPRA_AGIL_INFORMES_DIR`. `ruta_salida` solo acepta una subcarpeta dentro de ella (ej: `radar/octubre`): el modelo elige ese valor después de leer textos de terceros, así que no puede escribir en otra parte del disco.
 
 | Tipo | Qué imprime |
 | :--- | :--- |

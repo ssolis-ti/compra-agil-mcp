@@ -6,6 +6,29 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a producción.
+
+### Seguridad
+* **`generar_informe` escribía en cualquier carpeta del disco.** `ruta_salida` lo elige el modelo después de leer textos de terceros (nombres de procesos, razones sociales), y se aceptaba cualquier ruta: en la auditoría se escribió un informe fuera del directorio de trabajo con solo pedirlo. Ahora todo queda dentro de la carpeta de informes (`informes/` o `COMPRA_AGIL_INFORMES_DIR`), y `ruta_salida` es una subcarpeta de ella. Se rechazan `..`, rutas absolutas externas, otra unidad y enlaces simbólicos que salen. La carpeta se valida antes de consultar la API, así que un rechazo no gasta cuota.
+  * ⚠ **Cambio de comportamiento:** quien pasaba una ruta absoluta fuera de `informes/` debe configurar `COMPRA_AGIL_INFORMES_DIR`.
+
+### Añadido
+* **CI en GitHub Actions** (`.github/workflows/ci.yml`): tipos, build y tests en Ubuntu y Windows con Node 20 y 22, más `npm audit` de producción con nivel alto. El repositorio no tenía ninguna verificación automática antes de un merge.
+* **Prueba de humo por el protocolo MCP** (`test/protocolo.test.ts`): arranca el servidor real por stdio y comprueba versión, capacidades, las 16 herramientas, recursos, prompts, una llamada válida, una inválida y que el ticket no salga en los logs. Hasta ahora ningún test verificaba que el servidor arrancara.
+* **Banco de pruebas `scripts/qa/`**: API simulada con fallas inyectadas (cuelgue, 504, 429, JSON cortado, nulos, XSS) y un cliente MCP que corre escenarios por stdio contra el servidor compilado. Con `QA_API_REAL=1` corre una batería acotada contra la API real. Para simular uso con agentes: catálogo sintético con fallas aleatorias calibradas con la API real (`CATALOGO=sintetico`, `FALLA_DETALLE`, `LATENCIA_MS`) y un puente HTTP (`puente-mcp.mjs`) hacia una sola instancia del servidor. Documentación de la auditoría, el Sprint 0 y el roadmap en `docs/internals/qa/`.
+* **`engines` en `package.json`**: Node `>=20.16 <21 || >=22.3`, lo que exige `pdf-parse`.
+
+### Dependencias
+* **`npm audit fix`: 0 vulnerabilidades en producción** (eran 6, 3 altas: `hono`, `@hono/node-server`, `fast-uri`, `ip-address`, `qs`, `body-parser`, todas transitivas del SDK de MCP para sus transportes HTTP, que este servidor no usa). Solo cambia `package-lock.json`. El 6 de octubre se publicó un aviso crítico contra `proxy-addr` (GHSA-jqcg-44mw-7w3h, también transitivo vía `express`): queda en 2.0.8. Quedan 2 moderadas en `vitest`, que es de desarrollo y no viaja en el paquete; su arreglo es un salto de versión mayor y va aparte.
+
+### Corregido
+* **Una API que no respondía colgaba la herramienta para siempre.** Ninguna consulta tenía tiempo límite: en la auditoría la llamada siguió abierta hasta que el cliente MCP se rindió a los 150 s. Ahora cada consulta se corta a los 35 s (`COMPRA_AGIL_TIMEOUT_MS`), por encima de los ~30 s en que la pasarela ya responde 504, y el mensaje dice cuánto se esperó y qué llamada fue. El timeout cuenta como congestión para el limitador de concurrencia y no queda en caché. La descarga de adjuntos se corta a los 30 s y rechaza archivos de más de 20 MB.
+* **Un corte de red salía como `Error inesperado: fetch failed`.** Ahora se reintenta una vez, con espera aleatoria, y si vuelve a fallar se explica como fallo de conexión. No se reintentan ni el timeout ni los 5xx: la pasarela ya esperó ~30 s y repetir llevaría la herramienta por sobre los 60 s que espera un cliente MCP.
+* **Un 200 con cuerpo cortado salía como `Unexpected token…`, texto crudo de JavaScript.** Ahora se explica como respuesta inválida de la API, nombra la llamada y no queda en caché.
+* **Un listado con `montos: null` hacía caer `buscar_compras_agiles` con `Cannot read properties of null`.** Las respuestas se normalizan una sola vez en el cliente (`src/api/normalizar.ts`): un sub-objeto ausente pasa a `{}`, una lista ausente a `[]`, y los textos que se manipulan (`nombre`, `codigo`, `estado.codigo`) a `''`. No se inventan montos: un presupuesto ausente sigue ausente, no en 0. Los campos no documentados pasan intactos. Un listado sin `items` no se lee como «sin resultados»: se explica como respuesta con forma inesperada y no queda en caché.
+* **El daemon de monitoreo habría caído con un proceso sin monto publicado.** Ahora no lo alerta.
+* **Los informes HTML imprimían el cierre en la hora del servidor.** `fecha()` leía el valor sin zona como hora local y lo mostraba en hora local: el mismo cierre salía 12:00 en Chile, 15:00 en un servidor UTC y 17:00 en Madrid, y contradecía el `fecha_cierre_hora_chile` de la herramienta JSON. Ahora usa el mismo parser que el resto del servidor (sin zona = UTC) y muestra la hora de Chile; el radar lo rotula. `fechaLarga()` usa el calendario de Chile.
+
 ## [2.6.1] - 2026-10-02
 
 Respuestas que dejan de contradecir lo ya medido. No hubo llamada nueva a la API.

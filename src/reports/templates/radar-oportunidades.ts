@@ -163,7 +163,7 @@ export function renderRadarInforme(data: RadarInformeData): string {
       <p style="margin-bottom:2mm">
         Presupuesto <b>${clp(o.presupuesto_disponible)}</b> ·
         Ofertas recibidas: <b>${numero(o.ofertas_recibidas)}</b> ·
-        Cierra el <b>${fecha(o.fecha_cierre)}</b> (${esc(horasRestantes(o.horas_restantes))})
+        Cierra el <b>${fecha(o.fecha_cierre)}</b> hora de Chile (${esc(horasRestantes(o.horas_restantes))})
       </p>
       <div><small>Factores de puntuación:</small>
         <ul style="margin:1mm 0 0;padding-left:4mm">

@@ -5,6 +5,10 @@
  * Evita que cada template invente su propio formato.
  */
 
+import { parsearFechaApi } from '../utils/fechas.js';
+
+const ZONA_CHILE = 'America/Santiago';
+
 /** Formatea un monto en pesos chilenos. Ej: 1250000 → "$1.250.000" */
 export function clp(monto: number | null | undefined): string {
   if (monto === null || monto === undefined || !Number.isFinite(monto)) return '—';
@@ -26,23 +30,42 @@ export function porcentaje(valor: number | null | undefined, decimales = 1): str
   return `${numero(valor, decimales)}%`;
 }
 
-/** Formatea una fecha ISO a formato legible chileno. Ej: "15-07-2026 09:30" */
+/**
+ * Formatea una fecha de la API a formato legible chileno, en HORA DE CHILE.
+ * Ej: "2026-07-15 13:30" (sin zona, se asume UTC) → "15-07-2026 09:30".
+ *
+ * ⚠ Antes usaba `new Date(iso)` y `getHours()`: interpretaba el valor sin zona
+ *   como hora del servidor y lo mostraba en la hora del servidor. El mismo
+ *   cierre salía 12:00 en Chile, 15:00 en un servidor UTC y 17:00 en Madrid
+ *   (auditoría QA, octubre 2026), y contradecía el `fecha_cierre_hora_chile`
+ *   que la herramienta JSON entrega para el mismo proceso. Ahora usa el mismo
+ *   parser que el resto del servidor (utils/fechas.ts).
+ */
 export function fecha(iso: string | null | undefined, conHora = true): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  const dia = String(d.getDate()).padStart(2, '0');
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const anio = d.getFullYear();
-  if (!conHora) return `${dia}-${mes}-${anio}`;
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${dia}-${mes}-${anio} ${hh}:${mm}`;
+  const d = parsearFechaApi(iso);
+  if (!d) return '—';
+  const p = partesEnChile(d);
+  if (!conHora) return `${p.day}-${p.month}-${p.year}`;
+  return `${p.day}-${p.month}-${p.year} ${p.hour}:${p.minute}`;
 }
 
-/** Fecha larga para portadas. Ej: "15 de julio de 2026" */
+/** Fecha larga para portadas, según el calendario de Chile. Ej: "15 de julio de 2026" */
 export function fechaLarga(d: Date = new Date()): string {
-  return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+  return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: ZONA_CHILE });
+}
+
+function partesEnChile(d: Date): Record<'day' | 'month' | 'year' | 'hour' | 'minute', string> {
+  const partes = new Intl.DateTimeFormat('en-GB', {
+    timeZone: ZONA_CHILE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d);
+  const valor = (tipo: string) => partes.find((x) => x.type === tipo)?.value ?? '';
+  return { day: valor('day'), month: valor('month'), year: valor('year'), hour: valor('hour'), minute: valor('minute') };
 }
 
 /**
