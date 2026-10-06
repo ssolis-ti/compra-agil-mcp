@@ -57,7 +57,18 @@ function dentroDe(raiz: string, destino: string): boolean {
 export function resolverDirectorioSalida(dir?: string): string {
   const raiz = raizInformes();
   if (!dir || !dir.trim()) return raiz;
-  const destino = path.resolve(raiz, dir.trim());
+  let pedido = dir.trim();
+  if (process.platform !== 'win32') {
+    // ⚠ En Linux/macOS `path` no reconoce `C:\…` ni `\\servidor\…` como
+    //   absolutas: en la simulación con agentes (6-oct) «C:\Users\…\Desktop»
+    //   creó una carpeta con ese nombre literal dentro de informes/ y la
+    //   herramienta respondió ✅. Una ruta de Windows es siempre externa.
+    if (/^[a-zA-Z]:[\\/]/.test(pedido) || pedido.startsWith('\\\\')) throw new RutaSalidaError(dir, raiz);
+    // Una subcarpeta escrita con barras de Windows («radar\octubre») es una
+    // subcarpeta, no un nombre con barras invertidas.
+    pedido = pedido.replace(/\\/g, '/');
+  }
+  const destino = path.resolve(raiz, pedido);
   if (!dentroDe(raiz, destino)) throw new RutaSalidaError(dir, raiz);
   return destino;
 }
