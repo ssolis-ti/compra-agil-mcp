@@ -50,3 +50,19 @@ describe('analizar_precios_mercado: inadmisibles (S4)', () => {
     expect(rec.datos._nota_metodologica).not.toMatch(/casi todas lo son/);
   });
 });
+
+describe('informe impreso de precio (S16)', () => {
+  it('muestra suficiencia, cobertura y la comparación con y sin inadmisibles, sin remitir a un campo JSON', async () => {
+    const { renderPrecioInforme } = await import('../src/reports/templates/precio.js');
+    const rec = await recolectarDatosPrecios(cliente as never, { q: 'guantes' });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    const html = renderPrecioInforme({ datos: rec.datos, generadoEn: new Date('2026-10-06T12:00:00Z'), formato: 'a4' });
+
+    expect(html).toContain('Suficiencia de la muestra: baja');
+    expect(html).toContain('Procesos: 1 encontrados, 1 revisados, 1 con cotizaciones.');
+    expect(html).toContain('Con y sin inadmisibles');
+    expect(html).toContain('Solo admisibles');
+    expect(html).not.toContain('estadisticas_precio_unitario_solo_admisibles');
+    expect(html).toContain('la tabla «Con y sin inadmisibles» compara ambas distribuciones');
+  });
+});
