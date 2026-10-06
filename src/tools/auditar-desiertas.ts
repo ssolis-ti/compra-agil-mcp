@@ -4,6 +4,7 @@ import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { esAdmisible, extraerMontoNeto } from '../utils/quotation.js';
+import type { CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { safeError } from '../utils/redact.js';
 
 const TOOL_NAME = 'auditar_compras_desiertas';
@@ -38,6 +39,25 @@ export interface ProcesoComparable {
   motivo_desierta: string | null;
 }
 
+/** Causa que declara el motivo oficial de deserción, leída por palabras clave. */
+export type CausaMotivo = 'presupuesto' | 'requisitos' | 'plazo' | 'sin_ofertas' | 'otra' | 'no_informado';
+
+/**
+ * Lo que el propio proceso auditado dice de su fracaso. Es la evidencia más
+ * directa que hay: sus cotizaciones frente a su presupuesto y su motivo
+ * oficial. Los comparables solo dan contexto de mercado.
+ */
+export interface EvidenciaProceso {
+  causa_segun_motivo_oficial: CausaMotivo;
+  cotizaciones_recibidas: number;
+  cotizaciones_inadmisibles: number;
+  motivos_de_inadmisibilidad: string[];
+  menor_monto_neto: number | null;
+  menor_monto_total: number | null;
+  /** null si el proceso no informa presupuesto: no se puede comparar. */
+  cotizaciones_sobre_presupuesto: number | null;
+}
+
 export interface DatosAuditoria {
   proceso_auditado: {
     codigo: string;
@@ -49,6 +69,7 @@ export interface DatosAuditoria {
     items_solicitados: Array<{ nombre: string; cantidad: number; unidad: string }>;
     motivo_desierta: string;
   };
+  evidencia_del_proceso_auditado: EvidenciaProceso;
   busqueda_comparativa: {
     termino_clave: string;
     procesos_comparables_con_cotizaciones: number;
@@ -71,6 +92,108 @@ export interface DatosAuditoria {
 export type RecoleccionAuditoria =
   | { kind: 'mensaje'; texto: string; isError: boolean }
   | { kind: 'datos'; datos: DatosAuditoria };
+
+const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+/**
+ * Lee el motivo oficial de deserción. Es texto libre del comprador, así que se
+ * clasifica por palabras clave y, ante la duda, queda como 'otra': mejor no
+ * atribuir una causa que inventarla.
+ */
+export function clasificarMotivo(motivo: string | null | undefined): CausaMotivo {
+  if (!motivo || !motivo.trim()) return 'no_informado';
+  const m = sinTildes(motivo);
+  if (/sin ofertas|no se recibieron|no hubo ofertas|ninguna oferta|no se presentaron/.test(m)) return 'sin_ofertas';
+  if (/presupuest|monto maximo|monto disponible|sobrepas|exced|sobre el monto/.test(m)) return 'presupuesto';
+  if (/requisit|tecnic|especificac|garantia|certific|document|antecedente|adjunt|inadmisib|bases/.test(m)) return 'requisitos';
+  if (/plazo/.test(m)) return 'plazo';
+  return 'otra';
+}
+
+export function evidenciaDelProceso(detalle: CompraAgilDetalle, presupuesto: number): EvidenciaProceso {
+  const cotizaciones = detalle.proveedores_cotizando ?? [];
+  const netos = cotizaciones.map((c) => extraerMontoNeto(c)).filter((n): n is number => n !== null);
+  const totales = cotizaciones
+    .map((c) => c.monto_total)
+    .filter((n): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0);
+  const inadmisibles = cotizaciones.filter((c) => !esAdmisible(c));
+  return {
+    causa_segun_motivo_oficial: clasificarMotivo(detalle.motivos?.motivo_desierta),
+    cotizaciones_recibidas: cotizaciones.length,
+    cotizaciones_inadmisibles: inadmisibles.length,
+    motivos_de_inadmisibilidad: [...new Set(
+      inadmisibles.map((c) => c.justificacion_inadmisibilidad?.trim()).filter((m): m is string => Boolean(m)),
+    )],
+    menor_monto_neto: netos.length > 0 ? Math.min(...netos) : null,
+    menor_monto_total: totales.length > 0 ? Math.min(...totales) : null,
+    cotizaciones_sobre_presupuesto: presupuesto > 0 ? netos.filter((n) => n > presupuesto).length : null,
+  };
+}
+
+const pct = (valor: number, base: number) => Math.round(((valor - base) / base) * 100);
+const pesos = (n: number) => `$${n.toLocaleString('es-CL')}`;
+
+/**
+ * Recomendaciones que salen del propio proceso. Van antes que las de los
+ * comparables: lo que pasó en ESTE proceso pesa más que un promedio de otros.
+ *
+ * ⚠ Antes la auditoría solo miraba comparables. En la simulación del 6-oct un
+ *   proceso desierto por «Ofertas sobre el presupuesto disponible», con una
+ *   cotización 33 % sobre su presupuesto, recibió «No se detectaron
+ *   discrepancias obvias de presupuesto… revisar que no estén amarrados a una
+ *   única marca»: la conclusión opuesta a su propia evidencia.
+ */
+function recomendacionesPropias(e: EvidenciaProceso, presupuesto: number, motivo: string | null | undefined): string[] {
+  const r: string[] = [];
+  const motivoCitado = motivo?.trim() ? ` («${motivo.trim()}»)` : '';
+  const n = e.cotizaciones_recibidas;
+
+  if (presupuesto > 0 && e.menor_monto_neto !== null && e.menor_monto_neto > presupuesto) {
+    r.push(
+      `Presupuesto: ${n === 1 ? 'la única cotización' : `las ${n} cotizaciones`} de este mismo proceso ${n === 1 ? 'superó' : 'superaron'} el presupuesto de ${pesos(presupuesto)}. ` +
+      `La menor fue ${pesos(e.menor_monto_neto)} neto, ${pct(e.menor_monto_neto, presupuesto)} % por sobre él. ` +
+      `Para un nuevo llamado, el presupuesto debería cubrir al menos ese monto (más IVA si el presupuesto lo incluye), o hay que reducir cantidades.`,
+    );
+  } else if (
+    presupuesto > 0 && e.menor_monto_neto !== null && e.menor_monto_total !== null &&
+    e.menor_monto_total > presupuesto && e.causa_segun_motivo_oficial === 'presupuesto'
+  ) {
+    r.push(
+      `Presupuesto: la menor cotización cabe en neto (${pesos(e.menor_monto_neto)}) pero no con IVA (${pesos(e.menor_monto_total)}) frente a ${pesos(presupuesto)}, y el motivo oficial habla de presupuesto${motivoCitado}. ` +
+      `Probablemente el presupuesto incluye IVA: en un nuevo llamado conviene declararlo explícitamente o subirlo al menos a ${pesos(e.menor_monto_total)}.`,
+    );
+  } else if (e.causa_segun_motivo_oficial === 'presupuesto') {
+    const sobre = e.cotizaciones_sobre_presupuesto;
+    r.push(
+      `Presupuesto: el motivo oficial de deserción lo señala${motivoCitado}` +
+      (sobre !== null && n > 0 ? `; ${sobre} de ${n} cotizaciones de este proceso superaron los ${pesos(presupuesto)} disponibles.` : '.') +
+      ` Contrasta con los montos cotizados en procesos comparables antes de fijar el presupuesto del nuevo llamado.`,
+    );
+  }
+
+  if (e.causa_segun_motivo_oficial === 'requisitos' || (n > 0 && e.cotizaciones_inadmisibles === n)) {
+    const motivos = e.motivos_de_inadmisibilidad.length > 0
+      ? ` Motivos de inadmisibilidad declarados: ${e.motivos_de_inadmisibilidad.map((m) => `«${m}»`).join(', ')}.`
+      : '';
+    r.push(
+      `Requisitos: ${e.causa_segun_motivo_oficial === 'requisitos' ? `el motivo oficial apunta a incumplimientos${motivoCitado}` : 'todas las cotizaciones fueron declaradas inadmisibles'}` +
+      `${n > 0 ? ` (${e.cotizaciones_inadmisibles} de ${n} inadmisibles)` : ''}.${motivos}` +
+      ` Revisa que las bases pidan solo lo necesario, que los documentos exigidos estén listados de forma explícita y que no requieran certificaciones difíciles de obtener en el plazo.`,
+    );
+  }
+
+  if (e.causa_segun_motivo_oficial === 'sin_ofertas' || n === 0) {
+    r.push(
+      `Participación: el proceso no recibió cotizaciones${motivoCitado}. Revisa el plazo de publicación, que el rubro y la región tengan proveedores, y que el nombre del proceso use los términos con que los proveedores buscan.`,
+    );
+  }
+
+  if (e.causa_segun_motivo_oficial === 'plazo') {
+    r.push(`Plazo: el motivo oficial de deserción lo señala${motivoCitado}. Considera ampliar el plazo de postulación y el de entrega en un nuevo llamado.`);
+  }
+
+  return r;
+}
 
 /**
  * Misma recolección que `auditar_compras_desiertas`. La tool JSON y el informe
@@ -242,7 +365,17 @@ export async function recolectarDatosAuditoria(
     avgDuration = Math.round((successDurations.reduce((a, b) => a + b, 0) / successDurations.length) * 10) / 10;
   }
 
-  // 5. Análisis crítico de brechas
+  // 5. Análisis crítico de brechas.
+  //    Primero lo que dice el propio proceso (motivo oficial y sus
+  //    cotizaciones frente a su presupuesto); después, el contraste con los
+  //    comparables. Las brechas de comparables se anulan si no hay comparables
+  //    distintos —no se compara un proceso consigo mismo—, pero la evidencia
+  //    propia se conserva.
+  const evidencia = evidenciaDelProceso(targetDetail, targetBudget);
+  const causa = evidencia.causa_segun_motivo_oficial;
+  const presupuestoPorEvidencia = causa === 'presupuesto' ||
+    (targetBudget > 0 && evidencia.menor_monto_neto !== null && evidencia.menor_monto_neto > targetBudget);
+
   const analisis_critico = {
     presupuesto_insuficiente: false,
     plazo_insuficiente: false,
@@ -251,36 +384,43 @@ export async function recolectarDatosAuditoria(
     diferencia_plazo_dias: 0,
   };
 
-  if (targetBudget > 0 && avgPrice > 0) {
-    analisis_critico.diferencia_presupuesto_porcentaje = Math.round(((targetBudget - avgPrice) / avgPrice) * 100);
-    if (targetBudget < minPrice || targetBudget < avgPrice * 0.8) {
+  if (!sinComparablesDistintos) {
+    if (targetBudget > 0 && avgPrice > 0) {
+      analisis_critico.diferencia_presupuesto_porcentaje = Math.round(((targetBudget - avgPrice) / avgPrice) * 100);
+      if (targetBudget < minPrice || targetBudget < avgPrice * 0.8) {
+        analisis_critico.presupuesto_insuficiente = true;
+      }
+    } else if (targetBudget === 0 && avgPrice > 0) {
+      // Si el presupuesto objetivo es $0 o no especificado, se marca como potencial brecha si el histórico requiere fondos
       analisis_critico.presupuesto_insuficiente = true;
     }
-  } else if (targetBudget === 0 && avgPrice > 0) {
-    // Si el presupuesto objetivo es $0 o no especificado, se marca como potencial brecha si el histórico requiere fondos
-    analisis_critico.presupuesto_insuficiente = true;
-  }
 
-  if (targetDuration > 0 && avgDuration > 0) {
-    analisis_critico.diferencia_plazo_dias = Math.round((targetDuration - avgDuration) * 10) / 10;
-    if (targetDuration < 2 || targetDuration < avgDuration * 0.6) {
-      analisis_critico.plazo_insuficiente = true;
+    if (targetDuration > 0 && avgDuration > 0) {
+      analisis_critico.diferencia_plazo_dias = Math.round((targetDuration - avgDuration) * 10) / 10;
+      if (targetDuration < 2 || targetDuration < avgDuration * 0.6) {
+        analisis_critico.plazo_insuficiente = true;
+      }
     }
-  } else if (targetDuration > 0 && targetDuration < 2) {
+  }
+  if (targetDuration > 0 && targetDuration < 2) {
     // Plazo menor a 2 días siempre se marca como potencialmente insuficiente en Compra Ágil
     analisis_critico.plazo_insuficiente = true;
   }
+  const presupuestoPorComparables = analisis_critico.presupuesto_insuficiente;
+  const plazoPorComparables = analisis_critico.plazo_insuficiente;
 
-  if (
+  const requisitosAmbientales = Boolean(
     targetDetail.flags?.considera_requisitos_medioambientales ||
     targetDetail.flags?.considera_requisitos_impacto_social_economico
-  ) {
-    analisis_critico.requisitos_complejos = true;
-  }
+  );
+  analisis_critico.presupuesto_insuficiente = presupuestoPorComparables || presupuestoPorEvidencia;
+  analisis_critico.plazo_insuficiente = plazoPorComparables || causa === 'plazo';
+  analisis_critico.requisitos_complejos = requisitosAmbientales || causa === 'requisitos' ||
+    (evidencia.cotizaciones_recibidas > 0 && evidencia.cotizaciones_inadmisibles === evidencia.cotizaciones_recibidas);
 
-  // 6. Generación de recomendaciones accionables
-  const recomendaciones: string[] = [];
-  if (analisis_critico.presupuesto_insuficiente) {
+  // 6. Recomendaciones: primero las del propio proceso, luego las de mercado.
+  const recomendaciones: string[] = recomendacionesPropias(evidencia, targetBudget, targetDetail.motivos?.motivo_desierta);
+  if (presupuestoPorComparables) {
     if (targetBudget > 0) {
       recomendaciones.push(
         `Aumentar el presupuesto disponible. El presupuesto actual de $${targetBudget.toLocaleString('es-CL')} es un ${Math.abs(analisis_critico.diferencia_presupuesto_porcentaje)}% inferior al promedio de lo que el mercado cotizó en procesos similares ($${avgPrice.toLocaleString('es-CL')}). Se sugiere incrementarlo a al menos $${Math.round(avgPrice * 1.05).toLocaleString('es-CL')}.`
@@ -292,30 +432,29 @@ export async function recolectarDatosAuditoria(
     }
   }
 
-  if (analisis_critico.plazo_insuficiente) {
+  if (plazoPorComparables) {
     recomendaciones.push(
-      `Extender el plazo de postulación. El proceso actual ofreció ${targetDuration} días entre publicación y cierre, mientras que los procesos comparables promedian ${avgDuration} días. Se recomienda extender el plazo a un mínimo de 3 a 5 días hábiles.`
+      avgDuration > 0
+        ? `Extender el plazo de postulación. El proceso actual ofreció ${targetDuration} días entre publicación y cierre, mientras que los procesos comparables promedian ${avgDuration} días. Se recomienda extender el plazo a un mínimo de 3 a 5 días hábiles.`
+        : `Extender el plazo de postulación. El proceso actual ofreció ${targetDuration} días entre publicación y cierre. Se recomienda un mínimo de 3 a 5 días hábiles.`
     );
   }
 
-  if (analisis_critico.requisitos_complejos) {
+  if (requisitosAmbientales) {
     recomendaciones.push(
       `Flexibilizar los requisitos ambientales/sociales exigidos. Aunque promueven buenas prácticas, en procesos rápidos de bajo monto pueden asustar o inhabilitar a microempresas locales si implican adjuntar certificados complejos.`
     );
   }
 
   if (sinComparablesDistintos) {
-    analisis_critico.presupuesto_insuficiente = false;
-    analisis_critico.plazo_insuficiente = false;
-    analisis_critico.diferencia_presupuesto_porcentaje = 0;
-    analisis_critico.diferencia_plazo_dias = 0;
-    recomendaciones.length = 0;
     recomendaciones.push(
       'No hay otro proceso desierto en la muestra. No se compara este proceso consigo mismo, así que no hay brecha de presupuesto ni de plazo contra un mercado distinto.',
     );
   } else if (recomendaciones.length === 0) {
+    // Sin motivo oficial, sin evidencia propia y sin brechas de mercado: no
+    // hay base para afirmar una causa. Se sugiere dónde mirar, sin atribuir.
     recomendaciones.push(
-      `No se detectaron discrepancias obvias de presupuesto o plazo respecto al mercado. Se sugiere revisar la redacción de las especificaciones técnicas o los ítems requeridos en "productos_solicitados" para asegurarse de que no estén amarrados a una única marca o sean demasiado específicos.`
+      `Los datos disponibles no muestran una causa clara: el motivo oficial no la precisa, las cotizaciones del proceso no superan su presupuesto y no hay brechas frente a los comparables. Revisa las bases técnicas en la ficha del proceso: especificaciones demasiado específicas o requisitos difíciles de acreditar son causas frecuentes.`
     );
   }
 
@@ -334,6 +473,7 @@ export async function recolectarDatosAuditoria(
       })) || [],
       motivo_desierta: targetDetail.motivos?.motivo_desierta || 'No especificado en el sistema',
     },
+    evidencia_del_proceso_auditado: evidencia,
     busqueda_comparativa: {
       termino_clave: keyword,
       procesos_comparables_con_cotizaciones: successPrices.length,

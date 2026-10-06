@@ -7,7 +7,7 @@
 
 import type { BorradorCotizacion } from '../../tools/generar-borrador.js';
 import { renderDocumento } from '../render.js';
-import { portada, kpiRow, tabla, callout, lista, pieDoc, esc } from '../components.js';
+import { badge, portada, kpiRow, tabla, callout, lista, pieDoc, esc } from '../components.js';
 import { clp, numero, fecha, fechaLarga, rut } from '../format.js';
 import { PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 
@@ -48,10 +48,18 @@ ${revisar.length > 0 ? callout('Campos por revisar', lista(revisar), 'alerta') :
 
 ${kpiRow([
   { label: 'Valor neto', valor: clp(b.valor_neto) },
-  { label: 'IVA 19 %', valor: clp(b.total_impuesto), nota: b.nombre_impuesto },
+  { label: 'IVA', valor: clp(b.total_impuesto), nota: '19 %' },
   { label: 'Total', valor: clp(b.monto_total), nota: 'neto + IVA' },
   { label: 'Plazo', valor: `${numero(b.plazo_entrega_dias)} días`, nota: 'desde la OC' },
 ])}
+
+${b.comparacion_presupuesto || b.fecha_cierre ? `<h2>El proceso</h2>
+<p>
+  ${b.comparacion_presupuesto ? `Presupuesto del comprador: <b>${clp(b.comparacion_presupuesto.presupuesto_comprador)}</b>
+  ${b.comparacion_presupuesto.monto_total_sobre_presupuesto ? badge('El total supera el presupuesto', 'critico') : badge('El total cabe en el presupuesto', 'exito')}<br>
+  <small>Precio unitario neto máximo para caber: ${clp(b.comparacion_presupuesto.precio_unitario_maximo_neto)} (${clp(b.comparacion_presupuesto.precio_unitario_maximo_si_incluye_iva)} si el presupuesto incluye IVA).</small><br>` : ''}
+  ${b.fecha_cierre ? `Cierre: <b>${fecha(b.fecha_cierre)}</b> hora de Chile. Confírmalo en la ficha del proceso.` : ''}
+</p>` : ''}
 
 <h2>Proveedor</h2>
 <p>
