@@ -95,5 +95,7 @@ La publicación en npm la hace GitHub Actions (`.github/workflows/publicar.yml`)
 2. Fusionar ese PR en `main`.
 3. Crear y empujar el tag sobre `main`: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
-El workflow se detiene antes de publicar si falta el token, si el tag no coincide con `package.json`, si la versión ya existe en npm o si el CHANGELOG no tiene su sección. Publicar es irreversible: npm no permite reutilizar un número de versión.
+El workflow se detiene antes de publicar si falta el token, si el tag no coincide con `package.json` o si el CHANGELOG no tiene su sección. Si la versión ya existe en npm (se publicó a mano con `npm publish`), no vuelve a publicar: solo crea la release de GitHub. Publicar es irreversible: npm no permite reutilizar un número de versión.
+
+Para publicar a mano, desde `main` y con los clientes MCP cerrados: `npm ci && npm publish --access public` (`prepublishOnly` compila y corre los tests); luego empujar el tag para la release.
 
