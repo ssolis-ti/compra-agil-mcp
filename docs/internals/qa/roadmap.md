@@ -52,6 +52,31 @@ Hoy se rodea lanzándolo con `cmd /c cd /d <proyecto> && node dist/index.js` (as
 
 **Aceptación:** ninguna herramienta pasa de 50 s con la API simulada aunque el freno esté lleno; test de que 30 esperas simultáneas nunca superan 15 envíos por ventana.
 
+### Fase 1.10 — La API entrega hora de Chile, no UTC 🔴 (va primero)
+**Problema medido** (6 de octubre, enjambre de agentes contra la API real): `fecha_cierre` y `fecha_publicacion` llegan en hora de Chile, y `fecha_ultimo_cambio` también, aunque traiga una `Z`. El filtro `ttl_cambio_ms` de la API compara esas marcas contra la hora UTC real. Evidencia y efectos en [resultado-enjambre-api-real.md](resultado-enjambre-api-real.md); la conclusión «UTC» de la validación de la 2.7.0 era incorrecta.
+
+| Efecto hoy | Dónde |
+| :--- | :--- |
+| Toda hora de cierre en hora de Chile sale 3 h antes (4 h en invierno): búsqueda, detalle, radar, borrador, informes, recurso `compras/{codigo}`, alertas del daemon | `src/utils/fechas.ts` (`parsearFechaApi`) |
+| El radar descarta los procesos que cierran en las próximas 3 h y corre el puntaje de urgencia | `src/tools/radar-oportunidades.ts:72` |
+| `monitorear_cambios_recientes` con `minutos` < 180 devuelve siempre 0; con más, una ventana 3 h más corta | `src/tools/monitorear-cambios.ts:124` |
+| `cambio_desde`/`cambio_hasta` con zona devuelven una ventana corrida 3 h | ídem |
+| `verificar_ticket` informa «0 cambios en la última hora» siempre | `src/tools/verificar-ticket.ts:54` |
+| El daemon cubre 21 h de las 24 pedidas | `src/services/monitor.ts` |
+
+**Hacer:**
+- `parsearFechaApi`: interpretar los valores sin zona **y** los que traen `Z` de la API como hora de `America/Santiago`, con el desfase de esa fecha (UTC-3 / UTC-4). Las fechas que escribe el usuario siguen respetando su zona.
+- Ventanas: reemplazar `ttl_cambio_ms` por `cambio_desde`/`cambio_hasta` expresados como la API los compara (la hora de Chile del instante pedido con sufijo `Z`), o sumarle el desfase vigente. Aplicarlo en el monitoreo, `verificar_ticket` y el daemon. Validar los bordes de la ventana absoluta contra la API antes de elegir.
+- Radar: con la hora corregida, el filtro `hoursLeft <= 0` vuelve a ser correcto; revisar los umbrales de urgencia con datos reales.
+- Textos: `_nota_horaria`, `NOTA_ZONA_HORARIA`, las instrucciones que el servidor entrega al conectar (`src/instrucciones.ts`), las descripciones de las herramientas, el glosario y la regla «Fechas» de `CLAUDE.md`.
+- Revisar `test/fechas.test.ts` y `test/fechas-informe.test.ts`: hoy fijan la interpretación UTC y van a fallar; eso es lo esperado.
+
+**Aceptación:**
+- Test con los datos medidos: `fecha_ultimo_cambio` `2026-10-06T15:05:00.583Z` observado a las `2026-10-06T18:06Z` es un cambio de hace ~1 minuto; `fecha_cierre` `2026-10-08 09:00` es `2026-10-08 09:00` hora de Chile (`12:00Z`).
+- Test del cambio de horario (abril/septiembre): el desfase sale de la fecha del valor, no de la del servidor.
+- Contra la API real: `monitorear_cambios_recientes` con `minutos: 60` en horario hábil devuelve resultados, y el cambio más reciente tiene menos de 10 minutos.
+- Suite verde con `TZ` en UTC, `America/Santiago` y `Asia/Tokyo`.
+
 ### Fase 1.2 — Escritura de la caché 🟡
 **Problema:** `ResponseCache.persistir()` reescribe el JSON entero (hasta 500 entradas, varios MB) con `writeFileSync` en cada respuesta, y no es atómico.
 

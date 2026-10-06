@@ -89,6 +89,10 @@ a ~29 s.
 
 ### ¿`fecha_cierre` es UTC u hora de Chile? — **UTC; `parsearFechaApi` está bien**
 
+> ⚠️ **Conclusión corregida el 6 de octubre de 2026:** la API entrega **hora de Chile**, no UTC.
+> El paso 2 de abajo suponía que el filtro `ttl_cambio_ms` compara bien las horas, y la API comete
+> el mismo error en el filtro. Evidencia y efectos en [resultado-enjambre-api-real.md](resultado-enjambre-api-real.md).
+
 **La ficha pública no se pudo leer de forma automática.**
 `buscador.mercadopublico.cl` responde 403 de CloudFront a clientes sin
 navegador, y en Chrome sin interfaz la página carga sin los datos del

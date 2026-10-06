@@ -11,8 +11,9 @@ sesión local.
 | Auditoría QA de la 2.6.1 | ✅ Hecha — [auditoria-2.6.1.md](auditoria-2.6.1.md) |
 | Sprint 0 (bloqueantes para producción) | ✅ Hecho — [sprint-0.md](sprint-0.md) |
 | PR #8 a #13 | ✅ Fusionados en `main` (6-oct) |
-| Validación contra la API real | ✅ Etapa 1 de la 2.7.0 hecha (6-oct), sin bloqueantes; `fecha_cierre` confirmada como UTC — [resultado-api-real.md](resultado-api-real.md). Falta la etapa 2 (uso desde un cliente MCP) |
+| Validación contra la API real | ✅ Etapa 1 de la 2.7.0 hecha (6-oct), sin bloqueantes; ⚠ su conclusión de que `fecha_cierre` es UTC resultó incorrecta (ver la fila del enjambre) — [resultado-api-real.md](resultado-api-real.md). Falta la etapa 2 (uso desde un cliente MCP) |
 | Simulación de uso con 3 agentes (API simulada) | ✅ Dos corridas — [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md): la primera halló S1–S9 (corregidos en los PR #9 y #10); la segunda no los reprodujo y halló S1b y S11–S18 (fase 1.9) |
+| Enjambre de 4 agentes contra la API **real** (6-oct, 2.7.0) | ✅ Hecho — [resultado-enjambre-api-real.md](resultado-enjambre-api-real.md). **La API entrega hora de Chile, no UTC:** horas de cierre 3 h antes, radar que oculta los cierres de las próximas 3 h, monitoreo de menos de 180 min siempre vacío. Más E1–E11. Va como fase 1.10 |
 | Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #13 |
 | Versión 2.7.0 | ✅ Publicada en npm el 6-oct (`latest`); probada instalándola con `npx` desde una carpeta vacía. Tag `v2.7.0` y release en GitHub |
 | Publicación automática en npm | ✅ `publicar.yml`: un tag `v*` publica (requiere el secreto `NPM_TOKEN`); si la versión ya se publicó a mano, solo crea la release |
@@ -37,9 +38,10 @@ npm test            # todos deben pasar (458 en la 2.7.0)
 
 Después, en este orden:
 
-1. **Sprint 1** → [roadmap.md](roadmap.md), fase por fase (quedan 1.2–1.7 y la 1.9).
-2. **Etapa 2 de la validación real** (uso desde un cliente MCP) → [validacion-api-real.md](validacion-api-real.md).
-3. Cada versión nueva se publica según la sección 6 de `CONTRIBUTING.md`.
+1. **Fase 1.10, la hora de Chile** → [roadmap.md](roadmap.md). Va antes que todo: afecta a todas las herramientas con fechas.
+2. **Resto del Sprint 1**, fase por fase (quedan 1.2–1.7 y la 1.9).
+3. **Etapa 2 de la validación real** (uso desde un cliente MCP) → [validacion-api-real.md](validacion-api-real.md).
+4. Cada versión nueva se publica según la sección 6 de `CONTRIBUTING.md`.
 
 ## Banco de pruebas sin ticket
 
