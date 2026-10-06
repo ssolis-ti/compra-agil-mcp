@@ -76,6 +76,8 @@ export interface DatosPreciosMercado {
     procesos_encontrados: number;
     procesos_revisados: number;
     procesos_que_fallaron: number;
+    /** Qué procesos no se pudieron leer, para abrirlos a mano en su ficha. */
+    procesos_que_fallaron_detalle?: Array<{ codigo: string; ficha: string }>;
     _aviso_cobertura?: string;
     procesos_con_cotizaciones: number;
     cotizaciones_totales: number;
@@ -90,6 +92,20 @@ export interface DatosPreciosMercado {
   base_de_la_sugerencia: 'precio_unitario' | 'monto_neto_total';
   _advertencia_dispersion?: string;
   muestra_homogenea: boolean;
+  /**
+   * Si la muestra alcanza para usar el precio sugerido como referencia.
+   * `muestra_homogenea` solo mide dispersión: cuatro precios de un único
+   * comprador pueden ser homogéneos y aun así no representar al mercado.
+   */
+  suficiencia_muestra: {
+    nivel: 'baja' | 'media' | 'suficiente';
+    procesos_con_cotizaciones: number;
+    compradores_distintos: number;
+    precios_unitarios: number;
+    nota: string;
+  };
+  /** Presente si la búsqueda de históricos salió de la caché local. */
+  _frescura?: string;
   precio_sugerido_competitivo: number;
   criterio_sugerencia: string;
   rango_competitivo: { desde: number; hasta: number };
@@ -162,7 +178,7 @@ export async function recolectarDatosPrecios(
   const limite = args.limite_analisis || 5;
 
   logger.info(`analizar_precios_mercado: buscando históricos de "${keyword}" región "${region || 'todas'}"`);
-  const busqueda = await client.buscar({
+  const paramsBusqueda = {
     q: keyword,
     estado: 'desierta',
     region: region || undefined,
@@ -175,7 +191,14 @@ export async function recolectarDatosPrecios(
     // exige la API.
     tamano_pagina: 10,
     numero_pagina: 1,
-  });
+  };
+  // Antes de buscar: si la respuesta ya está en caché, se informa su edad.
+  // En la simulación con agentes (6-oct) repetir el análisis devolvía en 2 ms
+  // la misma respuesta sin decir que era una copia.
+  const edadCache = typeof (client as Partial<CompraAgilClient>).edadBusquedaEnCache === 'function'
+    ? (client as CompraAgilClient).edadBusquedaEnCache(paramsBusqueda)
+    : undefined;
+  const busqueda = await client.buscar(paramsBusqueda);
 
   if (!busqueda.items?.length) {
     return {
@@ -327,6 +350,21 @@ export async function recolectarDatosPrecios(
     ? `⚠ MUESTRA MUY DISPERSA: el precio máximo (${base.maximo.toLocaleString('es-CL')}) es ${Math.round(dispersion)} veces la mediana (${base.mediana.toLocaleString('es-CL')}). El término "${keyword}" probablemente está mezclando productos o servicios de naturaleza distinta, así que este precio sugerido tiene poco valor. Acota la búsqueda con un término más específico o usa "codigo_compra" para partir del producto exacto.`
     : undefined;
 
+  const fallidos = detallados
+    .map((d, i) => (d === null ? seleccionados[i].codigo : null))
+    .filter((c): c is string => c !== null);
+  const compradores = new Set(cotizaciones.map((c) => c.institucion).filter(Boolean)).size;
+  const nPrecios = preciosUnitarios.length;
+  const nivel: DatosPreciosMercado['suficiencia_muestra']['nivel'] =
+    procesosConDatos < 2 || compradores < 2 || nPrecios < 5 ? 'baja'
+      : procesosConDatos < 4 || nPrecios < 10 ? 'media'
+        : 'suficiente';
+  const notaSuficiencia = nivel === 'baja'
+    ? `Muestra chica: ${nPrecios} precio(s) de ${procesosConDatos} proceso(s) y ${compradores} comprador(es). Toma el precio sugerido como indicativo, no como precio de mercado.`
+    : nivel === 'media'
+      ? `Muestra acotada: ${nPrecios} precios de ${procesosConDatos} procesos y ${compradores} compradores. Úsala como referencia y contrástala con la ficha.`
+      : `${nPrecios} precios de ${procesosConDatos} procesos y ${compradores} compradores.`;
+
   const resultado: DatosPreciosMercado = {
     _nota_metodologica: [
       'Precios COTIZADOS por proveedores, NO adjudicados: la API de Mercado Público no expone qué oferta ganó (el estado "proveedor_seleccionado" devuelve 0 resultados y ninguna cotización viene marcada como seleccionada).',
@@ -347,7 +385,11 @@ export async function recolectarDatosPrecios(
       procesos_revisados: consultasOk,
       procesos_que_fallaron: consultasFallidas,
       ...(consultasFallidas > 0 && {
-        _aviso_cobertura: `${consultasFallidas} de ${consultasIntentadas} consultas de detalle fallaron (la API no respondió), así que la muestra es más chica que la pedida. No interpretes esto como escasez de datos del rubro.`,
+        procesos_que_fallaron_detalle: fallidos.map((codigo) => ({
+          codigo,
+          ficha: `https://buscador.mercadopublico.cl/ficha?code=${codigo}`,
+        })),
+        _aviso_cobertura: `${consultasFallidas} de ${consultasIntentadas} consultas de detalle fallaron (la API no respondió): ${fallidos.join(', ')}. La muestra es más chica que la pedida; no lo interpretes como escasez de datos del rubro. Sus cotizaciones se pueden ver en la ficha pública de cada uno.`,
       }),
       procesos_con_cotizaciones: procesosConDatos,
       cotizaciones_totales: cotizaciones.length,
@@ -363,8 +405,19 @@ export async function recolectarDatosPrecios(
     base_de_la_sugerencia: tipoBase,
     _advertencia_dispersion: advertenciaDispersion,
     muestra_homogenea: !muestraHeterogenea,
+    suficiencia_muestra: {
+      nivel,
+      procesos_con_cotizaciones: procesosConDatos,
+      compradores_distintos: compradores,
+      precios_unitarios: nPrecios,
+      nota: notaSuficiencia,
+    },
+    ...(edadCache !== undefined && {
+      _frescura: `La búsqueda de históricos salió de la caché local (guardada hace ${edadCache < 60 ? `${edadCache} s` : `${Math.round(edadCache / 60)} min`}); no es una consulta nueva a la API. Las cotizaciones de procesos desiertos no cambian.`,
+    }),
     precio_sugerido_competitivo: sugerido,
-    criterio_sugerencia: 'Percentil 25 de la distribución cotizada: te ubica en el cuarto más económico sin regalar margen. Resiste valores atípicos mejor que el promedio.',
+    criterio_sugerencia: (nivel === 'baja' ? '⚠ Muestra chica: tómalo como indicativo. ' : '') +
+      'Percentil 25 de la distribución cotizada: te ubica en el cuarto más económico sin regalar margen. Resiste valores atípicos mejor que el promedio.',
     rango_competitivo: { desde: base.minimo, hasta: base.mediana },
     cotizaciones_observadas: cotizaciones,
     cotizaciones_inadmisibles: inadmisibles.length > 0 ? inadmisibles : undefined,
