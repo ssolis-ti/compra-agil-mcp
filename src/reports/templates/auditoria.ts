@@ -8,7 +8,7 @@
 import type { DatosAuditoria } from '../../tools/auditar-desiertas.js';
 import { renderDocumento } from '../render.js';
 import { portada, kpiRow, tabla, badge, callout, lista, pieDoc, esc } from '../components.js';
-import { clp, numero, fecha, fechaLarga, instante } from '../format.js';
+import { clp, numero, fechaLarga, instante } from '../format.js';
 import { PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 
 export interface AuditoriaInformeData {

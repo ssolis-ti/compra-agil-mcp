@@ -56,6 +56,12 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 ### Calidad
 * **Tipos honestos (fase 1.4).** Las interfaces de la API declaraban como obligatorios campos que la API puede omitir, así que el compilador no avisaba de un acceso inseguro nuevo. Ahora solo es obligatorio lo que garantiza `api/normalizar.ts` (código, nombre, estado, que cada sub-objeto exista y que las listas sean listas); el resto es opcional o nulo. El compilador destapó 9 accesos inseguros, dos de ellos errores reales: en el borrador, un producto sin cantidad daba un total `NaN`. Ahora se asume 1 y se advierte en `_campos_a_revisar`. `es_emt` es `null` cuando la API no lo informa, en vez de pasar `undefined` como si fuera un booleano.
 
+* **ESLint en la CI (fase 1.5)**, con las reglas recomendadas de ESLint y typescript-eslint y `no-floating-promises`, que usa información de tipos. Corre también antes de publicar. Al dejarlo en verde aparecieron dos errores reales que el tipo `any` escondía:
+  * **El logger mandaba al cliente MCP el nivel `"warn"`, que el protocolo no define** (es `"warning"`): toda advertencia salía con un nivel inválido. El test del logger fijaba el error; ahora verifica cada nivel contra el esquema del SDK.
+  * **La rama de cuota agotada del daemon nunca se ejecutaba**: comparaba `error?.status` (el campo es `httpStatus`) y buscaba un texto que los mensajes ya no traen.
+
+  Además: errores relanzados que perdían su causa, imports sin uso y una promesa del daemon sin capturar.
+
 ### Rendimiento
 * **La caché escribe a disco una vez por ráfaga, y de forma atómica (fase 1.2).** Antes cada respuesta reescribía el JSON entero —hasta 500 entradas— con una escritura síncrona: una tanda de 20 detalles eran 20 escrituras que bloqueaban el proceso. Ahora se agrupan en una sola, ~1 s después de la última respuesta, a un archivo temporal que luego se renombra: un corte a mitad deja el archivo anterior completo. Lo pendiente se escribe al cerrar el proceso.
 * **El texto de los PDF locales se memoriza (fase 1.3).** `consultar_documentos_locales` y el recurso de documentación extraían los 7 PDF en cada consulta (0,8–1 s); ahora la segunda lectura tarda menos de 100 ms, y un archivo se relee si cambia su fecha o su tamaño.

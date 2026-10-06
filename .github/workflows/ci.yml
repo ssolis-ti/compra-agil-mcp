@@ -37,6 +37,9 @@ jobs:
       - name: Tipos
         run: npx tsc --noEmit
 
+      - name: Lint (incluye no-floating-promises)
+        run: npm run lint
+
       - name: Build
         run: npm run build
 

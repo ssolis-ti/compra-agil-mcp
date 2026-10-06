@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { LoggingLevelSchema } from '@modelcontextprotocol/sdk/types.js';
 import { logger, setMcpServer } from '../src/utils/logger.js';
 import { registrarSecreto, _resetSecretos } from '../src/utils/redact.js';
 
@@ -43,7 +44,9 @@ describe('logger — lo que se envía al cliente MCP', () => {
   it('respeta el nivel de cada método', () => {
     logger.warn('cuidado');
     logger.error('falló');
-    expect(enviados.map((e) => e.level)).toEqual(['warn', 'error']);
+    // El protocolo MCP dice 'warning', no 'warn' (fase 1.5: el test fijaba el error).
+    expect(enviados.map((e) => e.level)).toEqual(['warning', 'error']);
+    for (const e of enviados) expect(LoggingLevelSchema.safeParse(e.level).success, String(e.level)).toBe(true);
   });
 });
 

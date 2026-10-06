@@ -5,7 +5,6 @@
  * Admite tanto el ID numérico interno como el código alfanumérico (ej. "1057532-156-AG26").
  */
 
-import { z } from 'zod';
 import { esquemaCodigoOC } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';

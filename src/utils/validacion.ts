@@ -168,7 +168,7 @@ export function instalarFormatoDeErrores(server: McpServer): boolean {
       return await original.apply(server, a);
     } catch (error) {
       if (error instanceof McpError && error.code === ErrorCode.InvalidParams && /Input validation error/.test(error.message)) {
-        throw new Error(traducirRechazoDelEsquema(error.message));
+        throw new Error(traducirRechazoDelEsquema(error.message), { cause: error });
       }
       throw error;
     }

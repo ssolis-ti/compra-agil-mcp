@@ -9,7 +9,7 @@ import type { DatosPreciosMercado } from '../../tools/analizar-precios-mercado.j
 import type { EstadisticasPrecio } from '../../utils/quotation.js';
 import { renderDocumento } from '../render.js';
 import { portada, kpiRow, tabla, badge, callout, barChartSVG, pieDoc, esc } from '../components.js';
-import { clp, numero, fecha, fechaLarga, instante } from '../format.js';
+import { clp, numero, fechaLarga, instante } from '../format.js';
 import { TOKENS, PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 
 export interface PrecioInformeData {

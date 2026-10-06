@@ -23,7 +23,7 @@ const { version: PKG_VERSION } = require('../package.json') as { version: string
 
 import { CompraAgilClient } from './api/compra-agil-client.js';
 import { logger, setMcpServer } from './utils/logger.js';
-import { registrarSecreto, pista } from './utils/redact.js';
+import { registrarSecreto } from './utils/redact.js';
 import { iniciarRelojOficial } from './utils/reloj.js';
 import { instalarFormatoDeErrores } from './utils/validacion.js';
 

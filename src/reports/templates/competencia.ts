@@ -7,7 +7,7 @@
 import type { DatosCompetencia } from '../../utils/competencia.js';
 import { renderDocumento } from '../render.js';
 import { portada, kpiRow, tabla, badge, callout, pieDoc, esc } from '../components.js';
-import { clp, numero, porcentaje, fecha, fechaLarga, instante, rut } from '../format.js';
+import { clp, numero, porcentaje, fechaLarga, instante, rut } from '../format.js';
 import { sinContactos } from '../../utils/privacidad.js';
 import { PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../theme.js';
 

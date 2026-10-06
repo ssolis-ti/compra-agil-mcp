@@ -5,7 +5,6 @@
  * incluyendo productos, proveedores, cotizaciones y estado de OC.
  */
 
-import { z } from 'zod';
 import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilDetalle, ProveedorCotizando } from '../api/compra-agil-client.js';

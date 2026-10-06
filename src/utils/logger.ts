@@ -6,6 +6,7 @@
  * Todo el logging va exclusivamente a stderr (console.error).
  */
 
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { redact } from './redact.js';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -19,15 +20,29 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 
 const currentLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info';
 
+/**
+ * Nivel del protocolo MCP (RFC 5424) para cada nivel interno.
+ *
+ * ⚠ Fase 1.5: el logger mandaba "warn", que el protocolo no define (es
+ *   "warning"). Lo destapó el compilador al tipar el servidor, que antes era
+ *   `any`: toda advertencia salía al cliente con un nivel inválido.
+ */
+export const NIVEL_MCP = {
+  debug: 'debug',
+  info: 'info',
+  warn: 'warning',
+  error: 'error',
+} as const satisfies Record<LogLevel, string>;
+
 function formatTimestamp(): string {
   return new Date().toISOString();
 }
 
-let mcpServer: any = null;
+let mcpServer: McpServer | null = null;
 /** Evita repetir el aviso de fallo de envío en cada línea de log. */
 let falloDeEnvioAvisado = false;
 
-export function setMcpServer(server: any): void {
+export function setMcpServer(server: McpServer): void {
   mcpServer = server;
 }
 
@@ -47,7 +62,7 @@ function log(level: LogLevel, message: string, data?: unknown): void {
   // del LLM y a la transcripción. Se envía la versión ya redactada.
   if (mcpServer) {
     mcpServer.sendLoggingMessage({
-      level,
+      level: NIVEL_MCP[level],
       logger: 'mcp-compra-agil',
       data: seguro,
     }).catch((e: unknown) => {

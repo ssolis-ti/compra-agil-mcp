@@ -10,7 +10,7 @@ import { safeError } from '../utils/redact.js';
 import { describirFallosDetalle } from '../utils/presupuesto.js';
 import { parsearFechaApi } from '../utils/fechas.js';
 import { terminoComparables } from '../utils/doc-search.js';
-import { filtrarPorPalabras, esquemaPalabrasComparables, textoSinCoincidencias, type FiltroPalabras } from '../utils/palabras-clave.js';
+import { filtrarPorPalabras, esquemaPalabrasComparables, type FiltroPalabras } from '../utils/palabras-clave.js';
 import type { CompraAgilItem } from '../api/compra-agil-client.js';
 
 export { terminoComparables };
@@ -376,7 +376,6 @@ export async function recolectarDatosAuditoria(
   const processedCases: ProcesoComparable[] = [];
   let fallosDetalle = 0;
   let textoFallos = '';
-  let intentosDetalle = 0;
   const itemsToProcess = (searchResponse.items || [])
     .filter((item) => item.codigo !== targetCode)
     .slice(0, limit);
@@ -396,7 +395,7 @@ export async function recolectarDatosAuditoria(
       detalles[i] ? { item, detail: detalles[i]! } : null
     );
 
-    intentosDetalle = detallados.length;
+    const intentosDetalle = detallados.length;
     fallosDetalle = detallados.filter((d) => d === null).length;
     textoFallos = describirFallosDetalle(
       itemsToProcess.filter((_, i) => detallados[i] === null).map((i) => i.codigo),

@@ -121,7 +121,7 @@ describe('servidor MCP por stdio', () => {
       const r = await cliente.callTool({ name: nombre, arguments: args });
       const texto = (r.content as Array<{ text: string }>)[0].text;
       expect(r.isError, nombre).toBe(true);
-      expect(texto, `${nombre} ${JSON.stringify(args)}`).toMatch(/^Error de validación: .+ No se consultó la API.$/s);
+      expect(texto, `${nombre} ${JSON.stringify(args)}`).toMatch(/^Error de validación: .+ No se consultó la API\.$/s);
       expect(texto, nombre).not.toMatch(/MCP error|Input validation error|Invalid input|expected string/);
     }
   });

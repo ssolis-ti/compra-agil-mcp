@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { filtrarPorPalabras, esquemaPalabrasComparables, textoSinCoincidencias, type FiltroPalabras } from '../utils/palabras-clave.js';
+import { filtrarPorPalabras, esquemaPalabrasComparables, type FiltroPalabras } from '../utils/palabras-clave.js';
 import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient, CompraAgilDetalle } from '../api/compra-agil-client.js';

@@ -13,7 +13,6 @@ import { RateLimiter, rutaEstadoPorDefecto } from '../utils/rate-limiter.js';
 import { rutaDeDatos } from '../utils/rutas.js';
 import { ResponseCache } from '../utils/cache.js';
 import { LimitadorConcurrencia } from '../utils/concurrencia.js';
-import path from 'path';
 import { registrarSecreto } from '../utils/redact.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
 import { contextoActual, tiempoRestante } from '../utils/presupuesto.js';

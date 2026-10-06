@@ -229,7 +229,7 @@ export function registerDocumentosTools(server: McpServer): void {
             text: `Contenido extraído del documento (ID: ${args.id_documento}):\n\n${truncated}`,
           }],
         };
-      } catch (error: any) {
+      } catch (error) {
         return {
           content: [{
             type: 'text' as const,
@@ -323,7 +323,7 @@ export function registerDocumentosTools(server: McpServer): void {
                 texto: marcarSiEsGuiaOficial(file, cuerpo),
               });
             }
-          } catch (e: any) {
+          } catch (e) {
             errores.push(`### Archivo: ${file}\nError al leer o parsear: ${safeError(e)}`);
           }
         }
@@ -372,7 +372,7 @@ export function registerDocumentosTools(server: McpServer): void {
             text: `Resultados de búsqueda para "${args.query}" en documentos locales:${aviso}${avisoCobertura}${avisoTope}\n\n${results.join('\n\n====================\n\n')}`,
           }],
         };
-      } catch (error: any) {
+      } catch (error) {
         return {
           content: [{
             type: 'text' as const,

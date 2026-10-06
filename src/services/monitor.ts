@@ -6,10 +6,10 @@
  * y que contengan palabras clave específicas. Guarda las alertas en alerts.log.
  */
 import fs from 'fs';
-import path from 'path';
 import { loadEnvManual } from '../utils/env-loader.js';
 import { rutaDeDatos } from '../utils/rutas.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { CompraAgilApiError } from '../utils/error-handler.js';
 import { safeError, registrarSecreto } from '../utils/redact.js';
 import { enHoraDeChile, ventanaUltimosMinutos } from '../utils/fechas.js';
 import { ahora, iniciarRelojOficial } from '../utils/reloj.js';
@@ -143,19 +143,22 @@ async function runCheck() {
 
     console.log(`[${timestamp}] Ciclo completado. Alertas nuevas en este ciclo: ${alertCount}\n`);
 
-  } catch (error: any) {
-    const errorMsg = error?.actionableMessage || safeError(error);
+  } catch (error) {
+    const errorMsg = error instanceof CompraAgilApiError ? error.actionableMessage : safeError(error);
     console.error(`[${timestamp}] [ERROR] Falló el ciclo de monitoreo: ${errorMsg}\n`);
-    
-    // Si la cuota de la API se agotó, podemos dormir o pausar el demonio
-    if (errorMsg.includes('Cuota diaria agotada') || error?.status === 429) {
+
+    // ⚠ Fase 1.5: con `error: any` esta rama comparaba `error?.status` (el campo
+    //   es `httpStatus`) y buscaba un texto que los mensajes ya no traen: nunca
+    //   se ejecutaba. El lint la destapó al quitar el `any`.
+    if (error instanceof CompraAgilApiError && error.httpStatus === 429) {
       console.warn(`[${timestamp}] [ADVERTENCIA] Rate limit detectado. El servicio reintentará en el próximo ciclo.`);
     }
   }
 }
 
-// Ejecución inicial inmediata
-runCheck();
+// Ejecución inicial inmediata. runCheck captura sus propios errores; `void`
+// declara que no se espera a propósito.
+void runCheck();
 
 // Agendar ejecuciones periódicas
 setInterval(runCheck, INTERVAL_MINUTES * 60 * 1000);

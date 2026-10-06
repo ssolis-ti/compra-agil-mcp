@@ -62,8 +62,8 @@ export function registerDocumentacionResource(server: McpServer): void {
             text: text,
           }],
         };
-      } catch (error: any) {
-        throw new Error(`Error al leer el manual local: ${safeError(error)}`);
+      } catch (error) {
+        throw new Error(`Error al leer el manual local: ${safeError(error)}`, { cause: error });
       }
     }
   );

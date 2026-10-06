@@ -9,7 +9,6 @@
  * esta tool no consulta la API por su cuenta.
  */
 
-import { z } from 'zod';
 import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';

@@ -52,7 +52,7 @@ export function registerComprasTemplateResource(server: McpServer, client: Compr
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
           : `Error al leer recurso de Compra Ágil: ${safeError(error)}`;
-        throw new Error(message);
+        throw new Error(message, { cause: error });
       }
     }
   );

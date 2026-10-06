@@ -8,7 +8,6 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import { logger } from './logger.js';
 import { rutaDeDatos } from './rutas.js';
 
