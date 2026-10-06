@@ -11,7 +11,7 @@ sesión local.
 | Auditoría QA de la 2.6.1 | ✅ Hecha — [auditoria-2.6.1.md](auditoria-2.6.1.md) |
 | Sprint 0 (bloqueantes para producción) | ✅ Hecho — [sprint-0.md](sprint-0.md) |
 | PR #8 a #13 | ✅ Fusionados en `main` (6-oct) |
-| Validación contra la API real | 🟡 Etapa 1 hecha — [resultado-api-real.md](resultado-api-real.md); la de la 2.7.0 va en la rama `qa/validacion-2.7.0`, y la comprobación UTC/hora de Chile con `1499-607-COT26` el 6-oct a las 18:00 |
+| Validación contra la API real | ✅ Etapa 1 de la 2.7.0 hecha (6-oct), sin bloqueantes; `fecha_cierre` confirmada como UTC — [resultado-api-real.md](resultado-api-real.md). Falta la etapa 2 (uso desde un cliente MCP) |
 | Simulación de uso con 3 agentes (API simulada) | ✅ Dos corridas — [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md): la primera halló S1–S9 (corregidos en los PR #9 y #10); la segunda no los reprodujo y halló S1b y S11–S18 (fase 1.9) |
 | Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #13 |
 | Versión 2.7.0 | 🟡 En `main`; **sin publicar en npm** (npm sigue en la 2.5.0). Falta la validación real y el tag `v2.7.0` |
