@@ -6,6 +6,10 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Corregido — rutas independientes del directorio de trabajo (fase 1.0)
+* **Lanzado por un cliente MCP como indicaba el README, el servidor no encontraba el `.env` y repartía su estado por la carpeta del cliente.** Todo se resolvía con `process.cwd()`, y Claude Desktop lanza el servidor desde su propia carpeta: sin el ticket en texto plano en la config del cliente, terminaba al arrancar (medido el 5 de octubre; se rodeaba con `cmd /c cd /d <proyecto> && …`). Ahora el `.env` se busca en la carpeta de trabajo, la del proyecto y la de datos, y caché, estado de cuota, estado del daemon e informes van a una carpeta de datos fija: `COMPRA_AGIL_DATA_DIR`, la del proyecto si es un clon, o una del usuario si se instaló con `npx`. El README ya no pide el ticket en la config del cliente.
+  * ⚠ **Cambio de comportamiento:** quien lanzaba el servidor desde otra carpeta encontrará la caché, el estado y los `informes/` en la carpeta de datos, no en esa carpeta.
+
 ### Corregido — rendimiento (fase 1.1)
 * **El freno propio de 15 consultas/min podía retener una herramienta hasta el corte del cliente MCP.** Medido: una consulta esperó 57 s en la batería de `scripts/qa/`, y en la simulación con agentes cuatro llamadas tardaron 25-45 s con la API respondiendo en ~400 ms. Ahora cada llamada a una herramienta tiene un presupuesto de 45 s (`COMPRA_AGIL_PRESUPUESTO_MS`): si una consulta tendría que esperar más de lo que queda, no se envía —no gasta cuota— y la herramienta responde con lo que tenga. Las de análisis distinguen en sus avisos los detalles que fallaron en la API de los que se omitieron por tiempo (`procesos_que_fallaron_detalle[].motivo`). El corte de cada consulta tampoco pasa lo que le queda a la herramienta.
 * **Las consultas que esperaban turno salían en ráfaga.** El freno esperaba a que saliera la más antigua y, al despertar, anotaba la hora sin volver a mirar: varias esperas simultáneas superaban juntas el máximo. Ahora cada consulta reserva su turno antes de esperar, en orden de llegada.
