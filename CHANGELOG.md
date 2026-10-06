@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Seguridad
+* **SDK de MCP 1.29.0 → 1.32.1** por el aviso [GHSA-6qxp-vccf-f47h](https://github.com/advisories/GHSA-6qxp-vccf-f47h) (severidad alta, versiones 1.12.0–1.30.1): el **cliente OAuth** del SDK podía enviar credenciales a un servidor de autorización elegido por el servidor MCP. Este servidor usa solo el lado servidor sobre stdio y no usa OAuth, así que no estaba expuesto, pero el aviso hacía fallar la CI (`npm audit --omit=dev --audit-level=high`) desde su publicación. `npm audit --omit=dev`: 0 vulnerabilidades.
+
 ### Corregido — la API entrega hora de Chile, no UTC
 * **Los cierres se mostraban 3 horas antes (4 en invierno).** La API entrega `fecha_cierre`, `fecha_publicacion` y `fecha_ultimo_cambio` en hora de Chile, esta última con una "Z" que no le corresponde. Hasta la 2.7.0 se leían como UTC. Medido el 6 de octubre contra la API real, con el reloj verificado contra el SHOA: a las 15:42 de Chile el cambio más reciente decía `15:40Z`, y 89 de 92 cierres caen en horario de oficina leídos como hora de Chile (leídos como UTC aparecían cierres a las 03:00 y 05:00). La validación de la 2.7.0 había concluido lo contrario porque supuso que el filtro de la API compara bien las horas; comete el mismo error ahí.
 * **El radar ocultaba los procesos que cerraban en las 3 horas siguientes**, justo los más urgentes: los daba por cerrados. Ahora los muestra, con su puntaje de urgencia.
