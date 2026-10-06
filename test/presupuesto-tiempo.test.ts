@@ -140,3 +140,18 @@ describe('LimitadorConcurrencia — límite global entre herramientas', () => {
     expect([...a, ...b].every((x) => x === 1)).toBe(true);
   });
 });
+
+describe('timeout efectivo dentro de una herramienta', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('respeta un COMPRA_AGIL_TIMEOUT_MS menor que el mínimo útil (lo halló la batería de scripts/qa)', async () => {
+    vi.stubGlobal('fetch', vi.fn((_u: string, init: { signal: AbortSignal }) => new Promise((_r, rej) => {
+      init.signal.addEventListener('abort', () => rej(init.signal.reason));
+    })));
+    const client = new CompraAgilClient('TICKET-TEST', undefined, { timeoutMs: 300 });
+    const inicio = Date.now();
+    const error = await conPresupuesto(() => client.detalle('1-1-COT26'), 45_000).catch((e) => e);
+    expect(error.causa).toBe('timeout');
+    expect(Date.now() - inicio).toBeLessThan(2_000);
+  });
+});

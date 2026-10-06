@@ -454,7 +454,9 @@ export class CompraAgilClient {
    */
   private timeoutEfectivo(): number {
     const restante = tiempoRestante();
-    return restante === undefined ? this.timeoutMs : Math.max(MINIMO_UTIL_MS, Math.min(this.timeoutMs, restante));
+    // El piso de MINIMO_UTIL_MS solo limita el recorte por presupuesto: nunca
+    // sube un timeout configurado más bajo.
+    return restante === undefined ? this.timeoutMs : Math.min(this.timeoutMs, Math.max(MINIMO_UTIL_MS, restante));
   }
 
   private async enviar(url: string, consulta: string): Promise<Response> {
