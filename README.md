@@ -163,6 +163,9 @@ COMPRA_AGIL_BASE_URL=https://api2.mercadopublico.cl
 # Corte de cada consulta en ms (por defecto 35000, sobre los ~30 s de la pasarela)
 # COMPRA_AGIL_TIMEOUT_MS=35000
 
+# Tiempo máximo de cada llamada a una herramienta en ms (por defecto 45000)
+# COMPRA_AGIL_PRESUPUESTO_MS=45000
+
 # Carpeta raíz de los informes (por defecto ./informes). ruta_salida no sale de ella.
 # COMPRA_AGIL_INFORMES_DIR=C:/Users/tu-usuario/Documents/informes-compra-agil
 
