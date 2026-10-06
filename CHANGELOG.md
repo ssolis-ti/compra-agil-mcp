@@ -9,6 +9,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 ### Añadido
 * **Publicación automática en npm** (`.github/workflows/publicar.yml`): al empujar un tag `vX.Y.Z`, comprueba que exista el secret `NPM_TOKEN`, que el tag coincida con `package.json`, que esa versión no esté publicada y que el CHANGELOG tenga su sección; publica (con build y tests por `prepublishOnly`, y procedencia firmada si el repositorio es público) y crea la release de GitHub con esa sección como notas.
 
+### Documentación
+* README: la instalación manual empieza con `git clone` e indica la versión de Node, y la opción `npx` avisa que npm puede ir atrás del repositorio (hoy sirve la 2.5.0). El punto de retome de QA (`docs/internals/qa/README.md`) y la fase 0 del roadmap reflejan que los PR #8 a #13 ya están en `main` y que falta la validación real y el tag.
+
 ## [2.7.0] - 2026-10-06
 
 Auditoría QA de la 2.6.1, dos simulaciones de uso con agentes y la validación contra la API real (etapa 1). Lo que impedía llevar el servidor a producción y lo que llevaba a un modelo a dar un consejo equivocado. 458 tests (eran 345), CI en Ubuntu y Windows con Node 20 y 22.
