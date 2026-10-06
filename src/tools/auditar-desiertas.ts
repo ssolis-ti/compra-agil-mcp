@@ -8,6 +8,10 @@ import type { CompraAgilDetalle } from '../api/compra-agil-client.js';
 import { safeError } from '../utils/redact.js';
 import { describirFallosDetalle } from '../utils/presupuesto.js';
 import { parsearFechaApi } from '../utils/fechas.js';
+import { terminoComparables } from '../utils/doc-search.js';
+import type { CompraAgilItem } from '../api/compra-agil-client.js';
+
+export { terminoComparables };
 
 /**
  * Días entre la publicación y el cierre, con una decimal. `null` si falta una de
@@ -108,6 +112,8 @@ export interface DatosAuditoria {
     diferencia_plazo_dias: number | null;
     /** Por unidad cuando los comparables traen precio unitario; si no, montos totales. */
     base_comparacion: 'precio_unitario' | 'monto_total' | null;
+    /** Cuántos procesos comparables sostienen la diferencia. Con 1 es una referencia débil (S13). */
+    comparables_usados: number | null;
     lectura_diferencia: string | null;
   };
   recomendaciones_de_optimizacion: string[];
@@ -171,6 +177,26 @@ function mayoriaSobrePresupuesto(e: EvidenciaProceso): boolean {
 const pesos = (n: number) => `$${n.toLocaleString('es-CL')}`;
 
 /**
+ * ¿La evidencia apunta a requisitos? Sí si el motivo oficial lo dice, o si todas
+ * las cotizaciones fueron inadmisibles por algo que NO es el precio.
+ *
+ * ⚠ E1 (enjambre contra la API real, 6-oct): bastaba con que todas fueran
+ *   inadmisibles. Un proceso desierto por «PROVEEDOR SOBREPASA PRESUPUESTO
+ *   MÁXIMO», cuya única cotización fue inadmisible por precio, salía con
+ *   `requisitos_complejos: true` y la recomendación de revisar «certificaciones
+ *   difíciles de obtener»: una conclusión contra el motivo oficial.
+ */
+export function requisitosPorEvidencia(e: EvidenciaProceso): boolean {
+  if (e.causa_segun_motivo_oficial === 'requisitos') return true;
+  const n = e.cotizaciones_recibidas;
+  if (n === 0 || e.cotizaciones_inadmisibles !== n) return false;
+  const causas = e.motivos_de_inadmisibilidad.map(clasificarMotivo);
+  // Sin justificaciones, el motivo oficial decide: si es el precio, no se infieren requisitos.
+  if (causas.length === 0) return e.causa_segun_motivo_oficial !== 'presupuesto';
+  return !causas.every((c) => c === 'presupuesto');
+}
+
+/**
  * Recomendaciones que salen del propio proceso. Van antes que las de los
  * comparables: lo que pasó en ESTE proceso pesa más que un promedio de otros.
  *
@@ -219,7 +245,7 @@ function recomendacionesPropias(e: EvidenciaProceso, presupuesto: number, motivo
     );
   }
 
-  if (e.causa_segun_motivo_oficial === 'requisitos' || (n > 0 && e.cotizaciones_inadmisibles === n)) {
+  if (requisitosPorEvidencia(e)) {
     const motivos = e.motivos_de_inadmisibilidad.length > 0
       ? ` Motivos de inadmisibilidad declarados: ${e.motivos_de_inadmisibilidad.map((m) => `«${m}»`).join(', ')}.`
       : '';
@@ -290,30 +316,53 @@ export async function recolectarDatosAuditoria(
   }
 
   // Determinar la palabra clave para la comparativa histórica
-  if (!keyword) {
-    if (targetDetail.productos_solicitados && targetDetail.productos_solicitados.length > 0) {
-      keyword = targetDetail.productos_solicitados[0].nombre;
-    } else {
-      keyword = targetDetail.nombre;
-    }
-  }
+  const nombreBase = targetDetail.productos_solicitados?.[0]?.nombre || targetDetail.nombre || '';
+  const terminoDelUsuario = Boolean(keyword);
+  if (!keyword) keyword = terminoComparables(nombreBase);
 
   // 3. Buscar procesos comparables del mismo rubro que publiquen cotizaciones.
   //    Solo `desierta`: medido contra la API real, es el único estado que las
-  //    expone (desierta 5/8 procesos con precios; cerrada 0/8).
+  //    expone (desierta 5/8 procesos con precios; cerrada 0/8). Sumar
+  //    `cerrada` solo gastaría cuota. El sesgo —comparar contra procesos que
+  //    también fracasaron— se declara en la nota metodológica (E3).
   //    `proveedor_seleccionado` devuelve 0 resultados.
-  logger.info(`auditar_compras_desiertas: Buscando procesos comparables para "${keyword}"`);
+  //
+  //    ⚠ S12 (enjambre, 6-oct): si esta búsqueda fallaba, la auditoría no
+  //      entregaba nada, aunque ya tenía el motivo oficial, las cotizaciones y
+  //      los montos del propio proceso. Ahora se entrega esa evidencia y el
+  //      fallo se informa como cobertura, no como conclusión.
   const limit = args.limite_analisis || 3;
-  const searchResponse = await client.buscar({
-    q: keyword,
-    estado: 'desierta',
-    // Solo se examinan los primeros `limit` resultados, así que pedir 50
-    // era desperdicio — y provocaba HTTP 504: medido en producción, esta
-    // misma consulta con tamano_pagina=50 agota los ~30 s de la pasarela,
-    // y con 15 responde en 9,9 s.
-    tamano_pagina: 10,
-    numero_pagina: 1,
-  });
+  // En un objeto: TypeScript no ve la asignación dentro de buscarComparables
+  // y estrecharía una variable suelta a `null`.
+  const busquedaComparables: { fallo: string | null } = { fallo: null };
+  const buscarComparables = async (termino: string): Promise<CompraAgilItem[]> => {
+    logger.info(`auditar_compras_desiertas: Buscando procesos comparables para "${termino}"`);
+    try {
+      const r = await client.buscar({
+        q: termino,
+        estado: 'desierta',
+        // Solo se examinan los primeros `limit` resultados, así que pedir 50
+        // era desperdicio — y provocaba HTTP 504: medido en producción, esta
+        // misma consulta con tamano_pagina=50 agota los ~30 s de la pasarela,
+        // y con 15 responde en 9,9 s.
+        tamano_pagina: 10,
+        numero_pagina: 1,
+      });
+      return r.items || [];
+    } catch (error) {
+      busquedaComparables.fallo = error instanceof CompraAgilApiError ? error.actionableMessage : safeError(error);
+      return [];
+    }
+  };
+  let encontrados = (await buscarComparables(keyword)).filter((item) => item.codigo !== targetCode);
+  if (encontrados.length === 0 && !busquedaComparables.fallo && !terminoDelUsuario) {
+    const corto = terminoComparables(nombreBase, 1);
+    if (corto && corto !== keyword) {
+      keyword = corto;
+      encontrados = (await buscarComparables(keyword)).filter((item) => item.codigo !== targetCode);
+    }
+  }
+  const searchResponse = { items: encontrados };
 
   const successDurations: number[] = [];
   const successPrices: number[] = [];
@@ -445,6 +494,7 @@ export async function recolectarDatosAuditoria(
     diferencia_presupuesto_porcentaje: null,
     diferencia_plazo_dias: null,
     base_comparacion: null,
+    comparables_usados: null,
     lectura_diferencia: null,
   };
   let presupuestoComparado = false;
@@ -456,10 +506,19 @@ export async function recolectarDatosAuditoria(
       const dif = Math.round(((refPresupuesto - refPromedio) / refPromedio) * 100);
       analisis_critico.diferencia_presupuesto_porcentaje = dif;
       analisis_critico.base_comparacion = porUnidad ? 'precio_unitario' : 'monto_total';
+      // ⚠ S13 (segunda simulación): con un solo comparable lo llamaba
+      //   «promedio» y el informe concluía «en rango» sin advertirlo. Y no
+      //   decía que lo cotizado es neto mientras el presupuesto puede incluir IVA.
+      const nComparables = porUnidad ? successUnitPrices.length : successPrices.length;
+      analisis_critico.comparables_usados = nComparables;
+      const referencia = nComparables === 1
+        ? `lo cotizado${porUnidad ? ' por unidad' : ''} en el único proceso comparable`
+        : `el promedio de lo cotizado${porUnidad ? ' por unidad' : ''} en ${nComparables} procesos comparables`;
       analisis_critico.lectura_diferencia =
-        `El presupuesto${porUnidad ? ' por unidad' : ''} está ${Math.abs(dif)} % ${dif < 0 ? 'bajo' : 'sobre'} el promedio ` +
-        `de lo cotizado${porUnidad ? ' por unidad' : ''} en procesos comparables` +
-        (porUnidad ? '.' : ' (montos totales de procesos con cantidades posiblemente distintas: tómalo con cautela).');
+        `El presupuesto${porUnidad ? ' por unidad' : ''} está ${Math.abs(dif)} % ${dif < 0 ? 'bajo' : 'sobre'} ${referencia}` +
+        (porUnidad ? '.' : ' (montos totales de procesos con cantidades posiblemente distintas: tómalo con cautela).') +
+        (nComparables === 1 ? ' Un solo comparable es una referencia débil: no basta para afirmar que el presupuesto esté en rango.' : '') +
+        ' Lo cotizado es neto (sin IVA): si el presupuesto incluye IVA, la holgura real es menor.';
       if (refPresupuesto < refMinimo || refPresupuesto < refPromedio * 0.8) {
         analisis_critico.presupuesto_insuficiente = true;
       }
@@ -495,8 +554,10 @@ export async function recolectarDatosAuditoria(
   analisis_critico.plazo_insuficiente = plazoPorComparables || causa === 'plazo'
     ? true
     : plazoComparado ? false : null;
-  analisis_critico.requisitos_complejos = requisitosAmbientales || causa === 'requisitos' ||
-    (evidencia.cotizaciones_recibidas > 0 && evidencia.cotizaciones_inadmisibles === evidencia.cotizaciones_recibidas);
+  // Los criterios ambientales o sociales no bastan para afirmar que los
+  // requisitos fueron el problema: solo la evidencia del proceso (E1).
+  const porRequisitos = requisitosPorEvidencia(evidencia);
+  analisis_critico.requisitos_complejos = porRequisitos;
 
   // 6. Recomendaciones: primero las del propio proceso, luego las de mercado.
   const recomendaciones: string[] = recomendacionesPropias(evidencia, targetBudget, targetDetail.motivos?.motivo_desierta);
@@ -522,15 +583,23 @@ export async function recolectarDatosAuditoria(
     );
   }
 
-  if (requisitosAmbientales) {
+  if (requisitosAmbientales && porRequisitos) {
     recomendaciones.push(
       `Flexibilizar los requisitos ambientales/sociales exigidos. Aunque promueven buenas prácticas, en procesos rápidos de bajo monto pueden asustar o inhabilitar a microempresas locales si implican adjuntar certificados complejos.`
     );
+  } else if (requisitosAmbientales && !presupuestoPorEvidencia && !presupuestoPorComparables && !plazoPorComparables && causa !== 'plazo') {
+    recomendaciones.push(
+      `El proceso incluye criterios ambientales o sociales. Ningún dato indica que causaran la deserción, pero conviene revisar si exigían certificados difíciles de reunir en el plazo.`
+    );
   }
 
-  if (sinComparablesDistintos) {
+  if (sinComparablesDistintos && busquedaComparables.fallo) {
     recomendaciones.push(
-      'No hay otro proceso desierto en la muestra. No se compara este proceso consigo mismo, así que no hay brecha de presupuesto ni de plazo contra un mercado distinto.',
+      `No se pudieron buscar procesos comparables: ${busquedaComparables.fallo} La evidencia de este proceso (motivo oficial, cotizaciones y montos) sigue siendo válida; reintenta en unos minutos para contrastarla con el mercado.`,
+    );
+  } else if (sinComparablesDistintos) {
+    recomendaciones.push(
+      `No se encontró otro proceso desierto con «${keyword}». No se compara este proceso consigo mismo, así que no hay brecha de presupuesto ni de plazo contra un mercado distinto. Para comparar, prueba con "q" y un término más general.`,
     );
   } else if (recomendaciones.length === 0) {
     // Sin motivo oficial, sin evidencia propia y sin brechas de mercado: no
@@ -566,6 +635,9 @@ export async function recolectarDatosAuditoria(
       ...(fallosDetalle > 0 && {
         _aviso_cobertura: `${textoFallos} La comparación se basa en menos procesos de los pedidos; no lo interpretes como escasez de datos del rubro.`,
       }),
+      ...(busquedaComparables.fallo && {
+        _aviso_cobertura: `La búsqueda de procesos comparables falló, así que no hubo contraste con el mercado: ${busquedaComparables.fallo} No lo interpretes como escasez de datos del rubro.`,
+      }),
       estadisticas_montos_cotizados: successPrices.length > 0 ? {
         minimo_cotizado: minPrice,
         maximo_cotizado: maxPrice,
@@ -580,7 +652,7 @@ export async function recolectarDatosAuditoria(
     analisis_de_brechas: analisis_critico,
     recomendaciones_de_optimizacion: recomendaciones,
     procesos_comparables_analizados: processedCases,
-    _nota_metodologica: 'La comparación usa el MENOR monto cotizado de cada proceso similar (cerrado o desierto), no montos adjudicados: la API de Mercado Público no expone qué oferta ganó. Revisa también "motivo_desierta": muchas deserciones se explican por incumplimientos formales (garantías, certificados) y no por precio.',
+    _nota_metodologica: 'La comparación usa el MENOR monto cotizado de cada proceso similar, no montos adjudicados: la API de Mercado Público no expone qué oferta ganó. Los comparables son procesos DESIERTOS, porque son los únicos que publican sus cotizaciones (medido: 5 de 8 desiertos frente a 0 de 8 cerrados): la muestra se inclina hacia compras que también fracasaron, así que tómala como referencia de precios ofertados y no como el precio de una compra exitosa. Revisa también "motivo_desierta": muchas deserciones se explican por incumplimientos formales (garantías, certificados) y no por precio.',
   };
 
   return { kind: 'datos', datos: result };

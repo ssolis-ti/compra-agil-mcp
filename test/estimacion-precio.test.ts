@@ -79,8 +79,8 @@ describe('estimarPrecioUnitario — el precio ingresado manda', () => {
 describe('estimarPrecioUnitario — respaldo por presupuesto (el defecto)', () => {
   it('si la API falla, USA el presupuesto en vez de caer al placeholder', async () => {
     const e = await estimarPrecioUnitario(clienteQueFalla, detalleBase());
-    // 4.800.000 * 0,9 / 2 unidades
-    expect(e.precio).toBe(2_160_000);
+    // 4.800.000 × 0,9 / 1,19 (IVA) / 2 unidades
+    expect(e.precio).toBe(1_815_126);
     expect(e.sugerido).toBe(true);
     expect(e.automatico).toBe(true);
     expect(e.precio).not.toBe(PRECIO_PLACEHOLDER);
@@ -88,8 +88,9 @@ describe('estimarPrecioUnitario — respaldo por presupuesto (el defecto)', () =
 
   it('si no hay comparables, también usa el presupuesto', async () => {
     const e = await estimarPrecioUnitario(clienteSinResultados, detalleBase());
-    expect(e.precio).toBe(2_160_000);
+    expect(e.precio).toBe(1_815_126);
     expect(e.fuente).toMatch(/presupuesto del comprador/i);
+    expect(e.fuente).toMatch(/IVA incluido/);
   });
 
   it('reparte el presupuesto entre la cantidad total solicitada', async () => {
@@ -100,7 +101,7 @@ describe('estimarPrecioUnitario — respaldo por presupuesto (el defecto)', () =
       ],
     });
     const e = await estimarPrecioUnitario(clienteQueFalla, d);
-    expect(e.precio).toBe(Math.round((4_800_000 * 0.9) / 8));
+    expect(e.precio).toBe(Math.floor((4_800_000 * 0.9) / 1.19 / 8));
   });
 
   it('cae al presupuesto_estimado cuando los montos disponibles vienen nulos', async () => {
@@ -112,7 +113,24 @@ describe('estimarPrecioUnitario — respaldo por presupuesto (el defecto)', () =
       },
     });
     const e = await estimarPrecioUnitario(clienteQueFalla, d);
-    expect(e.precio).toBe(2_160_000);
+    expect(e.precio).toBe(1_815_126);
+  });
+
+  it('E2: el total con IVA del precio por defecto cabe en el presupuesto (caso del enjambre, 6-oct)', async () => {
+    // 5796-33-COT26: presupuesto $516.267, 100 unidades. Antes salía $4.646 neto
+    // por unidad: $552.874 con IVA, sobre el presupuesto.
+    const d = detalleBase({
+      presupuesto: {
+        tipo_presupuesto: 'Disponible', moneda: 'CLP', presupuesto_estimado: null,
+        monto_disponible: 516_267, monto_disponible_clp: 516_267,
+        valor_cambio_moneda: null, fecha_cambio_moneda: null,
+      },
+      productos_solicitados: [{ codigo_producto: 1, nombre: 'Toallas de papel', descripcion: null, cantidad: 100, unidad_medida: 'EA' }],
+    });
+    const e = await estimarPrecioUnitario(clienteQueFalla, d);
+    const totalConIva = Math.round(e.precio * 100 * 1.19);
+    expect(totalConIva).toBeLessThanOrEqual(516_267);
+    expect(e.precio).toBe(3_904);
   });
 });
 

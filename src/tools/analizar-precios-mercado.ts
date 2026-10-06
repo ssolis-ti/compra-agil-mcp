@@ -24,6 +24,11 @@ import { CompraAgilApiError } from '../utils/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { safeError } from '../utils/redact.js';
 import { describirFallosDetalle } from '../utils/presupuesto.js';
+import { terminoComparables } from '../utils/doc-search.js';
+import type { CompraAgilDetalle, CompraAgilItem } from '../api/compra-agil-client.js';
+
+const mensajeDeError = (error: unknown) =>
+  error instanceof CompraAgilApiError ? error.actionableMessage : safeError(error);
 import {
   esGanador, esAdmisible, extraerPrecioUnitario, extraerMontoNeto,
   calcularEstadisticas,
@@ -137,15 +142,47 @@ export async function recolectarDatosPrecios(
   // 1. Si dan un código, extraer keyword y región de ese proceso
   if (args.codigo_compra) {
     logger.info(`analizar_precios_mercado: leyendo compra ${args.codigo_compra}`);
-    const activa = await client.detalle(args.codigo_compra);
-    if (activa.productos_solicitados?.length > 0) {
-      const p = activa.productos_solicitados[0];
-      keyword = p.nombre;
-      contextoProceso = `Producto solicitado: "${p.nombre}" (cantidad ${p.cantidad} ${p.unidad_medida})`;
-    } else {
-      keyword = activa.nombre;
-      contextoProceso = `Proceso: "${activa.nombre}"`;
+    // ⚠ S12 (segunda simulación y enjambre, 6-oct): si el detalle del proceso
+    //   de referencia daba 504, el análisis entero fallaba con el texto del
+    //   504. El listado (`buscar` por `id`) es más liviano y suele responder
+    //   cuando el detalle no: de ahí sale el nombre para buscar comparables.
+    let activa: CompraAgilDetalle | null = null;
+    let errorDetalle: unknown = null;
+    try {
+      activa = await client.detalle(args.codigo_compra);
+    } catch (error) {
+      errorDetalle = error;
     }
+    if (activa) {
+      if (activa.productos_solicitados?.length > 0) {
+        const p = activa.productos_solicitados[0];
+        keyword = p.nombre;
+        contextoProceso = `Producto solicitado: "${p.nombre}" (cantidad ${p.cantidad} ${p.unidad_medida})`;
+      } else {
+        keyword = activa.nombre;
+        contextoProceso = `Proceso: "${activa.nombre}"`;
+      }
+    } else {
+      let delListado: CompraAgilItem | undefined;
+      try {
+        delListado = (await client.buscar({ id: args.codigo_compra, tamano_pagina: 10, numero_pagina: 1 })).items?.[0];
+      } catch {
+        // Sin listado tampoco: se informa el fallo del detalle, que es el primero.
+      }
+      if (!delListado && !args.q) {
+        return {
+          kind: 'mensaje',
+          isError: true,
+          texto: `No se pudo leer el proceso ${args.codigo_compra}, así que no se sabe qué producto analizar. Falló al pedir su detalle: ${mensajeDeError(errorDetalle)} ` +
+            `Reintenta en unos minutos, o usa "q" con el nombre del producto para analizar precios sin depender de ese proceso.`,
+        };
+      }
+      keyword = args.q || terminoComparables(delListado!.nombre, 3);
+      contextoProceso = delListado
+        ? `Proceso: "${delListado.nombre}" (el detalle no respondió; el término de búsqueda sale del nombre del listado)`
+        : `Proceso ${args.codigo_compra} (el detalle no respondió; se usa el término indicado en "q")`;
+    }
+    const regionActiva = activa?.institucion.region;
     // ⚠ La región del comprador NO se aplica como filtro. Antes se imponía sin
     //   decirlo: en la simulación con agentes (6-oct) un proceso de
     //   Valparaíso respondió «No se encontraron procesos… en la región 5.
@@ -154,8 +191,8 @@ export async function recolectarDatosPrecios(
     //   (que busca en todo el país) sí encontraba precios. Las desiertas con
     //   cotizaciones son escasas: acotar por región deja la muestra vacía.
     //   Quien quiera el análisis regional lo pide con `region`.
-    if (!region && activa.institucion.region !== null && activa.institucion.region !== undefined) {
-      regionDelComprador = String(activa.institucion.region);
+    if (!region && regionActiva !== null && regionActiva !== undefined) {
+      regionDelComprador = String(regionActiva);
     }
   }
 
@@ -199,7 +236,18 @@ export async function recolectarDatosPrecios(
   const edadCache = typeof (client as Partial<CompraAgilClient>).edadBusquedaEnCache === 'function'
     ? (client as CompraAgilClient).edadBusquedaEnCache(paramsBusqueda)
     : undefined;
-  const busqueda = await client.buscar(paramsBusqueda);
+  let busqueda: Awaited<ReturnType<typeof client.buscar>>;
+  try {
+    busqueda = await client.buscar(paramsBusqueda);
+  } catch (error) {
+    // Se dice en qué paso falló: sin eso el usuario no sabe si reintentar
+    // con otro término o esperar (enjambre, 6-oct).
+    return {
+      kind: 'mensaje',
+      isError: true,
+      texto: `Falló la búsqueda de procesos históricos con «${keyword}», el primer paso del análisis; no se consultó ningún detalle. ${mensajeDeError(error)}`,
+    };
+  }
 
   if (!busqueda.items?.length) {
     return {

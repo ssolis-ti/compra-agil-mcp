@@ -269,9 +269,12 @@ describe('recolectarDatosAuditoria', () => {
     expect(rec.datos.analisis_de_brechas.plazo_insuficiente).toBe(true);
     // La evidencia del propio proceso va primero (S1); la de mercado sigue presente.
     expect(rec.datos.recomendaciones_de_optimizacion.some((r) => r.includes('Aumentar el presupuesto disponible'))).toBe(true);
-    expect(rec.datos._nota_metodologica).toBe(
-      'La comparación usa el MENOR monto cotizado de cada proceso similar (cerrado o desierto), no montos adjudicados: la API de Mercado Público no expone qué oferta ganó. Revisa también "motivo_desierta": muchas deserciones se explican por incumplimientos formales (garantías, certificados) y no por precio.',
-    );
+    // E3: los comparables son solo desiertos, y la nota lo declara con su sesgo.
+    expect(rec.datos._nota_metodologica).toMatch(/no montos adjudicados/);
+    expect(rec.datos._nota_metodologica).toMatch(/DESIERTOS/);
+    expect(rec.datos._nota_metodologica).toMatch(/también fracasaron/);
+    expect(rec.datos._nota_metodologica).not.toMatch(/cerrado o desierto/);
+    expect(rec.datos._nota_metodologica).toMatch(/motivo_desierta/);
 
     const html = renderAuditoriaInforme({ datos: rec.datos, generadoEn: AHORA, formato: 'oficio' });
     expect(html).toContain('Aumentar el presupuesto disponible');

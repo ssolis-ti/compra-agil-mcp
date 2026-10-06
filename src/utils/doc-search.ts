@@ -51,6 +51,30 @@ export function normalizar(texto: string): string {
 }
 
 /**
+ * Palabras con significado de un texto, en su forma original (con tildes y
+ * mayúsculas): sin palabras vacías y de al menos 3 caracteres. Sirve para armar
+ * un término de búsqueda para la API, que no se sabe si ignora los acentos.
+ */
+export function palabrasSignificativas(texto: string): string[] {
+  return texto
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((p) => p.length >= 3 && !VACIAS.has(normalizar(p)) && !VACIAS.has(p.toLowerCase()));
+}
+
+/**
+ * Término para buscar procesos parecidos en la API: hasta `max` palabras con
+ * significado del nombre del producto, con sus tildes.
+ *
+ * ⚠ S14 (segunda simulación) y E3 (enjambre, 6-oct): con el nombre completo
+ *   («Computadores portátiles para docentes») la búsqueda solo encontraba al
+ *   propio proceso. Un término corto encuentra procesos parecidos.
+ */
+export function terminoComparables(nombre: string, max = 2): string {
+  const palabras = palabrasSignificativas(nombre);
+  return palabras.length > 0 ? palabras.slice(0, max).join(' ') : nombre.trim();
+}
+
+/**
  * Descompone la consulta en términos buscables: normalizados, sin palabras
  * vacías ni términos del dominio (ver DEL_DOMINIO) y de al menos 3 caracteres.
  *

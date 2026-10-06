@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { CompraAgilDetalle, ProveedorCotizando } from '../src/api/compra-agil-client.js';
-import { clasificarMotivo, recolectarDatosAuditoria } from '../src/tools/auditar-desiertas.js';
+import { clasificarMotivo, recolectarDatosAuditoria, terminoComparables } from '../src/tools/auditar-desiertas.js';
+import { CompraAgilApiError } from '../src/utils/error-handler.js';
 import { renderAuditoriaInforme } from '../src/reports/templates/auditoria.js';
 
 /**
@@ -208,9 +209,154 @@ describe('auditar_compras_desiertas — «no evaluable» y comparación por unid
     const g = rec.datos.analisis_de_brechas;
     expect(g.base_comparacion).toBe('precio_unitario');
     expect(g.diferencia_presupuesto_porcentaje).toBe(-21);
-    expect(g.lectura_diferencia).toBe('El presupuesto por unidad está 21 % bajo el promedio de lo cotizado por unidad en procesos comparables.');
+    expect(g.lectura_diferencia).toBe('El presupuesto por unidad está 21 % bajo lo cotizado por unidad en el único proceso comparable. ' +
+      'Un solo comparable es una referencia débil: no basta para afirmar que el presupuesto esté en rango. ' +
+      'Lo cotizado es neto (sin IVA): si el presupuesto incluye IVA, la holgura real es menor.');
+    expect(g.comparables_usados).toBe(1);
     expect(g.presupuesto_insuficiente).toBe(true);
     expect(rec.datos.procesos_comparables_analizados[0].menor_precio_unitario).toBe(800_000);
     expect(rec.datos.recomendaciones_de_optimizacion.join(' ')).toContain('Para 2 unidades, se sugiere al menos $1.680.000');
+  });
+});
+
+describe('auditar_compras_desiertas — requisitos solo con evidencia (E1)', () => {
+  // Caso del enjambre contra la API real (6-oct): 742475-128-COT26, segundo
+  // llamado, motivo de precio, única cotización inadmisible por precio y
+  // criterios ambientales. La auditoría recomendaba revisar certificaciones.
+  const casoPrecio = () => proceso('742475-128-COT26', {
+    presupuesto: { tipo_presupuesto: 'Disponible', moneda: 'CLP', presupuesto_estimado: 370_000, monto_disponible: 370_000, monto_disponible_clp: 370_000, valor_cambio_moneda: null, fecha_cambio_moneda: null },
+    motivos: { motivo_cancelacion: null, motivo_desierta: 'PROVEEDOR SOBREPASA PRESUPUESTO MÁXIMO' },
+    proveedores_cotizando: [cotizacion(1_012_835, { estado_por_comprador: '2', justificacion_inadmisibilidad: 'El valor ofertado sobrepasa el monto máximo disponible' })],
+    flags: { considera_requisitos_medioambientales: true, considera_requisitos_impacto_social_economico: false },
+  });
+
+  it('inadmisible solo por precio y motivo de precio: no infiere requisitos ni recomienda certificaciones', async () => {
+    const objetivo = casoPrecio();
+    const rec = await recolectarDatosAuditoria(clienteCon(objetivo) as never, { codigo_compra: objetivo.codigo });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    const d = rec.datos;
+    expect(d.evidencia_del_proceso_auditado.cotizaciones_inadmisibles).toBe(1);
+    expect(d.analisis_de_brechas.requisitos_complejos).toBe(false);
+    expect(d.analisis_de_brechas.presupuesto_insuficiente).toBe(true);
+    const texto = d.recomendaciones_de_optimizacion.join(' ');
+    expect(texto).not.toMatch(/certificaciones difíciles|Flexibilizar los requisitos/);
+    expect(texto).toMatch(/^Presupuesto:/);
+  });
+
+  it('sin justificaciones de inadmisibilidad, el motivo oficial de precio también lo descarta', async () => {
+    const objetivo = casoPrecio();
+    objetivo.proveedores_cotizando = [cotizacion(1_012_835, { estado_por_comprador: '2' })];
+    const rec = await recolectarDatosAuditoria(clienteCon(objetivo) as never, { codigo_compra: objetivo.codigo });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    expect(rec.datos.analisis_de_brechas.requisitos_complejos).toBe(false);
+  });
+
+  it('todas inadmisibles por papeleo: sí lo marca, aunque el motivo oficial no lo diga', async () => {
+    const objetivo = proceso('8-8-COT26', {
+      motivos: { motivo_cancelacion: null, motivo_desierta: 'Proceso desierto' },
+      proveedores_cotizando: [
+        cotizacion(900_000, { justificacion_inadmisibilidad: 'Oferta no cumple con garantia solicitada' }),
+        cotizacion(950_000, { justificacion_inadmisibilidad: 'El valor ofertado sobrepasa el monto máximo disponible' }),
+      ],
+    });
+    const rec = await recolectarDatosAuditoria(clienteCon(objetivo) as never, { codigo_compra: objetivo.codigo });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    expect(rec.datos.analisis_de_brechas.requisitos_complejos).toBe(true);
+    expect(rec.datos.recomendaciones_de_optimizacion.join(' ')).toMatch(/Requisitos: todas las cotizaciones fueron declaradas inadmisibles/);
+  });
+
+  it('criterios ambientales sin ninguna otra causa: lo menciona sin afirmar que causaran la deserción', async () => {
+    const objetivo = proceso('9-9-COT26', {
+      flags: { considera_requisitos_medioambientales: true, considera_requisitos_impacto_social_economico: false },
+    });
+    const rec = await recolectarDatosAuditoria(clienteCon(objetivo) as never, { codigo_compra: objetivo.codigo });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    expect(rec.datos.analisis_de_brechas.requisitos_complejos).toBe(false);
+    expect(rec.datos.recomendaciones_de_optimizacion.join(' ')).toMatch(/Ningún dato indica que causaran la deserción/);
+  });
+});
+
+describe('auditar_compras_desiertas — búsqueda de comparables (S12, S14, E3)', () => {
+  it('terminoComparables: palabras con significado, con tildes, sin el relleno', () => {
+    expect(terminoComparables('Computadores portátiles para docentes')).toBe('Computadores portátiles');
+    expect(terminoComparables('Computadores portátiles para docentes', 1)).toBe('Computadores');
+    expect(terminoComparables('TOLDO, MOSTRADOR PUBLICITARIO, MESA PLEGABLE')).toBe('TOLDO MOSTRADOR');
+  });
+
+  it('S12: si falla la búsqueda de comparables, entrega la evidencia del proceso y lo informa como cobertura', async () => {
+    const objetivo = proceso('5930-100-COT26', {
+      motivos: { motivo_cancelacion: null, motivo_desierta: 'Ofertas sobre el presupuesto disponible' },
+      proveedores_cotizando: [cotizacion(1_679_096)],
+    });
+    const cliente = {
+      detalle: async () => objetivo,
+      buscar: async () => { throw new CompraAgilApiError(504, [], 'GET /v2/compra-agil'); },
+      detallesEnParalelo: async () => [],
+    };
+    const rec = await recolectarDatosAuditoria(cliente as never, { codigo_compra: objetivo.codigo });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos, no un error');
+    const d = rec.datos;
+    expect(d.evidencia_del_proceso_auditado.menor_monto_neto).toBe(1_679_096);
+    expect(d.recomendaciones_de_optimizacion[0]).toMatch(/^Presupuesto:/);
+    expect(d.recomendaciones_de_optimizacion.join(' ')).toMatch(/No se pudieron buscar procesos comparables/);
+    expect(d.busqueda_comparativa._aviso_cobertura).toMatch(/búsqueda de procesos comparables falló/);
+    expect(d.busqueda_comparativa._aviso_cobertura).toMatch(/escasez/);
+  });
+
+  it('S14: busca con un término corto y, si no hay comparables, reintenta una vez con una palabra', async () => {
+    const objetivo = proceso('1-1-COT26');
+    const comparable = proceso('2-2-COT26', { proveedores_cotizando: [cotizacion(1_150_000)] });
+    const terminos: string[] = [];
+    const cliente = {
+      detalle: async (c: string) => (c === objetivo.codigo ? objetivo : comparable),
+      buscar: async (p: { q: string }) => {
+        terminos.push(p.q);
+        // Con dos palabras solo aparece el propio proceso; con una, un comparable.
+        const items = p.q === 'Computadores'
+          ? [{ codigo: '2-2-COT26', institucion: { organismo_comprador: 'Otra' }, fechas: {} }]
+          : [{ codigo: objetivo.codigo, institucion: { organismo_comprador: 'Misma' }, fechas: {} }];
+        return { items };
+      },
+      detallesEnParalelo: async () => [comparable],
+    };
+    const rec = await recolectarDatosAuditoria(cliente as never, { codigo_compra: objetivo.codigo });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    expect(terminos).toEqual(['Computadores portátiles', 'Computadores']);
+    expect(rec.datos.busqueda_comparativa.termino_clave).toBe('Computadores');
+    expect(rec.datos.busqueda_comparativa.sin_comparables_distintos).toBe(false);
+  });
+
+  it('S14: con "q" del usuario no reintenta por su cuenta, y sin comparables sugiere un término más general', async () => {
+    const objetivo = proceso('1-1-COT26');
+    const terminos: string[] = [];
+    const cliente = {
+      detalle: async () => objetivo,
+      buscar: async (p: { q: string }) => { terminos.push(p.q); return { items: [{ codigo: objetivo.codigo, institucion: { organismo_comprador: 'Misma' }, fechas: {} }] }; },
+      detallesEnParalelo: async () => [],
+    };
+    const rec = await recolectarDatosAuditoria(cliente as never, { codigo_compra: objetivo.codigo, q: 'portátiles docentes' });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    expect(terminos).toEqual(['portátiles docentes']);
+    expect(rec.datos.recomendaciones_de_optimizacion.join(' ')).toMatch(/No se encontró otro proceso desierto con «portátiles docentes».*término más general/);
+  });
+});
+
+describe('auditar_compras_desiertas — cuántos comparables sostienen la lectura (S13)', () => {
+  it('con dos comparables habla de promedio y dice cuántos son', async () => {
+    const objetivo = proceso('1-1-COT26');
+    const c2 = proceso('2-2-COT26', { proveedores_cotizando: [cotizacion(1_150_000)] });
+    const c3 = proceso('3-3-COT26', { proveedores_cotizando: [cotizacion(1_250_000)] });
+    const cliente = {
+      detalle: async () => objetivo,
+      buscar: async () => ({ items: [c2, c3].map((p) => ({ codigo: p.codigo, institucion: { organismo_comprador: 'Otra' }, fechas: {} })) }),
+      detallesEnParalelo: async () => [c2, c3],
+    };
+    const rec = await recolectarDatosAuditoria(cliente as never, { codigo_compra: objetivo.codigo });
+    if (rec.kind !== 'datos') throw new Error('se esperaban datos');
+    const g = rec.datos.analisis_de_brechas;
+    expect(g.comparables_usados).toBe(2);
+    expect(g.lectura_diferencia).toMatch(/el promedio de lo cotizado .*en 2 procesos comparables/);
+    expect(g.lectura_diferencia).not.toMatch(/referencia débil/);
+    expect(g.lectura_diferencia).toMatch(/neto \(sin IVA\)/);
   });
 });

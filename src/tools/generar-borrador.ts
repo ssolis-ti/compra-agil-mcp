@@ -33,7 +33,7 @@ function presupuestoDelComprador(detalle: CompraAgilDetalle): number {
  * Decide el precio unitario del borrador, en orden de preferencia:
  *   1. el que ingresó el usuario,
  *   2. el percentil 25 de lo que cotizó el mercado en procesos similares,
- *   3. el presupuesto del comprador menos 10%,
+ *   3. el presupuesto del comprador menos 10%, con el IVA ya incluido,
  *   4. un placeholder de $1.000, que se advierte explícitamente.
  *
  * ⚠ POR QUÉ EL PASO 3 VIVE FUERA DEL try: antes, la consulta de precios de
@@ -130,11 +130,17 @@ export async function estimarPrecioUnitario(
   const presupuesto = presupuestoDelComprador(detalle);
   if (presupuesto > 0) {
     const cantidadTotal = detalle.productos_solicitados?.reduce((acc, p) => acc + p.cantidad, 0) || 1;
+    // ⚠ E2 (enjambre contra la API real, 6-oct): antes el 90 % del presupuesto
+    //   era el NETO, y con el IVA el total quedaba en el 107 %: el borrador
+    //   proponía por defecto una oferta que no cabía ($552.874 frente a
+    //   $516.267). La API no dice si el presupuesto incluye IVA, así que el
+    //   total CON IVA queda en el 90 %: cabe en los dos casos.
+    const base = 'presupuesto del comprador descontado 10%, IVA incluido (el total con IVA cabe aunque el presupuesto lo incluya)';
     return {
-      precio: Math.round((presupuesto * 0.9) / cantidadTotal),
+      precio: Math.floor((presupuesto * 0.9) / 1.19 / cantidadTotal),
       fuente: intentosDetalle > 0 && fallosDetalle === intentosDetalle
-        ? `Sugerencia automática: presupuesto del comprador descontado 10%. ⚠ NO se pudo consultar el mercado — ${textoFallos} Esto no significa que no existan comparables: reintenta más tarde para obtener un precio de mercado.`
-        : `Sugerencia automática: presupuesto del comprador descontado 10% (no se encontraron cotizaciones de mercado comparables${fallosDetalle > 0 ? `; además, ${textoFallos}` : ''})`,
+        ? `Sugerencia automática: ${base}. ⚠ NO se pudo consultar el mercado — ${textoFallos} Esto no significa que no existan comparables: reintenta más tarde para obtener un precio de mercado.`
+        : `Sugerencia automática: ${base} (no se encontraron cotizaciones de mercado comparables${fallosDetalle > 0 ? `; además, ${textoFallos}` : ''})`,
       sugerido: true,
       automatico: true,
     };
@@ -311,6 +317,20 @@ export async function construirBorradorCotizacion(
   const cantidadTotal = productosCotizados.reduce((acc, p) => acc + (p.cantidad || 0), 0);
   const frentePresupuesto = compararConPresupuesto(presupuestoDelComprador(targetDetail), valorNeto, montoTotal, cantidadTotal);
   if (frentePresupuesto?.advertencia) advertencias.push(frentePresupuesto.advertencia);
+
+  // ⚠ Enjambre contra la API real (6-oct): en 5796-33-COT26 la API listaba un
+  //   solo producto («Toallas de papel» × 100) y el pedido real —jabón,
+  //   lavaloza, desinfectante, papel higiénico— estaba en la descripción y en
+  //   un adjunto .docx. El borrador cotizaba solo lo que la API lista, sin
+  //   avisarlo. Los adjuntos no se pueden leer por la API (ver README).
+  const adjuntos = targetDetail.documentos ?? [];
+  if (adjuntos.length > 0) {
+    const nombres = adjuntos.slice(0, 3).map((d) => `«${d.nombre}»`).join(', ') + (adjuntos.length > 3 ? '…' : '');
+    advertencias.push(
+      `El proceso tiene ${adjuntos.length} adjunto(s) (${nombres}). Este borrador cotiza solo los ${productosCotizados.length} producto(s) que lista la API; ` +
+      `las especificaciones, y a veces productos adicionales, suelen estar en los adjuntos. Revísalos en la ficha antes de enviar: https://buscador.mercadopublico.cl/ficha?code=${encodeURIComponent(targetDetail.codigo)}`,
+    );
+  }
 
   if (!isPriceSuggested) {
     advertencias.push(`precio_unitario es un valor por defecto ($${suggestedPrice.toLocaleString('es-CL')}); no se pudo estimar de mercado. Ingresa "precio_unitario_personalizado".`);

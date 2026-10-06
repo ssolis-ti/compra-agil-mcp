@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { BuscarParams } from '../src/api/compra-agil-client.js';
 import { recolectarDatosPrecios } from '../src/tools/analizar-precios-mercado.js';
+import { CompraAgilApiError } from '../src/utils/error-handler.js';
 
 /**
  * S3 de la simulación con agentes (6-oct): con `codigo_compra`, el análisis se
@@ -69,5 +70,44 @@ describe('analizar_precios_mercado con codigo_compra (S3)', () => {
     if (rec.kind !== 'mensaje') throw new Error('se esperaba mensaje');
     expect(rec.texto).toContain('en la región 5');
     expect(rec.texto).toContain('sin el parámetro "region"');
+  });
+});
+
+describe('analizar_precios_mercado con codigo_compra cuando falla el detalle (S12)', () => {
+  const error504 = () => new CompraAgilApiError(504, [], 'GET /v2/compra-agil/4449-111-COT26');
+
+  it('usa el nombre del listado y sigue con el análisis', async () => {
+    const buscar = vi.fn(async (p: BuscarParams) => (p.id
+      ? { items: [{ ...desierta, codigo: '4449-111-COT26', nombre: 'Adquisición de kit de aseo para escuelas', institucion: { region: 5 } }], paginacion: { total_paginas: 1, numero_pagina: 1, tamano_pagina: 10, total_resultados: 1 } }
+      : { items: [desierta], paginacion: { total_paginas: 1, numero_pagina: 1, tamano_pagina: 10, total_resultados: 1 } }));
+    const c = { buscar, detalle: async () => { throw error504(); }, detallesEnParalelo: async () => [desierta] };
+    const rec = await recolectarDatosPrecios(c as never, { codigo_compra: '4449-111-COT26' });
+    expect(rec.kind).toBe('datos');
+    expect(buscar.mock.calls[0][0].id).toBe('4449-111-COT26');
+    // Término corto, no el nombre completo del proceso (S14).
+    expect(buscar.mock.calls[1][0].q).toBe('Adquisición kit aseo');
+    if (rec.kind === 'datos') expect(JSON.stringify(rec.datos)).toMatch(/el detalle no respondió/);
+  });
+
+  it('si tampoco responde el listado, dice qué falló y sugiere "q", sin gastar más consultas', async () => {
+    const buscar = vi.fn(async () => { throw error504(); });
+    const c = { buscar, detalle: async () => { throw error504(); }, detallesEnParalelo: async () => [] };
+    const rec = await recolectarDatosPrecios(c as never, { codigo_compra: '4449-111-COT26' });
+    expect(rec.kind).toBe('mensaje');
+    if (rec.kind !== 'mensaje') return;
+    expect(rec.isError).toBe(true);
+    expect(rec.texto).toMatch(/No se pudo leer el proceso 4449-111-COT26/);
+    expect(rec.texto).toMatch(/usa "q"/);
+    expect(buscar).toHaveBeenCalledTimes(1);
+  });
+
+  it('si falla la búsqueda de históricos, dice que fue el primer paso y que no consultó detalles', async () => {
+    const detallesEnParalelo = vi.fn(async () => []);
+    const c = { buscar: async () => { throw error504(); }, detalle: async () => activa, detallesEnParalelo };
+    const rec = await recolectarDatosPrecios(c as never, { q: 'guantes de nitrilo' });
+    expect(rec.kind).toBe('mensaje');
+    if (rec.kind !== 'mensaje') return;
+    expect(rec.texto).toMatch(/Falló la búsqueda de procesos históricos con «guantes de nitrilo», el primer paso/);
+    expect(detallesEnParalelo).not.toHaveBeenCalled();
   });
 });

@@ -94,3 +94,19 @@ describe('construirBorradorCotizacion frente al presupuesto (S2)', () => {
     expect(html).toContain('Campos por revisar');
   });
 });
+
+describe('construirBorradorCotizacion con adjuntos (enjambre, 6-oct)', () => {
+  it('avisa que solo cotiza lo que lista la API y que el detalle puede estar en los adjuntos', async () => {
+    const d = { ...proceso(9_021_000), documentos: [{ id: '1855508', nombre: 'Materiales de Aseo detalle (1).docx' }] };
+    const b = await construirBorradorCotizacion(clienteCon(d) as never, argsUsuaria);
+    const aviso = b._campos_a_revisar.find((a) => a.includes('adjunto'));
+    expect(aviso).toMatch(/1 adjunto\(s\) \(«Materiales de Aseo detalle \(1\)\.docx»\)/);
+    expect(aviso).toMatch(/cotiza solo los 1 producto\(s\) que lista la API/);
+    expect(aviso).toMatch(/ficha\?code=4449-111-COT26/);
+  });
+
+  it('sin adjuntos no agrega el aviso', async () => {
+    const b = await construirBorradorCotizacion(clienteCon(proceso(9_021_000)) as never, argsUsuaria);
+    expect(b._campos_a_revisar.some((a) => a.includes('adjunto'))).toBe(false);
+  });
+});

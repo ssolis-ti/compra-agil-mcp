@@ -22,7 +22,7 @@ Los bloques van en orden: cada uno se apoya en el anterior. Cada ítem se cierra
 como dice el encabezado de este documento (test de regresión, `tsc`, suite
 verde, CHANGELOG, commit propio).
 
-### Bloque A — Hora de Chile 🔴 · L
+### Bloque A — Hora de Chile 🔴 · L · ✅ (`9154cac`)
 - **Fase 1.10** completa (ver abajo). Incluye `cierre_segundo_llamado` con su hora de Chile y `ultimo_cambio_hora_chile` en el monitoreo.
 - **Reloj de referencia del SHOA (`ntp.shoa.cl`).** Hoy el NTP solo lo usa `verificar_hora_oficial`; los plazos, el radar y las ventanas restan `Date.now()` de la máquina sin contrastarlo. Medir el desfase contra el SHOA al arrancar y cada ~30 min, sin bloquear, y aplicarlo en un único `ahora()` que usen todas las herramientas y el daemon. Si el UDP 123 está bloqueado, seguir con el reloj local y decirlo en la respuesta; si el desfase pasa de 1 minuto, advertirlo en toda respuesta con plazos, no solo en la herramienta dedicada.
 - **El NTP no entrega la zona horaria.** Da la hora UTC exacta; el desfase UTC-3/UTC-4 sale de la base de zonas de Node (`process.versions.tz`, hoy `2026a`), y Chile fija sus cambios de horario por decreto. Tests con los días de cambio (abril y septiembre); `verificar_hora_oficial` informa la versión de la base de zonas y advierte si es anterior al último cambio de reglas conocido.
@@ -32,12 +32,12 @@ verde, CHANGELOG, commit propio).
 ### Bloque B — Conclusiones correctas 🟠 · M
 | Ítem | Arreglo | Dónde |
 | :--- | :--- | :--- |
-| E1 | La auditoría no infiere «requisitos complejos» si las inadmisibilidades son por precio; el motivo oficial manda | `auditar-desiertas.ts:494` |
-| E2 | El precio por defecto del borrador cabe en el presupuesto **con IVA** | `generar-borrador.ts:134` |
-| S12 | Análisis y auditoría por código entregan resultado parcial con la evidencia propia si falla un paso inicial | `analizar-precios-mercado.ts`, `auditar-desiertas.ts` |
-| E3 + S14 | Comparables de procesos cerrados y desiertos, término más amplio que el primer ítem, sugerencia cuando no hay | `auditar-desiertas.ts:249`, `:300` |
-| S13 | Advertencia con un solo comparable; neto frente a IVA explícito | `auditar-desiertas.ts` |
-| Verificar | El borrador reduce un pedido de varios productos a uno sin avisar del adjunto. Reproducir; si se confirma, advertirlo | `generar-borrador.ts` |
+| ✅ E1 | La auditoría no infiere «requisitos complejos» si las inadmisibilidades son por precio; el motivo oficial manda | `auditar-desiertas.ts:494` |
+| ✅ E2 | El precio por defecto del borrador cabe en el presupuesto **con IVA** | `generar-borrador.ts:134` |
+| ✅ S12 | Análisis y auditoría por código entregan resultado parcial con la evidencia propia si falla un paso inicial | `analizar-precios-mercado.ts`, `auditar-desiertas.ts` |
+| ✅ E3 + S14 | Término de comparables más corto con un reintento, sugerencia cuando no hay, y la nota declara que solo se usan desiertos (los cerrados no publican cotizaciones: sumarlos solo gastaría cuota) | `auditar-desiertas.ts:249`, `:300` |
+| ✅ S13 | Advertencia con un solo comparable; neto frente a IVA explícito | `auditar-desiertas.ts` |
+| ✅ Verificado | El borrador no recorta: cotiza todo lo que lista la API. El defecto era no avisar que el pedido completo puede estar en los adjuntos; ahora lo advierte | `generar-borrador.ts` |
 
 ### Bloque C — Cuota y errores 🟡 · M
 | Ítem | Arreglo | Dónde |
