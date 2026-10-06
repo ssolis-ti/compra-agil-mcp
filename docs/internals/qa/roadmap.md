@@ -41,7 +41,7 @@ Hoy se rodea lanzándolo con `cmd /c cd /d <proyecto> && node dist/index.js` (as
 
 **Aceptación:** un test que arranca `dist/index.js` con `cwd` en una carpeta temporal ajena y comprueba que lee el `.env` del proyecto, responde `tools/list` y escribe la caché en la carpeta de datos, no en el cwd. Con eso, la configuración del README funciona en Claude Desktop sin el rodeo de `cmd`.
 
-### Fase 1.1 — Presupuesto de tiempo por herramienta 🟠
+### Fase 1.1 — Presupuesto de tiempo por herramienta 🟠 ✅ (rama `claude/fase-1-1-s1b`)
 **Problema medido:** el freno propio de 15 consultas/min (`src/utils/rate-limiter.ts`, `throttle()`) retiene una consulta hasta ~60 s. En la batería de `scripts/qa/` la consulta ~20 del minuto esperó **57 s** antes de salir, y una herramienta con `limite_analisis` alto excede los 60 s del cliente MCP sin entregar nada. Además, las esperas despiertan todas a la vez sin volver a mirar el límite y salen en ráfaga.
 
 **Hacer:**
@@ -108,7 +108,7 @@ S1–S3 corregidos en la rama `claude/fase-1-8-s1-s3` (tests `auditoria-evidenci
 ### Fase 1.9 — Lo que encontró la segunda simulación 🟠
 Ver «Segunda corrida» en [resultado-simulacion-agentes.md](resultado-simulacion-agentes.md).
 
-- **S1b 🟠** Auditoría: marcar presupuesto cuando las cotizaciones propias no caben con IVA (o la mayoría lo supera en neto), aunque el motivo oficial sea otro.
+- ✅ **S1b 🟠** Auditoría: marcar presupuesto cuando las cotizaciones propias no caben con IVA (o la mayoría lo supera en neto), aunque el motivo oficial sea otro.
 - **S11 🟠** Corregir la descripción de `obtener_detalle_compra` sobre cuándo aparecen las cotizaciones.
 - **S12 🟠** Precios por código: si falla el detalle de referencia, usar el nombre del listado o sugerir reintentar con `q`.
 - **S13 🟠** Auditoría: advertir cuando hay un solo comparable; aclarar neto vs. IVA en la comparación.
