@@ -24,7 +24,8 @@ import { renderCotizacionInforme } from '../reports/templates/cotizacion.js';
 import { renderPrecioInforme } from '../reports/templates/precio.js';
 import { renderAuditoriaInforme } from '../reports/templates/auditoria.js';
 import { renderCompetenciaInforme } from '../reports/templates/competencia.js';
-import { escribirInforme, slug, stamp, defaultOutputDir } from '../reports/export.js';
+import { escribirInforme, slug, stamp, RutaSalidaError, resolverDirectorioSalida } from '../reports/export.js';
+import path from 'path';
 import { clp } from '../reports/format.js';
 import { PAPEL, FORMATO_POR_DEFECTO, type FormatoPapel } from '../reports/theme.js';
 import { safeError } from '../utils/redact.js';
@@ -61,7 +62,7 @@ const inputSchema = {
   plazo_entrega_dias: z.number().optional().describe('Solo "cotizacion". Plazo de entrega en días. Si se omite, se usa el del comprador o 5.'),
   descripcion_propuesta: z.string().optional().describe('Solo "cotizacion". Mensaje comercial que entra en la carta.'),
   limite_analisis: z.number().min(1).max(15).optional().describe('Procesos históricos a revisar. En "precio", 1-15 (default 5). En "auditoria", 1-8 (default 3).'),
-  ruta_salida: z.string().optional().describe('Directorio donde guardar el informe. Si se omite, se usa la carpeta "informes/" del directorio de trabajo.'),
+  ruta_salida: z.string().optional().describe('Subcarpeta dentro de la carpeta de informes (ej: "radar/octubre"). Si se omite, se usa la carpeta de informes: "informes/" del directorio de trabajo, o la que fije COMPRA_AGIL_INFORMES_DIR. No acepta carpetas fuera de ella.'),
 };
 
 function texto(contenido: string, isError = false) {
@@ -89,7 +90,7 @@ function entregar(
     `Resumen del contenido:`,
     ...lineas,
     ``,
-    `Carpeta de informes: ${rutaSalida ? rutaSalida : defaultOutputDir()}`,
+    `Carpeta de informes: ${path.dirname(ruta)}`,
   ].join('\n');
   return texto(resumen);
 }
@@ -111,6 +112,9 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
     },
     async (args) => {
       try {
+        // Antes de gastar cuota: una carpeta fuera de la raíz se rechaza ya.
+        resolverDirectorioSalida(args.ruta_salida);
+
         if (args.tipo === 'radar') {
           logger.info(`generar_informe: construyendo informe "${args.tipo}"`);
           const generadoEn = new Date();
@@ -163,7 +167,7 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
             `• Monto total en juego: ${clp(montoTotal)}`,
             mejor ? `• Mejor oportunidad: ${mejor.nombre} (${mejor.codigo}) — ${mejor.puntuacion_caliente} pts` : '',
             ``,
-            `Carpeta de informes: ${args.ruta_salida ? args.ruta_salida : defaultOutputDir()}`,
+            `Carpeta de informes: ${path.dirname(ruta)}`,
           ].filter(Boolean).join('\n');
 
           return {
@@ -261,7 +265,9 @@ export function registerGenerarInforme(server: McpServer, client: CompraAgilClie
       } catch (error) {
         const message = error instanceof CompraAgilApiError
           ? error.actionableMessage
-          : `Error inesperado al generar el informe: ${safeError(error)}`;
+          : error instanceof RutaSalidaError
+            ? error.message
+            : `Error inesperado al generar el informe: ${safeError(error)}`;
         return {
           content: [{ type: 'text' as const, text: message }],
           isError: true,

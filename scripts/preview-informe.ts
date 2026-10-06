@@ -145,7 +145,7 @@ for (const formato of FORMATOS) {
     generadoEn: AHORA,
     formato,
   });
-  const { ruta, bytes } = escribirInforme(html, `preview-radar-${formato}.html`, 'informes');
+  const { ruta, bytes } = escribirInforme(html, `preview-radar-${formato}.html`);
   console.log(`  ${PAPEL[formato].glosa.padEnd(32)} → ${ruta} (${(bytes / 1024).toFixed(1)} KB)`);
 }
 
@@ -260,6 +260,6 @@ const vistas: Array<[string, string]> = [
   ['preview-competencia-carta.html', renderCompetenciaInforme({ datos: competenciaMuestra, generadoEn: AHORA, formato: 'carta' })],
 ];
 for (const [nombre, html] of vistas) {
-  const { ruta, bytes } = escribirInforme(html, nombre, 'informes');
+  const { ruta, bytes } = escribirInforme(html, nombre);
   console.log(`  ${nombre.padEnd(32)} → ${ruta} (${(bytes / 1024).toFixed(1)} KB)`);
 }

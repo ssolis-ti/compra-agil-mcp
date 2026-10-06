@@ -8,6 +8,10 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a producción.
 
+### Seguridad
+* **`generar_informe` escribía en cualquier carpeta del disco.** `ruta_salida` lo elige el modelo después de leer textos de terceros (nombres de procesos, razones sociales), y se aceptaba cualquier ruta: en la auditoría se escribió un informe fuera del directorio de trabajo con solo pedirlo. Ahora todo queda dentro de la carpeta de informes (`informes/` o `COMPRA_AGIL_INFORMES_DIR`), y `ruta_salida` es una subcarpeta de ella. Se rechazan `..`, rutas absolutas externas, otra unidad y enlaces simbólicos que salen. La carpeta se valida antes de consultar la API, así que un rechazo no gasta cuota.
+  * ⚠ **Cambio de comportamiento:** quien pasaba una ruta absoluta fuera de `informes/` debe configurar `COMPRA_AGIL_INFORMES_DIR`.
+
 ### Corregido
 * **Una API que no respondía colgaba la herramienta para siempre.** Ninguna consulta tenía tiempo límite: en la auditoría la llamada siguió abierta hasta que el cliente MCP se rindió a los 150 s. Ahora cada consulta se corta a los 35 s (`COMPRA_AGIL_TIMEOUT_MS`), por encima de los ~30 s en que la pasarela ya responde 504, y el mensaje dice cuánto se esperó y qué llamada fue. El timeout cuenta como congestión para el limitador de concurrencia y no queda en caché. La descarga de adjuntos se corta a los 30 s y rechaza archivos de más de 20 MB.
 * **Un corte de red salía como `Error inesperado: fetch failed`.** Ahora se reintenta una vez, con espera aleatoria, y si vuelve a fallar se explica como fallo de conexión. No se reintentan ni el timeout ni los 5xx: la pasarela ya esperó ~30 s y repetir llevaría la herramienta por sobre los 60 s que espera un cliente MCP.
