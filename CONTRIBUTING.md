@@ -80,6 +80,7 @@ Adoptamos el estándar de **Conventional Commits**. Los mensajes de commit deben
 
 Antes de enviar tus cambios para revisión, verifica que:
 1. [ ] El código TypeScript compila de forma exitosa ejecutando `npm run build` sin generar advertencias.
-2. [ ] Se han actualizado los archivos de documentación correspondientes si cambiaste o agregaste alguna herramienta o parámetro.
-3. [ ] No has expuesto de forma accidental credenciales ni tokens de la API (`.env`) en el historial de Git.
-4. [ ] El formateador y linter no reportan conflictos estéticos.
+2. [ ] `npm test` pasa completo. La CI (`.github/workflows/ci.yml`) lo corre en Ubuntu y Windows con Node 20 y 22, incluida una prueba de humo que arranca el servidor por stdio, y rechaza vulnerabilidades altas en las dependencias de producción.
+3. [ ] Se han actualizado los archivos de documentación correspondientes si cambiaste o agregaste alguna herramienta o parámetro.
+4. [ ] No has expuesto de forma accidental credenciales ni tokens de la API (`.env`) en el historial de Git.
+5. [ ] El formateador y linter no reportan conflictos estéticos.
