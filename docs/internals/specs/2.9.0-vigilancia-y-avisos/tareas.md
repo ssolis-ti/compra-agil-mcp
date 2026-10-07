@@ -74,7 +74,7 @@ cambiar ningún comportamiento visible.
 
 ---
 
-## Fase 2 — Vigilancia sin huecos ⏸
+## Fase 2 — Vigilancia sin huecos ✅ (7-oct-2026)
 
 **Objetivo:** el ciclo nuevo revisa todo lo que cambió, se recupera de los
 fallos y lo dice cuando no puede.
@@ -83,18 +83,27 @@ fallos y lo dice cuando no puede.
 
 | Id | Tarea | Prueba primero | Archivos |
 | :--- | :--- | :--- | :--- |
-| T2.1 | Modelo de estado v2, carga, guardado atómico bajo bloqueo, poda y migración desde `.monitor-state.json` | `estado-vigilancia.test.ts`: migración conserva la dedupe; poda por antigüedad; archivo corrupto → estado vacío con aviso, sin excepción | `vigilancia/estado.ts` |
-| T2.2 | Lotes: marcas desde la siguiente a la marca hasta la última asentada, consulta de un lote (marca a marca + 4:59), tope de recuperación con hueco, comprobación de consistencia | `lotes.test.ts`: marcas en el cambio de horario de septiembre; ninguna marca saltada ni repetida; consistencia con totales y códigos | `vigilancia/lotes.ts` |
-| T2.3 | Criterios: mover `coincidenciaDeAlerta`, sumar exclusiones, regiones y «solo sin ofertas», leer las variables `MONITOR_*` actuales | `criterios.test.ts`: los casos de `ciclo-monitor.test.ts` siguen pasando; casos nuevos de exclusión y región | `vigilancia/criterios.ts` |
-| T2.4 | Ciclo: lotes en orden, páginas con comprobación, relectura y región, lotes pendientes ante errores, marca contigua, presupuesto de tiempo con avance parcial | `ciclo-vigilancia.test.ts` contra la API simulada: (a) lotes de 35 durante una hora → todos revisados; (b) 504 en 3 ciclos seguidos → los lotes se recuperan; (c) proceso que pasa al lote siguiente entre dos páginas → la comprobación lo detecta y la relectura no pierde ninguno; (d) corte a mitad → ni pérdida ni duplicado; (e) lote de 150 → se lee por región; (f) lote que no cuadra ni por región → incompleto informado | `vigilancia/ciclo.ts` |
-| T2.5 | Vigilante único con latido; un vigilante muerto se reemplaza | `vigilante.test.ts`: dos procesos, uno ejecuta; PID inexistente → se toma | `vigilancia/vigilante.ts` |
-| T2.6 | El daemon (`services/monitor.ts`) pasa al núcleo nuevo, todavía escribiendo en `alerts.log`. Se borran `ciclo-monitor.ts` y `estado-monitor.ts` | `monitor-proceso.test.ts`: el daemon arranca contra la API simulada, escribe una alerta y el estado v2 | `services/monitor.ts` |
+| T2.1 ✅ | Modelo de estado v2, carga, guardado atómico bajo bloqueo, poda y migración desde `.monitor-state.json` | `estado-vigilancia.test.ts`: migración conserva la dedupe; poda por antigüedad; archivo corrupto → estado vacío con aviso, sin excepción | `vigilancia/estado.ts` |
+| T2.2 ✅ | Lotes: marcas desde la siguiente a la marca hasta la última asentada, consulta de un lote (marca a marca + 4:59), tope de recuperación con hueco, comprobación de consistencia | `lotes.test.ts`: marcas en el cambio de horario de septiembre; ninguna marca saltada ni repetida; consistencia con totales y códigos | `vigilancia/lotes.ts` |
+| T2.3 ✅ | Criterios: mover `coincidenciaDeAlerta`, sumar exclusiones, regiones y «solo sin ofertas», leer las variables `MONITOR_*` actuales | `criterios.test.ts`: los casos de `ciclo-monitor.test.ts` siguen pasando; casos nuevos de exclusión y región | `vigilancia/criterios.ts` |
+| T2.4 ✅ | Ciclo: lotes en orden, páginas con comprobación, relectura y región, lotes pendientes ante errores, marca contigua, presupuesto de tiempo con avance parcial | `ciclo-vigilancia.test.ts` contra la API simulada: (a) lotes de 35 durante una hora → todos revisados; (b) 504 en 3 ciclos seguidos → los lotes se recuperan; (c) proceso que pasa al lote siguiente entre dos páginas → la comprobación lo detecta y la relectura no pierde ninguno; (d) corte a mitad → ni pérdida ni duplicado; (e) lote de 150 → se lee por región; (f) lote que no cuadra ni por región → incompleto informado | `vigilancia/ciclo.ts` |
+| T2.5 ✅ | Vigilante único con latido; un vigilante muerto se reemplaza | `vigilante.test.ts`: dos procesos, uno ejecuta; PID inexistente → se toma | `vigilancia/vigilante.ts` |
+| T2.6 ✅ | El daemon (`services/monitor.ts`) pasa al núcleo nuevo, todavía escribiendo en `alerts.log`. Se borran `ciclo-monitor.ts` y `estado-monitor.ts` | `monitor-proceso.test.ts`: el daemon arranca contra la API simulada, escribe una alerta y el estado v2 | `services/monitor.ts` |
 
 **Mutación obligatoria:** romper a mano la condición de avance de la marca (T2.4) y la comprobación de consistencia (T2.2): algún test debe fallar en cada caso.
 
 **Sale:** el daemon con la vigilancia completa (los avisos siguen en el log).
 
 **Puerta:** los casos (a)–(e) de T2.4 en verde; `graphify update .` muestra `vigilancia/` sin dependencias hacia `tools/`.
+
+**Resultado (7-oct):**
+- **Suite:** 681 tests en las tres zonas horarias; cobertura del 94 %, con cada archivo de `vigilancia/` sobre el 90 % de líneas y umbral de 80 % por archivo en la configuración.
+- **Mutación:** los dos mutantes obligatorios fueron detectados. Uno salta la marca sobre un pendiente; el otro relaja la comprobación de consistencia.
+- **Hallazgo al codificar:** el cliente sirve las búsquedas repetidas desde su caché de 5 minutos, así que en producción la comprobación de un lote paginado habría comparado una respuesta consigo misma. Los tests no lo veían porque el cliente falso no tiene caché. Se agregó `buscarFresco()`, con su test, y el daemon lo usa.
+- **Decisión:** la marca se guarda como instante UTC, no como hora de Chile. En abril la hora de pared se repite y una marca en hora de pared saltaría los lotes de la hora repetida (test en `lotes.test.ts`).
+- **Daemon:** el intervalo por defecto pasa de 60 a 15 min. `.env.example` queda con el mínimo en 0 y las variables nuevas.
+- **Prueba como proceso real** contra la API simulada por HTTP (`monitor-proceso.test.ts`).
+- **Caso agregado (c2):** la relectura tampoco cuadra y el lote se lee por región.
 
 ---
 

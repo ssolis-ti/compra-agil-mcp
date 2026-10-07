@@ -24,7 +24,7 @@ sintaxis, sin modelo): 1.202 nodos, 2.897 relaciones, 82 comunidades y
 
 | Pieza | Dónde | Uso en la 2.9.0 |
 | :--- | :--- | :--- |
-| `buscarInformado()` con `totalResultados` | `api/compra-agil-client.ts:619` | Saber si un lote cabe en una página |
+| `buscar()` y el nuevo `buscarFresco()` | `api/compra-agil-client.ts` | Leer un lote. La vigilancia usa `buscarFresco`, que no lee la caché de búsquedas (5 min): desde la caché, la comprobación de un lote paginado compararía una respuesta consigo misma |
 | `aFormatoApi`, `ventanaUltimosMinutos` | `utils/fechas.ts` | Ventanas como la API compara (R1.10) |
 | `ahora()`, `paredDeChile()` | `utils/reloj.ts`, `utils/fechas.ts` | Reloj del SHOA, horario de silencio |
 | `registrarSecreto()` y `safeError()` | `utils/redact.ts` (20 módulos lo usan) | Redacción de los secretos nuevos (R4.5) |
@@ -94,6 +94,7 @@ flowchart TB
 | `vigilancia/lotes.ts` | Marcas de lote entre la marca y el último asentado, tope de recuperación, comprobación de consistencia | ✔ |
 | `vigilancia/criterios.ts` | `Criterios`, `coincidencia(item, criterios)`, validación y diferencia entre dos criterios (R2.2) | ✔ |
 | `vigilancia/ciclo.ts` | `ejecutarCiclo(deps, estado, limites)`: lee lotes, genera alertas, avanza la marca | — |
+| `vigilancia/ronda.ts` | Una ronda: tomar el vigilante, cargar, leer, entregar las alertas y recién entonces guardar | — |
 | `vigilancia/vigilante.ts` | Un solo vigilante: tomar, latir y soltar | — |
 | `vigilancia/salud.ts` | Ceguera, recuperación, resumen diario, proyección de cuota | ✔ |
 | `avisos/mensaje.ts` | `Alerta` (datos ya limpios) y `crearAlerta(item, coincidencia, ahora)` | ✔ |
@@ -117,7 +118,9 @@ tocar el daemon y el proceso del servidor MCP.
 ```ts
 interface EstadoVigilancia {
   version: 2;
-  marca: string | null;              // marca (hora de Chile con «Z») del último lote leído completo
+  marca: string | null;              // instante UTC (ISO) del último lote leído completo. En UTC y no en hora
+                                     // de Chile: en abril la hora de pared se repite y un lote se saltaría
+  leidos: string[];                  // lotes ya leídos después de la marca (hay un pendiente antes)
   pendientes: LotePendiente[];       // lotes que fallaron, en orden
   incompletos: LoteIncompleto[];     // lotes que no cuadraron ni por región (R1.5)
   huecos: Rango[];                   // lo que quedó fuera del tope de recuperación (R1.3)

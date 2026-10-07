@@ -41,6 +41,9 @@ function grafoDeImports(soloValores = false): Map<string, string[]> {
   return grafo;
 }
 
+/** El código sin comentarios: documentar una regla no la rompe. */
+const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+
 /** 'tools/x.ts' → 'tools'; 'servidor.ts' → 'servidor.ts'. */
 const capa = (f: string) => (f.includes('/') ? f.split('/')[0] : f);
 
@@ -122,7 +125,7 @@ describe('arquitectura de src/', () => {
     const frontera = (f: string) => f.startsWith('avisos/canales/') || f === 'avisos/config.ts';
     const impuros = [...grafo.keys()]
       .filter((f) => (capa(f) === 'vigilancia' || capa(f) === 'avisos') && !frontera(f))
-      .filter((f) => /process\.env|Date\.now\(|setInterval\(|setTimeout\(/.test(fs.readFileSync(path.join(SRC, f), 'utf8')));
+      .filter((f) => /process\.env|Date\.now\(|setInterval\(|setTimeout\(/.test(sinComentarios(fs.readFileSync(path.join(SRC, f), 'utf8'))));
     expect(impuros).toEqual([]);
   });
 
@@ -131,5 +134,7 @@ describe('arquitectura de src/', () => {
     falso.set('api/falso.ts', ['tools/buscar-compras.ts']);
     expect(violaciones(falso)).toEqual(['api/falso.ts -> tools/buscar-compras.ts']);
     expect(ciclos(new Map([['a.ts', ['b.ts']], ['b.ts', ['a.ts']]]))).toHaveLength(1);
+    expect(sinComentarios('/** no toca `process.env` */\nconst x = 1; // Date.now()')).not.toMatch(/process\.env|Date\.now/);
+    expect(sinComentarios('const t = Date.now();')).toMatch(/Date\.now/);
   });
 });

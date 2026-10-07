@@ -352,6 +352,7 @@ export class CompraAgilClient {
     path: string,
     params: Record<string, string | number | undefined> | undefined,
     normalizar: (payload: unknown) => T,
+    opciones: { fresco?: boolean } = {},
   ): Promise<T> {
     // Una respuesta vigente en caché ahorra la consulta entera: ni cuota, ni
     // espera, ni riesgo de 429. Se comprueba antes que el rate limit, para que
@@ -359,7 +360,7 @@ export class CompraAgilClient {
     // Se normaliza también al leer: el archivo pudo escribirlo una versión
     // anterior que guardaba la respuesta cruda.
     const claveCache = ResponseCache.clave(path, params);
-    const enCache = this.cache.obtener<unknown>(claveCache);
+    const enCache = opciones.fresco ? undefined : this.cache.obtener<unknown>(claveCache);
     if (enCache !== undefined) {
       try {
         const valor = normalizar(enCache);
@@ -601,6 +602,15 @@ export class CompraAgilClient {
 
   async buscar(params: BuscarParams): Promise<BuscarResponse> {
     return this.request('/v2/compra-agil', this.paramsDeBusqueda(params), normalizarListado);
+  }
+
+  /**
+   * Como `buscar`, pero sin leer la caché (la respuesta sí la renueva). La usa
+   * la vigilancia: para comprobar que un lote no cambió mientras se paginaba,
+   * vuelve a pedir la página 1, y desde la caché sería la misma respuesta.
+   */
+  async buscarFresco(params: BuscarParams): Promise<BuscarResponse> {
+    return this.request('/v2/compra-agil', this.paramsDeBusqueda(params), normalizarListado, { fresco: true });
   }
 
   /** Segundos que lleva en caché esta búsqueda, o `undefined` si saldría a la red. */

@@ -6,7 +6,18 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Corregido
+* **El daemon de vigilancia ya no pierde procesos sin decirlo** (2.9.0, fase 2). Hasta la 2.8.0 tenía tres fallas:
+  * revisaba «la última hora» y, si un ciclo fallaba, esa hora no se volvía a mirar;
+  * cortaba en 100 procesos por ciclo sin avisar;
+  * al paginar, un proceso que cambiaba a mitad de la lectura hacía saltar a otro.
+
+  Ahora lee la API lote por lote (la API registra los cambios cada 5 minutos) desde una marca del último lote completo. Comprueba cada lote paginado (total y códigos) y lo relee o lo lee por región si no cuadra. Los lotes que fallan se reintentan antes de avanzar, y más de 48 h sin vigilar se informan como hueco. Un solo vigilante a la vez, con latido. El estado pasa a `.vigilancia.json` (versión 2) y migra el `.monitor-state.json` anterior sin perder la deduplicación.
+* **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
+
 ### Añadido
+* `buscarFresco()` en el cliente: una búsqueda que no lee la caché. La usa la vigilancia para comprobar que un lote no cambió mientras se paginaba.
+* Criterios nuevos de vigilancia: `MONITOR_EXCLUIR`, `MONITOR_REGIONES` y `MONITOR_SOLO_SIN_OFERTAS`.
 * **`scripts/qa/medir-ventanas.mjs`**, mediciones de la fase 0 de la 2.9.0 contra la API real. La API registra los cambios en lotes cada 5 minutos con una sola marca y bordes incluidos, lo que cambió el diseño de la vigilancia ([medicion-ventanas.md](docs/internals/qa/medicion-ventanas.md), ADR 0021).
 * **Cimientos de la 2.9.0 (fase 1), sin cambio de comportamiento:**
   * La escritura atómica y el candado entre procesos salen de la caché y del control de cuota a `utils/archivo-atomico.ts` y `utils/bloqueo.ts`, para que los use el estado de la vigilancia.
