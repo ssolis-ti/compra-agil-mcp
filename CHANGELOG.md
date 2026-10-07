@@ -16,6 +16,11 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Avisos por Telegram** (2.9.0, fase 4). Con `COMPRA_AGIL_AVISOS=telegram`, `COMPRA_AGIL_TELEGRAM_TOKEN` y `COMPRA_AGIL_TELEGRAM_CHAT_ID`, el daemon envía las alertas al chat por la Bot API, con `fetch` nativo.
+  * **Envío:** un mensaje por segundo al mismo chat, honrando `retry_after` ante un 429.
+  * **Seguridad:** el token se registra para la redacción y nunca aparece en un error.
+  * **Chat id:** `mcp-compra-agil --telegram-chat-id` dice qué chat id poner: basta con escribirle al bot.
+  * **Destinos:** solo se configuran en el `.env` (ADR 0023).
 * **Bandeja de salida de avisos** (2.9.0, fase 3). Cada alerta genera un aviso por canal, guardado junto al estado de la vigilancia.
   * **Reintentos:** un error transitorio se reintenta con espera creciente, honrando `Retry-After`; uno permanente no se reintenta.
   * **Sin pérdidas:** un canal caído o un reinicio no pierden avisos. Al terminar el horario de silencio, lo retenido sale en un resumen.

@@ -137,7 +137,7 @@ reinicios y fallos, con contenido limpio.
 
 ---
 
-## Fase 4 — Canal Telegram ⏸
+## Fase 4 — Canal Telegram ✅ (7-oct-2026, salvo T4.4)
 
 **Objetivo:** los avisos llegan a Telegram.
 **Cubre:** R5.1–R5.4, R4.5 (token).
@@ -145,14 +145,26 @@ reinicios y fallos, con contenido limpio.
 
 | Id | Tarea | Prueba primero | Archivos |
 | :--- | :--- | :--- | :--- |
-| T4.1 | Configuración: leer y validar token y chat id, registrar el token como secreto | `config-avisos.test.ts`: faltante → error claro; el token no aparece en el error | `avisos/config.ts` |
-| T4.2 | Canal: `sendMessage`, ritmo de 1 por segundo, `retry_after`, clasificación | `canal-telegram.test.ts` contra una Bot API simulada (200, 429 con `retry_after`, 403, 400 de entidades) | `avisos/canales/telegram.ts`, `scripts/qa/mock-telegram.mjs` |
-| T4.3 | `--telegram-chat-id`: `getUpdates` y mostrar el último chat | `cli-telegram.test.ts` contra la simulación | `cli/avisos.ts` |
-| T4.4 | Prueba manual con un bot real del dueño | Captura del mensaje recibido, sin token visible | Nota en `docs/internals/qa/` |
+| T4.1 ✅ | Configuración: leer y validar token y chat id, registrar el token como secreto | `config-avisos.test.ts`: faltante → error claro; el token no aparece en el error | `avisos/config.ts` |
+| T4.2 ✅ | Canal: `sendMessage`, ritmo de 1 por segundo, `retry_after`, clasificación | `canal-telegram.test.ts` contra una Bot API simulada (200, 429 con `retry_after`, 403, 400 de entidades) | `avisos/canales/telegram.ts`, `scripts/qa/mock-telegram.mjs` |
+| T4.3 ✅ | `--telegram-chat-id`: `getUpdates` y mostrar el último chat | `cli-telegram.test.ts` contra la simulación | `cli/avisos.ts` |
+| T4.4 ⏳ dueño | Prueba manual con un bot real del dueño | Captura del mensaje recibido, sin token visible | Nota en `docs/internals/qa/` |
 
 **Sale:** el daemon avisa por Telegram.
 
 **Puerta:** la prueba real de T4.4 recibida y anotada.
+
+**Resultado (7-oct):**
+- **Suite:** 741 tests en las tres zonas horarias.
+- **Daemon como proceso real:** entrega a la Bot API simulada (`scripts/qa/mock-telegram.mjs`, `monitor-proceso.test.ts`).
+- **Lint y secretos:** la regla `preserve-caught-error` pedía adjuntar el error original como `cause`. En `ultimoChat` eso podía arrastrar la URL con el token, así que el error vuelve como valor ya redactado, sin lanzar.
+- **Variable de QA:** se agregó `COMPRA_AGIL_TELEGRAM_API` para apuntar a la Bot API simulada.
+- **Queda T4.4**, que hace el dueño porque necesita su propio bot y su token:
+  1. Crear el bot con @BotFather.
+  2. Poner `COMPRA_AGIL_TELEGRAM_TOKEN` en el `.env`.
+  3. Escribirle al bot y correr `npx tsx src/index.ts --telegram-chat-id`.
+  4. Poner `COMPRA_AGIL_TELEGRAM_CHAT_ID` y `COMPRA_AGIL_AVISOS=telegram`.
+  5. Correr `npm run monitor`.
 
 ---
 

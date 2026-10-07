@@ -76,4 +76,44 @@ describe('daemon de vigilancia', () => {
     expect(salida).toMatch(/Lotes leídos: 1[23], fallidos: 0/);
     expect(salida).not.toContain('TICKET-DE-PRUEBA-NO-REAL-0000');
   }, 90_000);
+
+  it('con Telegram configurado, las alertas llegan al chat (fase 4)', async () => {
+    // @ts-expect-error: módulo JavaScript sin tipos
+    const { iniciarMockTelegram } = await import('../scripts/qa/mock-telegram.mjs');
+    const tg = await iniciarMockTelegram();
+    const otraCarpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'monitor-telegram-'));
+    const puerto = await puertoLibre();
+    const api = spawn(process.execPath, [path.join(RAIZ, 'scripts', 'qa', 'mock-api.mjs')], {
+      env: { ...process.env, PORT: String(puerto), CATALOGO: 'cambios', CAMBIOS_POR_LOTE: '2' },
+    });
+    procesos.push(api);
+    await new Promise<void>((r) => api.stderr!.once('data', () => r()));
+    let salida = '';
+    const daemon = spawn(process.execPath, [TSX, path.join(RAIZ, 'src', 'services', 'monitor.ts')], {
+      cwd: otraCarpeta,
+      env: {
+        ...process.env,
+        COMPRA_AGIL_TICKET: 'TICKET-DE-PRUEBA-NO-REAL-0000',
+        COMPRA_AGIL_BASE_URL: `http://127.0.0.1:${puerto}`,
+        COMPRA_AGIL_DATA_DIR: otraCarpeta,
+        COMPRA_AGIL_NTP: 'off',
+        MONITOR_KEYWORDS: 'resmas', MONITOR_EXCLUIR: '', MONITOR_REGIONES: '', MONITOR_MIN_BUDGET_CLP: '0', MONITOR_SOLO_SIN_OFERTAS: 'true',
+        COMPRA_AGIL_AVISOS: 'telegram',
+        COMPRA_AGIL_TELEGRAM_TOKEN: tg.token,
+        COMPRA_AGIL_TELEGRAM_CHAT_ID: '-100123',
+        COMPRA_AGIL_TELEGRAM_API: tg.url,
+        COMPRA_AGIL_AVISOS_SILENCIO: '',
+      },
+    });
+    procesos.push(daemon);
+    daemon.stdout!.on('data', (d) => { salida += String(d); });
+    daemon.stderr!.on('data', (d) => { salida += String(d); });
+    const limite = Date.now() + 60_000;
+    while (!/Avisos por telegram: \d+ entregados/.test(salida) && Date.now() < limite) await new Promise((r) => setTimeout(r, 200));
+    expect(salida).toMatch(/Avisos por telegram: \d+ entregados/);
+    expect(tg.recibidos.length).toBeGreaterThan(0);
+    expect(String(tg.recibidos[0].text)).toMatch(/calza/);
+    expect(salida).not.toContain(tg.token);
+    await tg.cerrar();
+  }, 90_000);
 });

@@ -63,8 +63,8 @@ Además de la puerta propia de cada fase en `tareas.md`:
 | 1 | Cimientos compartidos | ✅ 7-oct |
 | 2 | Vigilancia sin huecos | ✅ 7-oct |
 | 3 | Bandeja de salida y formato | ✅ 7-oct |
-| 4 | Canal Telegram | 🔄 Siguiente |
-| 5 | Canal webhook | ⏸ |
+| 4 | Canal Telegram | ✅ 7-oct (T4.4: prueba con bot real, la hace el dueño) |
+| 5 | Canal webhook | 🔄 Siguiente |
 | 6 | Canal correo | ⏸ |
 | 7 | Salud y cuota | ⏸ |
 | 8 | Superficie: herramientas MCP, CLI y daemon | ⏸ |

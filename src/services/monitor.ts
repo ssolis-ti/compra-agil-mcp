@@ -17,6 +17,9 @@ import { safeError, registrarSecreto } from '../utils/redact.js';
 import { ahora, iniciarRelojOficial } from '../utils/reloj.js';
 import { criteriosDesdeEntorno, lineaDeAlerta } from '../vigilancia/criterios.js';
 import { rondaDeVigilancia } from '../vigilancia/ronda.js';
+import { leerConfigAvisos } from '../avisos/config.js';
+import { CanalTelegram } from '../avisos/canales/telegram.js';
+import type { Canal } from '../avisos/canal.js';
 
 loadEnvManual();
 
@@ -49,7 +52,16 @@ console.log(`Excluidas             : ${criterios.excluidas.join(', ') || '(ningu
 console.log(`Regiones              : ${criterios.regiones.join(', ') || '(todas)'}`);
 console.log(`Presupuesto mínimo    : ${criterios.presupuestoMinimo > 0 ? `$${criterios.presupuestoMinimo.toLocaleString('es-CL')} CLP` : 'sin mínimo'}`);
 console.log(`Solo sin ofertas      : ${criterios.soloSinOfertas ? 'sí' : 'no'}`);
+// Canales de aviso: solo desde el entorno (ADR 0023). Los secretos quedan
+// registrados para la redacción al leer la configuración.
+const configAvisos = leerConfigAvisos(process.env);
+const canales: Canal[] = [];
+if (configAvisos.telegram) canales.push(new CanalTelegram(configAvisos.telegram));
+
 console.log(`Alertas en            : ${ALERTAS}`);
+console.log(`Avisos por            : ${canales.map((c) => c.nombre).join(', ') || '(ningún canal: solo alerts.log)'}`);
+if (configAvisos.bandeja.silencio) console.log(`Silencio              : ${configAvisos.bandeja.silencio.desde}–${configAvisos.bandeja.silencio.hasta} (hora de Chile)`);
+for (const error of configAvisos.errores) console.warn(`[AVISO] ${error}`);
 console.log('========================================================');
 
 const client = new CompraAgilClient(TICKET, BASE_URL, { persistir: true });
@@ -74,6 +86,7 @@ async function ronda(): Promise<void> {
           console.log(`\x1b[33m${linea.trim()}\x1b[0m`);
         }
       },
+      avisos: { canales, config: configAvisos.bandeja },
     });
     for (const aviso of r.avisos) console.warn(`[${t}] [AVISO] ${aviso}`);
     if (!r.tomada) {
@@ -83,6 +96,13 @@ async function ronda(): Promise<void> {
     const c = r.ciclo!;
     console.log(`[${t}] Lotes leídos: ${c.lotesLeidos}, fallidos: ${c.lotesFallidos}, incompletos: ${c.incompletosNuevos}, ` +
       `procesos revisados: ${c.revisados}, alertas nuevas: ${c.alertas.length}, consultas: ${c.consultas}`);
+    if (r.envios) {
+      for (const [canal, n] of Object.entries(r.envios.porCanal)) {
+        if (n.entregados + n.fallidos + n.reintentos > 0) {
+          console.log(`[${t}] Avisos por ${canal}: ${n.entregados} entregados, ${n.reintentos} por reintentar, ${n.fallidos} fallidos.`);
+        }
+      }
+    }
     if (c.hueco) console.warn(`[${t}] [AVISO] Más de 48 h sin vigilar: no se revisó desde ${c.hueco.desde} hasta ${c.hueco.hasta}.`);
     if (c.lotesFallidos > 0) console.warn(`[${t}] [AVISO] ${c.lotesFallidos} lote(s) fallaron: se reintentan en la próxima ronda.`);
     if (c.cuotaAgotada) console.warn(`[${t}] [AVISO] La API respondió 429: la ronda se detuvo para no seguir gastando cuota.`);

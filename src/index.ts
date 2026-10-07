@@ -35,6 +35,12 @@ import { crearServidor } from './servidor.js';
 const TICKET = process.env.COMPRA_AGIL_TICKET;
 const BASE_URL = process.env.COMPRA_AGIL_BASE_URL || 'https://api2.mercadopublico.cl';
 
+// Comandos de terminal (2.9.0): no abren el servidor ni necesitan el ticket.
+if (process.argv.includes('--telegram-chat-id')) {
+  const { comandoTelegramChatId } = await import('./cli/avisos.js');
+  process.exit(await comandoTelegramChatId(process.env, (linea) => console.log(linea)));
+}
+
 // Registrar el ticket como secreto ANTES de cualquier log o request: a partir de
 // aquí, `redact()` lo borra de todo texto que salga del proceso (logs, errores,
 // respuestas de tools). Ver src/utils/redact.ts.
