@@ -72,7 +72,7 @@ Adoptamos el estándar de **Conventional Commits**. Los mensajes de commit deben
 ### Flujo de Trabajo con Ramas (Git Flow Simplificado):
 * Toda mejora debe implementarse en una rama secundaria: `feature/nombre-de-mejora` o `bugfix/nombre-de-error`.
 * Se prohíbe realizar commits directos sobre la rama `main`.
-* Los Pull Requests (PR) deben dirigirse hacia la rama `develop` para su integración y posterior promoción a `main`.
+* Los Pull Requests (PR) se dirigen a `main`, la única rama permanente del repositorio.
 
 ---
 
@@ -80,10 +80,11 @@ Adoptamos el estándar de **Conventional Commits**. Los mensajes de commit deben
 
 Antes de enviar tus cambios para revisión, verifica que:
 1. [ ] El código TypeScript compila de forma exitosa ejecutando `npm run build` sin generar advertencias.
-2. [ ] `npm test` pasa completo. La CI (`.github/workflows/ci.yml`) lo corre en Ubuntu y Windows con Node 20 y 22, incluida una prueba de humo que arranca el servidor por stdio, y rechaza vulnerabilidades altas en las dependencias de producción.
-3. [ ] Se han actualizado los archivos de documentación correspondientes si cambiaste o agregaste alguna herramienta o parámetro.
-4. [ ] No has expuesto de forma accidental credenciales ni tokens de la API (`.env`) en el historial de Git.
-5. [ ] El formateador y linter no reportan conflictos estéticos.
+2. [ ] `npm test` pasa completo. La CI (`.github/workflows/ci.yml`) lo corre en Ubuntu y Windows con Node 20 y 22, junto con `tsc --noEmit` y el lint, incluida una prueba de humo que arranca el servidor por stdio, y rechaza vulnerabilidades altas en las dependencias de producción.
+3. [ ] `npm run test:coverage` respeta el umbral: global ≥ 75 % de líneas y cada herramienta ≥ 80 %.
+4. [ ] Se han actualizado los archivos de documentación correspondientes si cambiaste o agregaste alguna herramienta o parámetro.
+5. [ ] No has expuesto de forma accidental credenciales ni tokens de la API (`.env`) en el historial de Git.
+6. [ ] `npm run lint` no reporta errores (incluye `no-floating-promises`).
 
 ---
 
@@ -97,5 +98,5 @@ La publicación en npm la hace GitHub Actions (`.github/workflows/publicar.yml`)
 
 El workflow se detiene antes de publicar si falta el token, si el tag no coincide con `package.json` o si el CHANGELOG no tiene su sección. Si la versión ya existe en npm (se publicó a mano con `npm publish`), no vuelve a publicar: solo crea la release de GitHub. Publicar es irreversible: npm no permite reutilizar un número de versión.
 
-Para publicar a mano, desde `main` y con los clientes MCP cerrados: `npm ci && npm publish --access public` (`prepublishOnly` compila y corre los tests); luego empujar el tag para la release.
+Para publicar a mano, desde `main` y con los clientes MCP cerrados: `npm ci && npm publish --access public` (`prepublishOnly` corre el lint, compila y pasa los tests con el umbral de cobertura); luego empujar el tag para la release.
 

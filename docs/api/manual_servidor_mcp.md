@@ -1,6 +1,6 @@
 # Manual del Servidor MCP Compra Ágil v2
 
-Servidor MCP (Model Context Protocol) que envuelve la API de Compra Ágil v2 y la API legada de Órdenes de Compra de Mercado Público. Paquete `@ssolis-ti/mcp-compra-agil` **2.7.0**. Transporte stdio. Node.js 20.16+ o 22.3+. Al conectar, el `initialize` entrega las reglas de uso: no mostrar el ticket, no declarar un ganador y no insistir ante un 429.
+Servidor MCP (Model Context Protocol) que envuelve la API de Compra Ágil v2 y la API legada de Órdenes de Compra de Mercado Público. Paquete `@ssolis-ti/mcp-compra-agil` **2.8.0**. Transporte stdio. Node.js 20.16+ o 22.3+. Al conectar, el `initialize` entrega las reglas de uso: no mostrar el ticket, no declarar un ganador y no insistir ante un 429.
 
 > La fuente autoritativa es el servidor vivo (`tools/list`), no este archivo. Este manual se publica como `compra-agil://documentacion/api/manual_servidor_mcp.md` y lo indexa `consultar_documentos_locales`. Si contradice al código, manda el código. La guía de ChileCompra (`Documentacion_API_Compra_Agil.md`) describe la API prometida. Donde la medición difiere, manda `docs/internals/hallazgos-api.md`, que este lector no indexa.
 

@@ -110,8 +110,11 @@ El último sesga la muestra hacia arriba. Por eso las tools reportan
 * **Sin ningún parámetro** → HTTP 400 (`PARAMETROS_INVALIDOS`).
 * **`tamano_pagina` mínimo es 10.** `1` y `5` → HTTP 400. Máximo 50. *El comentario
   original del código tenía razón; la guía no menciona ningún mínimo.*
-* **La consulta más liviana** es `ttl_cambio_ms=3600000` (~1s). Es la que usa
-  `verificar_ticket`.
+* **La consulta más liviana** es `ttl_cambio_ms=3600000` (~1s). Era la que usaba
+  `verificar_ticket` hasta la 2.7.0. Desde la 2.8.0 ninguna herramienta usa
+  `ttl_cambio_ms`: compara contra la hora UTC real marcas que están en hora de
+  Chile, y una ventana menor a 3 horas vuelve vacía (medido el 6-oct-2026). Las
+  ventanas se mandan como `cambio_desde`/`cambio_hasta` ([ADR 0015](adr/0015-la-api-entrega-hora-de-chile.md)).
 
 ### Latencia medida
 

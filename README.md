@@ -2,7 +2,7 @@
 
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-blue.svg)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.16+%20%7C%2022.3+-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Servidor [MCP (Model Context Protocol)](https://modelcontextprotocol.io) desarrollado en TypeScript que envuelve e integra de forma avanzada la API REST de **Compra Ágil v2** y la API de **Órdenes de Compra (OC)** de [Mercado Público](https://www.mercadopublico.cl). Permite a cualquier IA, agente autónomo o cliente compatible interrogar, filtrar, auditar y prospectar procesos de compra estatal del gobierno de Chile.
@@ -17,21 +17,22 @@ El proyecto está diseñado bajo una arquitectura modular y cuenta con tres modo
 ---
 
 ## 📋 Tabla de Contenidos
-* [¿Qué es Compra Ágil?](#qué-es-compra-ágil)
-* [Características Clave](#características-clave)
-* [Requisitos](#requisitos)
-* [Instalación](#instalación)
-* [Configuración de Variables de Entorno](#configuración-de-variables-de-entorno)
-* [Uso y Modos de Ejecución](#uso-y-modos-de-ejecución)
+* [¿Qué es Compra Ágil?](#-qué-es-compra-ágil)
+* [Características Clave](#-características-clave)
+* [Requisitos y ticket](#-requisitos-y-obtención-de-credenciales)
+* [Instalación](#-instalación)
+* [Configuración de Variables de Entorno](#️-configuración-de-variables-de-entorno)
+* [Uso y Modos de Ejecución](#️-uso-y-modos-de-ejecución)
   * [Desarrollo](#desarrollo)
   * [Producción](#producción)
   * [Monitoreo Autónomo](#monitoreo-autónomo)
   * [Testing con MCP Inspector](#testing-con-mcp-inspector)
-* [Integración con Clientes MCP](#integración-con-clientes-mcp)
-  * [Claude Desktop](#claude-desktop)
-  * [OpenClaw](#openclaw)
-  * [Cursor / Windsurf](#cursor--windsurf)
-* [Catálogo del Servidor](#catálogo-del-servidor)
+* [Integración con Clientes MCP y Agentes](#-integración-con-clientes-mcp-y-agentes)
+  * [Claude Desktop](#2-claude-desktop)
+  * [Claude Code](#3-claude-code-claudecode)
+  * [OpenClaw](#4-openclaw)
+  * [Cursor / Windsurf](#6-cursor--windsurf)
+* [Catálogo del Servidor](#-catálogo-del-servidor)
   * [Herramientas Disponibles (Tools)](#herramientas-disponibles-tools)
   * [Recursos Disponibles (Resources)](#recursos-disponibles-resources)
   * [Prompts Disponibles](#prompts-disponibles)
@@ -62,12 +63,12 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 * **Prospectar Oportunidades:** Monitorea llamados activos sin oferentes con un ranking ponderado (Hot Score) y filtros locales.
 * **Alertas Automatizadas:** El Daemon en segundo plano notifica oportunidades que coincidan con tu presupuesto mínimo y rubro.
 
-> ⚠️ **Importante:** la API de Mercado Público **no publica qué oferta ganó**. Todo el análisis de precios se basa en cotizaciones presentadas, no en adjudicaciones. Lee [Limitaciones conocidas](#-limitaciones-conocidas-de-la-api) antes de usarlo en decisiones de negocio.
+> ⚠️ **Importante:** la API de Mercado Público **no publica qué oferta ganó**. Todo el análisis de precios se basa en cotizaciones presentadas, no en adjudicaciones. Lee [Limitaciones conocidas](#️-limitaciones-conocidas-de-la-api) antes de usarlo en decisiones de negocio.
 
 ---
 
 ## ⚡ Características Clave
-* **Modernizado para SDK v1.12+:** Carga declarativa y robusta de herramientas, recursos y prompts bajo los nuevos estándares del protocolo.
+* **SDK oficial de MCP 1.32:** Carga declarativa y robusta de herramientas, recursos y prompts bajo los nuevos estándares del protocolo.
 * **Carga de Entorno Autónoma:** El servidor carga al iniciarse el `.env` del directorio de trabajo, de la carpeta del proyecto y de su carpeta de datos, así que funciona aunque el cliente MCP lo lance desde otra carpeta, sin variables de sistema globales ni el ticket en la config del cliente.
 * **Lector de Documentación Integrado (Recursos):** Exposición nativa de guías, normativas y manuales en PDF (dentro de la carpeta `docs/`) como recursos del protocolo MCP (`compra-agil://documentacion/{filename}`). El servidor extrae el texto del PDF de manera local (y lo memoriza: la segunda consulta tarda menos de 100 ms) y lo inyecta en el LLM bajo demanda. Las guías viajan en el paquete de npm desde la 2.7.0.
 * **Filtrado Inteligente Anti-Ruido:** Filtros locales (`palabras_clave_requeridas` y `palabras_clave_excluidas`, insensibles a tildes) en `buscar_compras_agiles` y, desde la 2.8.0, en el análisis de precios, la auditoría, el borrador y los informes: se aplican antes de pedir detalles, así que no gastan cuota y evitan mezclar productos distintos en una muestra de precios.
@@ -76,7 +77,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 * **Métricas de uso:** `obtener_estadisticas_uso` informa la latencia y los errores de cada herramienta y el resultado de las consultas a la API (caché, 504, 429, timeouts) desde que arrancó el servidor.
 * **Paginación Inteligente y Monitoreo Completo:** La herramienta de cambios recientes admite navegación de páginas (`numero_pagina`), y el demonio de monitoreo periódico procesa de forma recursiva todas las páginas de resultados (`client.buscarTodo()`) para evitar pérdidas de alertas.
 * **Integración del Detalle de OC:** Resuelve de forma dinámica el código alfanumérico o ID numérico de las Órdenes de Compra utilizando la API legada de Mercado Público.
-* **Validado contra la API real:** El comportamiento documentado por ChileCompra difiere del real en varios puntos. Este servidor implementa lo que la API **hace**, no lo que promete, y lo documenta en [Limitaciones conocidas](#-limitaciones-conocidas-de-la-api). Hay tests de regresión que blindan cada hallazgo.
+* **Validado contra la API real:** El comportamiento documentado por ChileCompra difiere del real en varios puntos. Este servidor implementa lo que la API **hace**, no lo que promete, y lo documenta en [Limitaciones conocidas](#️-limitaciones-conocidas-de-la-api). Hay tests de regresión que blindan cada hallazgo.
 * **Redacción de credenciales:** Todo texto que sale del proceso (logs, errores, respuestas) pasa por un punto único de redacción que borra el ticket. Es relevante porque `sendLoggingMessage` envía los logs al cliente MCP — es decir, al contexto del modelo y a la transcripción.
 * **Rate Limiting Local:** Throttle proactivo que espacia las solicitudes bajo un máximo por minuto **antes** de enviarlas, además de reaccionar al error 429 para evitar la inhabilitación temporal del ticket. El estado de cuota persiste entre reinicios, y ante un 429 se honra el header `Retry-After` con espera creciente en vez de bloquear hasta el día siguiente: la cuota es un *token bucket* que se recarga solo (verificado: la API respondió con normalidad 13 min después de un 429).
 * **Caché de respuestas:** Las consultas repetidas se sirven desde disco sin gastar cuota (15 min para detalles, 5 min para búsquedas). Es lo que hace viable el flujo completo de análisis: repetir `generar_borrador_cotizacion` pasó de 6 consultas y 11 s a **0 consultas y 41 ms**. El ticket nunca entra en la caché.
@@ -89,7 +90,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 ## 📌 Requisitos y Obtención de Credenciales
 
 Para utilizar este servidor MCP necesitas:
-1. **Node.js v22+** (se utiliza la API nativa de `fetch` y soporte nativo para módulos ESM).
+1. **Node.js 20.16+ o 22.3+** (se utiliza la API nativa de `fetch` y soporte nativo para módulos ESM).
 2. **Ticket de acceso a la API** de Mercado Público de ChileCompra.
 
 ### 🔑 Paso a Paso para obtener tu Ticket de Acceso
@@ -287,21 +288,19 @@ Para registrar el servidor en OpenClaw (el cliente de terminal y automatización
 Ejecuta en tu consola:
 ```bash
 openclaw mcp add compra-agil node "C:\\ruta\\completa\\mcp-compra-agil\\dist\\index.js"
-openclaw mcp set compra-agil env.COMPRA_AGIL_TICKET "tu_ticket_de_chilecompra_aqui"
 ```
+*El ticket se toma del `.env` de la carpeta del proyecto. No lo pases con `openclaw mcp set … env.COMPRA_AGIL_TICKET`: quedaría en el historial de la terminal.*
 #### B. Edición de Archivo de Configuración
 Abre tu archivo de configuración de OpenClaw (típicamente localizado en `~/.openclaw/openclaw.json` o `~/.openclaw/openclaw.json5`) e integra el servidor dentro de la sección `"mcpServers"`:
 ```json5
   "mcpServers": {
     "compra-agil": {
       "command": "node",
-      "args": ["C:/ruta/completa/mcp-compra-agil/dist/index.js"],
-      "env": {
-        "COMPRA_AGIL_TICKET": "tu_ticket_de_chilecompra_aqui"
-      }
+      "args": ["C:/ruta/completa/mcp-compra-agil/dist/index.js"]
     }
   }
 ```
+*El ticket se toma del `.env` de la carpeta del proyecto, como en Claude Desktop: no hace falta escribirlo en esta config.*
 *Asegúrate de ajustar los permisos de sandbox de herramientas (`tools.sandbox.tools` o `tools.sandbox.allowlist`) en tu config de OpenClaw para permitir la ejecución del comando `node`.*
 
 ### 5. Open-Code / VSCodium / VS Code (Extensiones de Agentes)
@@ -316,14 +315,12 @@ Abre tu archivo de configuración de OpenClaw (típicamente localizado en `~/.op
        "compra-agil": {
          "command": "node",
          "args": ["C:/ruta/completa/mcp-compra-agil/dist/index.js"],
-         "env": {
-           "COMPRA_AGIL_TICKET": "tu_ticket_de_chilecompra_aqui"
-         },
          "disabled": false
        }
      }
    }
    ```
+   El ticket se toma del `.env` de la carpeta del proyecto: no lo escribas en este archivo.
 4. Guarda el archivo y la extensión refrescará automáticamente registrando las nuevas herramientas.
 
 #### Con la extensión **Continue**:
@@ -333,16 +330,14 @@ Abre tu archivo `~/.continue/config.json` y añade la configuración en el bloqu
   {
     "name": "compra-agil",
     "command": "node",
-    "args": ["C:/ruta/completa/mcp-compra-agil/dist/index.js"],
-    "env": {
-      "COMPRA_AGIL_TICKET": "tu_ticket_de_chilecompra_aqui"
-    }
+    "args": ["C:/ruta/completa/mcp-compra-agil/dist/index.js"]
   }
 ]
 ```
+*El ticket se toma del `.env` de la carpeta del proyecto: no hace falta escribirlo en esta config.*
 
 ### 6. Cursor / Windsurf
-* **Cursor:** Dirígete a `Settings` > `Features` > `MCP`. Haz clic en `+ Add New MCP Server`. Escribe el nombre `compra-agil`, selecciona el tipo `Stdio`, escribe en command `node` y en args `C:/ruta/completa/mcp-compra-agil/dist/index.js`. Añade la variable `COMPRA_AGIL_TICKET`.
+* **Cursor:** Dirígete a `Settings` > `Features` > `MCP`. Haz clic en `+ Add New MCP Server`. Escribe el nombre `compra-agil`, selecciona el tipo `Stdio`, escribe en command `node` y en args `C:/ruta/completa/mcp-compra-agil/dist/index.js`. El ticket se toma del `.env` del proyecto.
 * **Windsurf:** Dirígete a la pestaña de MCP en Ajustes e ingresa la misma configuración Stdio.
 
 ### 7. Agentes Personalizados (Node.js/Python SDK)
@@ -354,9 +349,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 const transport = new StdioClientTransport({
   command: "node",
   args: ["C:/ruta/completa/mcp-compra-agil/dist/index.js"],
-  env: {
-    COMPRA_AGIL_TICKET: "tu_ticket_de_chilecompra_aqui"
-  }
+  // Sin `env`: el servidor lee el ticket del .env de la carpeta del proyecto.
 });
 
 const client = new Client({ name: "mi-agente-cliente", version: "1.0.0" });
@@ -378,7 +371,7 @@ const resources = await client.listResources();
 | `buscar_compras_agiles` | Busca procesos utilizando palabras clave (con filtros inteligentes locales), región (1-16), estado y ventana temporal. Parámetros `q` e `id` son excluyentes. Cada resultado trae el RUT del organismo y la fecha del último cambio. |
 | `obtener_detalle_compra` | Detalle exhaustivo de una cotización: descripción, ítems y cotizaciones recibidas (confidenciales hasta el estado *Cerrada*). Incluye el código de estado, el número de llamado y, si la moneda no es CLP, el tipo de cambio. |
 | `monitorear_cambios_recientes` | Sincronización reactiva e incremental por ventana de cambios, con soporte para paginación. Dos modos excluyentes: **relativo** (`minutos`, máx 1440 / 24 h) o **absoluto** (`cambio_desde`/`cambio_hasta` en ISO-8601, sin techo de 24 h) para resincronizar un período arbitrario. |
-| `verificar_orden_compra` | Informa si un proceso tiene OC emitida. **No consulta la API por su cuenta** (gastaba cuota para responder siempre "no puedo saberlo"): reutiliza el detalle si ya está en caché e indica cómo confirmarlo en la ficha pública — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
+| `verificar_orden_compra` | Informa si un proceso tiene OC emitida. **No consulta la API por su cuenta** (gastaba cuota para responder siempre "no puedo saberlo"): reutiliza el detalle si ya está en caché e indica cómo confirmarlo en la ficha pública — ver [Limitaciones](#️-limitaciones-conocidas-de-la-api). |
 | `obtener_detalle_orden_compra` | Desglose de productos y facturación de una OC. ⚠ **El código debe venir de otra fuente** (la OC que te emitieron, un correo, la ficha pública): consulta la API legada de Órdenes de Compra, y la de Compra Ágil no entrega códigos de OC. |
 | `obtener_estadisticas_uso` | Cuántas consultas lleva esta instalación en el día UTC y si ya recibió un 429. ⚠ Es un **conteo local**, no el saldo del ticket: la API no publica cuánta cuota queda. Persiste entre reinicios. Desde la 2.8.0 suma **métricas** de esta sesión: latencia (media, mediana, p95, máxima) y errores por herramienta, y consultas a la API por resultado (caché, 200, 504, 429, timeout). |
 | `verificar_ticket` | Comprueba que el ticket configurado funcione contra la API real **sin revelar su valor** (solo muestra `••••1234`). Primer diagnóstico recomendado. |
@@ -386,11 +379,11 @@ const resources = await client.listResources();
 | `obtener_enlace_documento` | Entrega el enlace a la **ficha pública** del proceso, que es donde el adjunto sí es accesible (en un navegador). El enlace heredado de descarga directa se ofrece advirtiendo que hoy responde 404. |
 | `descargar_y_leer_documento` | ⚠ **Hoy no puede descargar los adjuntos de Compra Ágil**: el portal dejó de servirlos por enlace directo (404 verificado) y en la ficha el archivo lo genera JavaScript, sin URL que pedir. Para IDs numéricos responde de inmediato con el enlace a la ficha, sin gastar el intento. Los UUID sí se intentan. |
 | `consultar_documentos_locales` | Busca dentro de los PDF/TXT/MD de `docs/`. Admite **preguntas en lenguaje natural** ("¿qué multas me pueden aplicar?"), no solo palabras sueltas: descompone la consulta en términos, ignora acentos y palabras vacías, y ordena por densidad de coincidencias. Devuelve como máximo 3 archivos y nombra los que quedaron fuera. En preguntas de negocio (plazos, multas, requisitos) mandan las guías; en preguntas sobre el servidor o la API, el manual medido va primero. Si ningún fragmento reúne la mitad de los términos, lo advierte. |
-| `analizar_precios_mercado` | Analiza la distribución de precios **cotizados** por la competencia en procesos similares (mín/p25/mediana/promedio/máx) y sugiere un precio competitivo. Advierte cuando la muestra es demasiado dispersa o pequeña. Acepta `palabras_clave_requeridas`/`excluidas` para no mezclar productos. ⚠ Analiza precios cotizados, **no adjudicados** — ver [Limitaciones](#-limitaciones-conocidas-de-la-api). |
+| `analizar_precios_mercado` | Analiza la distribución de precios **cotizados** por la competencia en procesos similares (mín/p25/mediana/promedio/máx) y sugiere un precio competitivo. Advierte cuando la muestra es demasiado dispersa o pequeña. Acepta `palabras_clave_requeridas`/`excluidas` para no mezclar productos. ⚠ Analiza precios cotizados, **no adjudicados** — ver [Limitaciones](#️-limitaciones-conocidas-de-la-api). |
 | `auditar_compras_desiertas` | Analiza por qué una convocatoria quedó desierta, cruzando su presupuesto y plazo contra los precios que el mercado cotizó en procesos del mismo rubro. Parte por la evidencia del propio proceso (motivo oficial, cotizaciones, inadmisibilidades) y no infiere requisitos si el problema fue el precio. Dice cuántos comparables sostienen cada lectura. |
 | `generar_borrador_cotizacion` | Auto-completa propuestas JSON de cotización bajo el esquema oficial, calculando impuestos (19% IVA) y redactando la carta de presentación. Marca los campos a revisar: placeholders, el total frente al presupuesto (el precio por defecto cabe con IVA) y si el pedido completo puede estar en los adjuntos. |
 | `radar_oportunidades_calientes` | Califica y ordena convocatorias publicadas con un score ponderado (Hot Score, máx 115) de competencia, urgencia de cierre, presupuesto, simplicidad y **segundo llamado**. Cada resultado trae el desglose de factores y el campo `llamado`. Auto-pagina. |
-| `generar_informe` | Genera un **informe profesional imprimible** (HTML autocontenido, diseño A4/Carta/Oficio) y devuelve la ruta del archivo. Tipos: `radar`, `cotizacion`, `precio`, `auditoria` y `competencia`. Ver [Informes](#-informes-imprimibles). |
+| `generar_informe` | Genera un **informe profesional imprimible** (HTML autocontenido, diseño A4/Carta/Oficio) y devuelve la ruta del archivo. Tipos: `radar`, `cotizacion`, `precio`, `auditoria` y `competencia`. Ver [Informes](#️-informes-imprimibles). |
 
 ### Recursos Disponibles (Resources)
 
@@ -400,7 +393,7 @@ const resources = await client.listResources();
 | `compra-agil://estados` | `application/json` | Estados de la API con su comportamiento **real verificado**: marca cuáles funcionan (`publicada`, `cerrada`, `desierta`, `cancelada`) y cuáles no (`proveedor_seleccionado` devuelve 0; `oc_emitida` da HTTP 400), pese a estar ambos documentados oficialmente. |
 | `compra-agil://glosario` | `application/json` | Glosario de acrónimos del dominio de ChileCompra para contextualización semántica de la IA. |
 | `compra-agil://compras/{codigo}` | `application/json` | Recurso dinámico que resuelve el objeto JSON puro devuelto por la API v2 de una Compra Ágil usando su código único. |
-| `compra-agil://documentacion/{filename}` | `text/plain` | Recurso dinámico que lee y extrae todo el contenido de texto de un PDF/TXT/MD local en la carpeta `docs/` en tiempo real. ⚠ Requiere clonar el repositorio — ver la nota siguiente. |
+| `compra-agil://documentacion/{filename}` | `text/plain` | Recurso dinámico que lee y extrae todo el contenido de texto de un PDF/TXT/MD local en la carpeta `docs/` en tiempo real. Los documentos viajan en el paquete — ver la nota siguiente. |
 
 #### 📚 La documentación viaja en el paquete
 
@@ -489,7 +482,7 @@ Por eso este servidor **no bloquea hasta el día siguiente**: honra `Retry-After
 
 Abre el archivo en tu navegador y usa **Ctrl+P** para exportarlo a PDF, seleccionando el papel correspondiente en el diálogo de impresión.
 
-Los informes se guardan en `informes/` de la carpeta de datos (ver más abajo), o en la carpeta que fije `COMPRA_AGIL_INFORMES_DIR`. `ruta_salida` solo acepta una subcarpeta dentro de ella (ej: `radar/octubre`): el modelo elige ese valor después de leer textos de terceros, así que no puede escribir en otra parte del disco.
+Los informes se guardan en `informes/` de la carpeta de datos (ver [Integración](#-integración-con-clientes-mcp-y-agentes)), o en la carpeta que fije `COMPRA_AGIL_INFORMES_DIR`. `ruta_salida` solo acepta una subcarpeta dentro de ella (ej: `radar/octubre`): el modelo elige ese valor después de leer textos de terceros, así que no puede escribir en otra parte del disco.
 
 | Tipo | Qué imprime |
 | :--- | :--- |
