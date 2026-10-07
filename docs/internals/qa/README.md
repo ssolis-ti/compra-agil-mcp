@@ -17,7 +17,8 @@ sesión local.
 | Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #13 |
 | Versión 2.7.0 | ✅ Publicada en npm el 6-oct (`latest`); probada instalándola con `npx` desde una carpeta vacía. Tag `v2.7.0` y release en GitHub |
 | Publicación automática en npm | ✅ `publicar.yml`: un tag `v*` publica (requiere el secreto `NPM_TOKEN`); si la versión ya se publicó a mano, solo crea la release |
-| Versión 2.8.0 (cerrada) | ⏳ Planificada — [Plan 2.8.0](roadmap.md#plan-280--versión-cerrada): arreglos E1–E11 y S10–S18, fase 1.10 (hora de Chile), fases 1.2–1.7, 2.2 y 2.4 |
+| Versión 2.8.0 (cerrada) | ✅ Lista en `main` local — [Plan 2.8.0](roadmap.md#plan-280--versión-cerrada) completo (bloques A–H), validada contra la API real y con un segundo enjambre cuyos hallazgos se corrigieron. ⏳ Falta: subir los commits (el token de git necesita el permiso `workflow`), la etapa 2 en Claude Desktop y publicar en npm |
+| Segundo enjambre contra la API real (6-oct, 2.8.0) | ✅ [resultado](resultado-enjambre-api-real.md#validación-de-la-280-contra-la-api-real): hora confirmada en vivo, estadísticas verificadas a mano sobre datos reales, 0 fugas; F1–F10 corregidos |
 
 Todo lo de la 2.7.0 se probó contra una API **simulada** con fallas
 inyectadas: el entorno en la nube donde se hizo no tenía acceso a
@@ -33,7 +34,7 @@ git checkout main
 git pull
 npm ci
 npm run build
-npm test            # todos deben pasar (458 en la 2.7.0)
+npm test            # todos deben pasar (616 en la 2.8.0)
 ```
 
 Después, en este orden:

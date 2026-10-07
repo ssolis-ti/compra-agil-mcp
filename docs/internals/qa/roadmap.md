@@ -82,14 +82,14 @@ verde, CHANGELOG, commit propio).
 
 ### Definición de cerrada
 La 2.8.0 se publica cuando se cumple todo esto:
-1. `tsc`, ESLint y la suite en verde; la suite pasa con `TZ` en UTC, `America/Santiago` y `Asia/Tokyo`.
-2. Cobertura sobre los umbrales del bloque G, verificada en la CI.
-3. Ningún defecto conocido de severidad media o alta abierto en este roadmap.
-4. Contra la API real: `scripts/qa/escenarios-reales.mjs` sin errores atribuibles al servidor; monitoreo de 60 min con resultados en horario hábil.
-5. Enjambre de agentes repetido con presupuesto ≤ 60 consultas: 0 fugas del ticket, 0 hallazgos altos nuevos, y las estadísticas de precios recalculadas a mano sobre datos reales. Correrlo en un horario en que la API no esté degradada: el 6-oct los 504 del detalle impidieron obtener precios.
-6. Etapa 2 hecha desde Claude Desktop.
-7. README, `docs/api/manual_servidor_mcp.md`, glosario, instrucciones al conectar, `CLAUDE.md`, CHANGELOG y este punto de retome al día.
-8. Publicada en npm con tag `v2.8.0` y release en GitHub.
+1. ✅ `tsc`, ESLint y la suite en verde; la suite pasa con `TZ` en UTC, `America/Santiago` y `Asia/Tokyo`.
+2. 🟡 Cobertura sobre los umbrales del bloque G (93 %): se verifica en `prepublishOnly`; en la CI falta el paso, porque modificar `.github/workflows/` requiere el permiso `workflow` del token de git.
+3. ✅ Ningún defecto conocido de severidad media o alta abierto (los del segundo enjambre, corregidos).
+4. ✅ Contra la API real: batería 9 de 10, el error es un 504 de la API; monitoreo de 60 min con 49 cambios a las 20:33 (la 2.7.0 devolvía 0).
+5. ✅ (6-oct, [resultado](resultado-enjambre-api-real.md#validación-de-la-280-contra-la-api-real)) Enjambre de agentes repetido con presupuesto ≤ 60 consultas: 0 fugas del ticket, 0 hallazgos altos nuevos, y las estadísticas de precios recalculadas a mano sobre datos reales. Correrlo en un horario en que la API no esté degradada: el 6-oct los 504 del detalle impidieron obtener precios.
+6. ⏳ Etapa 2 hecha desde Claude Desktop (la hace el dueño).
+7. ✅ README, `docs/api/manual_servidor_mcp.md`, glosario, instrucciones al conectar, `CLAUDE.md`, CHANGELOG y este punto de retome al día.
+8. ⏳ Publicada en npm con tag `v2.8.0` y release en GitHub (la hace el dueño: requiere 2FA y subir los commits locales, para lo que falta el permiso `workflow`).
 
 ---
 

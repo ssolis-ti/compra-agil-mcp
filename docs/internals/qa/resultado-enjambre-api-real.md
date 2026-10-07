@@ -196,3 +196,78 @@ detalle de ChileCompra.
 2. E1 (requisitos contra el motivo oficial) y E2 (precio por defecto con IVA): pequeños y de alto impacto en la confianza.
 3. E4 y E5 junto con S17: validación local y un solo formato de error.
 4. Fase 2.2 (métricas por herramienta): sin ella, las latencias solo se pueden medir desde fuera, como aquí.
+
+---
+
+## Validación de la 2.8.0 contra la API real
+
+6 de octubre de 2026, 20:26–20:45 hora de Chile. Servidor 2.8.0 compilado
+desde `main`, contra la API real.
+
+### Batería automática
+
+`scripts/qa/escenarios-reales.mjs`: **9 de 10** (la 2.7.0 hizo 8 de 10 el 5-oct).
+
+| Escenario | Tiempo | Resultado |
+| :--- | ---: | :--- |
+| `verificar_ticket` | 6,5 s | ✅ «cambios en los últimos 10 minutos» con resultados |
+| `verificar_hora_oficial` | 0,04 s | ✅ SHOA, base de zonas `2026a` |
+| búsquedas (RM y texto) | 13–15 s | ✅ |
+| monitoreo 60 min | 11,2 s | ✅ **49 cambios**, el último de hace 18 min a las 20:33 (la 2.7.0 devolvía 0) |
+| radar RM | 13,4 s | ✅ |
+| precios (3 históricos) | 45,0 s | ✅ **con datos**: 10 cotizaciones reales |
+| auditoría desiertas | 29,6 s | ⚠ 504 en el detalle del proceso a auditar; el error trae el enlace a la ficha |
+| informe radar, estadísticas | < 0,1 s | ✅ |
+
+**Estadísticas verificadas a mano sobre datos reales** (10 cotizaciones de resmas): mínimo 2.805, máximo 8.549, promedio 4.018, mediana 3.563 y p25 3.409. Las seis coinciden exactamente con el servidor. Era el pendiente desde septiembre: hasta hoy los 504 lo habían impedido.
+
+### Segundo enjambre
+
+Cuatro agentes —los mismos perfiles, sin conocer los arreglos— sobre **una sola instancia** de la 2.8.0, a través de `scripts/qa/puente-mcp.mjs`. 62 llamadas.
+
+- **Seguridad:** 0 fugas del ticket en las respuestas, en los 5 informes generados, en el registro del puente ni en su log.
+- **Cuota:** ninguno 429. El contador local del día pasó de 64 a 91 (incluye la batería).
+- **Hora:** a las 20:37 de Chile, el último cambio del monitoreo era de las 20:35; la ventana 18:00–20:00 devolvió solo cambios dentro del rango; los cierres coinciden entre búsqueda, detalle, borrador e informes. **El hallazgo principal de la primera corrida no se reprodujo.**
+- **Verificación estadística independiente:** el analista recalculó mínimo, máximo, promedio, mediana y p25 de resmas y de guantes, y los netos: todo coincide con el servidor (diferencias solo de redondeo a entero). El HTML reproduce el JSON.
+
+Latencia por herramienta, **medida en el servidor** (registro del puente):
+
+| Herramienta | Llamadas | Errores | Mediana | Máxima |
+| :--- | ---: | ---: | ---: | ---: |
+| `analizar_precios_mercado` | 5 | 2 | 29,5 s | 35,9 s |
+| `auditar_compras_desiertas` | 2 | 2 | 29,5 s | 42,8 s |
+| `generar_borrador_cotizacion` | 1 | 0 | 28,9 s | 28,9 s |
+| `obtener_detalle_compra` | 3 | 1 | 14,1 s | 26,1 s |
+| `buscar_compras_agiles` | 5 | 2 | 9,0 s | 16,1 s |
+| `monitorear_cambios_recientes` | 4 | 1 | 7,5 s | 11,7 s |
+| `verificar_ticket` | 1 | 0 | 3,6 s | 3,6 s |
+| `generar_informe` | 7 | 3 | 0,0 s | 53,8 s |
+| locales (documentos, hora, OC en caché, estadísticas) | 32 | 4 | 0,0 s | 2,6 s |
+
+Los errores son 504 y 500 de la API y rechazos de entradas inválidas que los agentes probaron a propósito. Resultados de la API según el servidor: 200 ×17, 504 ×7, 500 ×2, 404 ×1; 15 respuestas desde caché (36 %).
+
+### Hallazgos y estado
+
+Verificados contra el código y, cuando hubo que hacerlo, contra las respuestas reales que quedaron en caché (`test/fixtures/enjambre2-detalles.json`). **Todos corregidos en la 2.8.0** (`0da8b7b`, `e5d6792`).
+
+| # | Sev. | Hallazgo | Causa real | Corrección |
+| :--- | :--- | :--- | :--- | :--- |
+| F1 | 🟠 Alta | «nitrilo» promediaba carpas y depósitos químicos como guantes, con la muestra «homogénea» | Entre varias líneas, si ninguna coincidía se tomaba la primera; con una sola línea se toma esa (los nombres de producto de la API son genéricos) | Sin coincidencia no se toma ninguna; cada cotización dice qué producto se cotizó; si la muestra mezcla productos deja de ser homogénea y los nombra |
+| F2 | 🟠 Alta | Resmas sugería un precio sin advertir que las 10 cotizaciones fueron rechazadas por sobrepasar el presupuesto | La nota lo decía en general, no para esta muestra | `_advertencia_sesgo` cuando la mitad o más se rechazó por precio |
+| F3 | 🟠 Alta | La auditoría decía «Presupuesto en rango» con 4 de 11 rechazadas por precio | Comparaba en neto; una cotización que cabía en neto fue rechazada: el comprador aplicó IVA | Infiere `presupuesto_aplicado_con_iva`; cuenta las que superan con IVA; marca el presupuesto |
+| F4 | 🟠 Alta | Recomendaba revisar «certificaciones» cuando los motivos eran especificaciones, despacho y precio | Consejo fijo | Inadmisibilidades por categoría y consejos solo para lo que pasó |
+| F5 | 🟠 Alta | El borrador sugería $4.898 para un pack de $500.000 y decía que cabía | Solo se avisaba si el total superaba el presupuesto | Aviso si el neto es < 10 % del presupuesto |
+| F6 | 🟡 Media | Datos personales en el informe de competencia: sitio web, contactos rotulados, RUT en el texto | El filtro solo cubría teléfonos y correos | Se omiten también |
+| F7 | 🟡 Media | Brecha calculada entre ofertas todas inadmisibles, duplicados, despacho oculto | — | Aviso, conteo de duplicados y despacho visible |
+| F8 | 🟡 Media | Las métricas no contaban los rechazos del esquema | El SDK rechaza antes de llamar a la herramienta | Se cuentan en la traducción del rechazo |
+| F9 | 🟡 Media | La descripción de la búsqueda en documentos prometía un aviso que no salía | El umbral cambió (mitad de los términos) y la descripción no | Descripción corregida |
+| F10 | 🟡 Baja | Fragmentos repetidos a una línea de distancia; rechazo de `ruta_salida` en otro formato; informe de precio que remitía a una tabla ausente; detalle sin enlace a la ficha; `multa_sancion` sin contexto; motivos duplicados por un espacio | — | Corregidos |
+
+**Conocidos, documentados y no corregibles desde el servidor:** el número de ofertas del listado puede diferir del de la ficha; la API no ordena el monitoreo por último cambio; la búsqueda de texto de la API es amplia (para eso están las palabras clave); la calidad de las respuestas de normativa depende de lo que digan las guías (búsqueda léxica, no semántica); un 504 en el detalle del proceso a auditar deja la auditoría sin datos.
+
+### Veredictos
+
+- **Proveedora:** lo usaría para encontrar y priorizar compras y armar la cotización; el precio lo pondría a mano (lo que motivó F5).
+- **Analista:** las cuentas están bien; no le confiaría el precio sin revisar las muestras (lo que motivó F1 y F2).
+- **Auditora:** el informe de competencia sirve como evidencia preliminar una vez anonimizado (F6); el de auditoría necesitaba F3 y F4.
+- **QA:** todos los rechazos sin cuota y en un formato, salvo `ruta_salida` (F10).
