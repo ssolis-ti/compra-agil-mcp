@@ -80,7 +80,7 @@ flowchart TB
 
 1. `vigilancia/` y `avisos/` no importan de `tools/`, `reports/`, `resources/`, `prompts/` ni `servidor.ts`.
 2. `avisos/` no importa de `api/` ni de `vigilancia/`. Recibe alertas ya armadas (`Alerta`, un tipo de `avisos/mensaje.ts`), así un canal nuevo no conoce la API.
-3. `vigilancia/` depende de `avisos/` solo por el tipo `Alerta` y la función `encolar()` de la bandeja.
+3. `vigilancia/` puede importar de `avisos/`, nunca al revés. La ronda (`vigilancia/ronda.ts`) arma las alertas, las encola y las envía antes de guardar el estado, para que la bandeja y la marca se guarden juntas (cambio del 7-oct, fase 3: la versión anterior de esta regla solo permitía el tipo `Alerta` y `encolar()`).
 4. `api/` no importa de `vigilancia/`, `avisos/`, `services/` ni `tools/`.
 5. La entrada (`index.ts`, `services/monitor.ts`, `cli/`) arma las piezas y lee el entorno. El núcleo no lee `process.env`, no usa `Date.now()` y no arranca temporizadores (NF5).
 
@@ -232,6 +232,7 @@ stateDiagram-v2
 - **Espera creciente:** 30 s, 1, 2, 4, 8, 16, 32 y 60 min. Un `retry_after` o `Retry-After` del canal tiene prioridad.
 - **Lote:** los avisos pendientes de un canal se agrupan en un mensaje. Si superan el tope (Telegram, 4.096 caracteres; correo, 50 procesos; webhook, 100), se parten en varios mensajes, cada uno con su id de lote.
 - **Silencio:** se compara con `paredDeChile(ahora())`. Los avisos retenidos salen juntos en el primer ciclo después del silencio.
+- **El motivo de error** que devuelve un canal se redacta otra vez al guardarlo en la bandeja: queda en disco y un canal podría incluir su propia URL.
 - **Modo gateway:** el gateway no usa la bandeja. Recibe las alertas por `obtener_alertas_nuevas` y las confirma con `confirmar_alertas` (sección 8). Los canales propios del servidor pueden estar activos a la vez: son caminos independientes.
 
 ## 6. Canales

@@ -57,6 +57,40 @@ describe('rondaDeVigilancia', () => {
     expect(c.llamadas()).toBe(0);
   });
 
+  it('con canales activos: un aviso por canal, enviado en la misma ronda y guardado en el estado (T3.5)', async () => {
+    const r = rutas();
+    const c = nuevoCatalogo();
+    const [codigo] = c.agregar(pared(T0 - 10 * MIN), 1);
+    const recibidos: Record<string, string[]> = { telegram: [], correo: [] };
+    let telegramCaido = true;
+    const canal = (nombre: 'telegram' | 'correo') => ({
+      nombre,
+      async enviar(lote: { avisos: Array<{ alerta: { codigo: string } }> }) {
+        if (nombre === 'telegram' && telegramCaido) return { ok: false as const, tipo: 'transitorio' as const, motivo: '502' };
+        recibidos[nombre].push(...lote.avisos.map((a) => a.alerta.codigo));
+        return { ok: true as const };
+      },
+      async probar() { return { ok: true as const }; },
+    });
+    const reloj = relojFalso(T0 + 2 * MIN);
+    const deps = {
+      api: clienteFalso(c), ahora: reloj.ahora, criterios, rutas: r, pid: process.pid, intervaloMs: 15 * MIN,
+      entregar: () => undefined, avisos: { canales: [canal('telegram'), canal('correo')] },
+    };
+    const primera = await rondaDeVigilancia(deps);
+    expect(primera.envios).toMatchObject({ entregados: 1, reintentos: 1 });
+    expect(recibidos).toEqual({ telegram: [], correo: [codigo] });
+    const guardado = cargarEstado(r.estado, r.estadoViejo, T0).estado;
+    expect(Object.values(guardado.bandeja).map((a) => [a.canal, a.estado]).sort()).toEqual([['correo', 'entregado'], ['telegram', 'pendiente']]);
+
+    // Telegram vuelve: la ronda siguiente, sin alertas nuevas, entrega lo pendiente (R3.5).
+    telegramCaido = false;
+    reloj.avanzar(5 * MIN);
+    const segunda = await rondaDeVigilancia(deps);
+    expect(segunda.ciclo?.alertas).toEqual([]);
+    expect(recibidos.telegram).toEqual([codigo]);
+  });
+
   it('si entregar falla, el estado no se guarda: las alertas vuelven en la ronda siguiente', async () => {
     const r = rutas();
     const c = nuevoCatalogo();

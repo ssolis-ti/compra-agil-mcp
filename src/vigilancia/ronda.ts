@@ -14,6 +14,9 @@
 import { ejecutarCiclo, type AlertaVigilancia, type DependenciasCiclo, type LimitesCiclo, type ResultadoCiclo } from './ciclo.js';
 import { cargarEstado, guardarEstado } from './estado.js';
 import { tomarVigilante, vigilanteActivo } from './vigilante.js';
+import { crearAlerta } from '../avisos/mensaje.js';
+import { encolar, enviarPendientes, podarBandeja, type ConfigBandeja, type ResultadoEnvios } from '../avisos/bandeja.js';
+import type { Canal } from '../avisos/canal.js';
 
 export interface RutasVigilancia {
   estado: string;
@@ -27,6 +30,8 @@ export interface DependenciasRonda extends DependenciasCiclo {
   pid: number;
   intervaloMs: number;
   entregar: (alertas: AlertaVigilancia[]) => void | Promise<void>;
+  /** Canales activos (fase 3). Sin canales, las alertas solo van a `entregar`. */
+  avisos?: { canales: Canal[]; config?: ConfigBandeja };
 }
 
 export interface ResultadoRonda {
@@ -36,6 +41,7 @@ export interface ResultadoRonda {
   /** Migración, estado ilegible o disco que no dejó guardar. */
   avisos: string[];
   ciclo?: ResultadoCiclo;
+  envios?: ResultadoEnvios;
 }
 
 export async function rondaDeVigilancia(deps: DependenciasRonda, limites: LimitesCiclo = {}): Promise<ResultadoRonda> {
@@ -47,9 +53,18 @@ export async function rondaDeVigilancia(deps: DependenciasRonda, limites: Limite
   const { estado, avisos } = cargarEstado(deps.rutas.estado, deps.rutas.estadoViejo, inicio);
   const ciclo = await ejecutarCiclo(deps, estado, limites);
   if (ciclo.alertas.length > 0) await deps.entregar(ciclo.alertas);
+  // Los avisos se encolan y se envían antes de guardar: lo que no se entregue
+  // queda en la bandeja del estado y sale en la ronda siguiente (R3.5).
+  let envios: ResultadoEnvios | undefined;
+  if (deps.avisos && deps.avisos.canales.length > 0) {
+    const alertas = ciclo.alertas.map((a) => crearAlerta(a.item, a.coincidencia, a.cuando));
+    encolar(estado.bandeja, alertas, deps.avisos.canales.map((c) => c.nombre), deps.ahora());
+    envios = await enviarPendientes(estado.bandeja, deps.avisos.canales, deps.ahora(), deps.avisos.config);
+  }
+  podarBandeja(estado.bandeja, deps.ahora());
   if (!guardarEstado(deps.rutas.estado, estado, deps.ahora())) {
     avisos.push(`No se pudo guardar ${deps.rutas.estado}: la próxima ronda repetirá estos lotes.`);
   }
   tomarVigilante(deps.rutas.vigilante, { pid: deps.pid, ahoraMs: deps.ahora(), latidoMaxMs });
-  return { tomada: true, avisos, ciclo };
+  return { tomada: true, avisos, ciclo, envios };
 }

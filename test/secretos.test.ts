@@ -108,6 +108,27 @@ describe('ningún secreto sale del servidor', () => {
     expect(secretosEn(disco)).toEqual([]);
   });
 
+  it('por la bandeja de salida: el motivo de error de un canal se guarda redactado (fase 3)', async () => {
+    const { encolar, enviarPendientes } = await import('../src/avisos/bandeja.js');
+    const { crearAlerta } = await import('../src/avisos/mensaje.js');
+    const { formatearTelegram } = await import('../src/avisos/formato/telegram.js');
+    const { formatearCorreo } = await import('../src/avisos/formato/correo.js');
+    const { cuerpoWebhook } = await import('../src/avisos/formato/webhook.js');
+    const T = Date.parse('2026-10-07T15:00:00Z');
+    const bandeja = {};
+    encolar(bandeja, [crearAlerta({ codigo: '1-1-COT26', nombre: 'Resmas' }, 'resmas', T)], ['telegram'], T);
+    const indiscreto = {
+      nombre: 'telegram' as const,
+      enviar: async () => ({ ok: false as const, tipo: 'transitorio' as const, motivo: `502 en https://api.telegram.org/bot${S.telegramToken}/sendMessage` }),
+      probar: async () => ({ ok: true as const }),
+    };
+    await enviarPendientes(bandeja, [indiscreto], T);
+    const lote = { id: 'x', canal: 'telegram' as const, resumenDeSilencio: false, avisos: Object.values(bandeja) as never[] };
+    const textos = [JSON.stringify(bandeja), ...formatearTelegram(lote, T), JSON.stringify(formatearCorreo(lote, T)), JSON.stringify(cuerpoWebhook(lote, T))];
+    expect(JSON.stringify(bandeja)).toContain('[REDACTED]');
+    expect(secretosEn(textos.join('\n'))).toEqual([]);
+  });
+
   it('control: la búsqueda encuentra un secreto cuando está', () => {
     expect(secretosEn(`x ${encodeURIComponent(S.webhookUrl)} y ${S.ticket}`)).toEqual(['ticket', 'webhookUrl']);
   });

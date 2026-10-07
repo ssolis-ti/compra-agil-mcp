@@ -16,6 +16,12 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Bandeja de salida de avisos** (2.9.0, fase 3). Cada alerta genera un aviso por canal, guardado junto al estado de la vigilancia.
+  * **Reintentos:** un error transitorio se reintenta con espera creciente, honrando `Retry-After`; uno permanente no se reintenta.
+  * **Sin pérdidas:** un canal caído o un reinicio no pierden avisos. Al terminar el horario de silencio, lo retenido sale en un resumen.
+  * **Formatos:** Telegram (HTML, dividido en mensajes de hasta 4.096 caracteres), correo (asunto sin texto de terceros) y webhook (`compra_agil.alertas` v1).
+  * **Contenido:** el texto del comprador se escapa en cada formato y sin datos de contacto.
+  * Todavía no hay canales reales: llegan en las fases 4 a 6.
 * `buscarFresco()` en el cliente: una búsqueda que no lee la caché. La usa la vigilancia para comprobar que un lote no cambió mientras se paginaba.
 * Criterios nuevos de vigilancia: `MONITOR_EXCLUIR`, `MONITOR_REGIONES` y `MONITOR_SOLO_SIN_OFERTAS`.
 * **`scripts/qa/medir-ventanas.mjs`**, mediciones de la fase 0 de la 2.9.0 contra la API real. La API registra los cambios en lotes cada 5 minutos con una sola marca y bordes incluidos, lo que cambió el diseño de la vigilancia ([medicion-ventanas.md](docs/internals/qa/medicion-ventanas.md), ADR 0021).

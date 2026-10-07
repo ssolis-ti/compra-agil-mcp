@@ -10,6 +10,7 @@
 import fs from 'fs';
 import { conBloqueo } from '../utils/bloqueo.js';
 import { escribirAtomico, leerJsonSeguro } from '../utils/archivo-atomico.js';
+import type { Bandeja } from '../avisos/bandeja.js';
 
 export interface LotePendiente { lote: string; intentos: number; ultimoError?: string }
 export interface LoteIncompleto { lote: string; total: number; leidos: number; registrado: number }
@@ -33,9 +34,10 @@ export interface EstadoVigilancia {
     /** Día UTC → consultas de la vigilancia. */
     consultasPorDia: Record<string, number>;
   };
-  /** Fases 3 y 8 (alertas para el gateway y bandeja de salida). Se conservan tal cual. */
+  /** Fase 8 (alertas para el gateway). Se conserva tal cual. */
   alertas: Record<string, unknown>;
-  bandeja: Record<string, unknown>;
+  /** Avisos por canal (fase 3, ADR 0022). */
+  bandeja: Bandeja;
 }
 
 export function estadoVacio(): EstadoVigilancia {
@@ -74,7 +76,13 @@ export function parsearEstado(crudo: unknown): EstadoVigilancia {
     e.salud.consultasPorDia = numeros(crudo.salud.consultasPorDia);
   }
   if (esObjeto(crudo.alertas)) e.alertas = crudo.alertas;
-  if (esObjeto(crudo.bandeja)) e.bandeja = crudo.bandeja;
+  if (esObjeto(crudo.bandeja)) {
+    // Un aviso ilegible se descarta: reintentarlo enviaría basura.
+    e.bandeja = Object.fromEntries(Object.entries(crudo.bandeja).filter(([, a]) =>
+      esObjeto(a) && typeof a.id === 'string' && ['telegram', 'webhook', 'correo'].includes(a.canal as string) &&
+      ['pendiente', 'entregado', 'fallido'].includes(a.estado as string) && esObjeto(a.alerta) && typeof a.alerta.codigo === 'string' &&
+      esNumero(a.intentos) && esNumero(a.proximoIntento) && esNumero(a.creado))) as Bandeja;
+  }
   return e;
 }
 

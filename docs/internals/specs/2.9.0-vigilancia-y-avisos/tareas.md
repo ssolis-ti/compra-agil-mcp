@@ -107,7 +107,7 @@ fallos y lo dice cuando no puede.
 
 ---
 
-## Fase 3 — Bandeja de salida y formato ⏸
+## Fase 3 — Bandeja de salida y formato ✅ (7-oct-2026)
 
 **Objetivo:** cada alerta se convierte en avisos por canal que sobreviven a
 reinicios y fallos, con contenido limpio.
@@ -116,17 +116,24 @@ reinicios y fallos, con contenido limpio.
 
 | Id | Tarea | Prueba primero | Archivos |
 | :--- | :--- | :--- | :--- |
-| T3.1 | `Alerta` y `crearAlerta()`: campos de R4.1, nombre recortado, `sinContactos`, sin descripción | `mensaje.test.ts`: con el fixture real de `enjambre2-detalles.json`, ningún teléfono ni correo en la alerta | `avisos/mensaje.ts` |
-| T3.2 | Interfaz `Canal`, `ResultadoEnvio` y clasificación transitorio/permanente | `canal.test.ts`: tabla de códigos HTTP y errores de red → tipo | `avisos/canal.ts` |
-| T3.3 | Bandeja: estados, id estable, lotes por canal, espera creciente, 8 intentos, silencio con `paredDeChile(ahora())`, retención y resumen | `bandeja.test.ts`: canal que falla 2 veces y entrega; 400 → fallido sin reintento; reinicio con pendientes; silencio de 22:00 a 07:00 con el cambio de horario de septiembre | `avisos/bandeja.ts` |
-| T3.4 | Formateadores puros de Telegram, correo y webhook, con su escapado y división por tope | `formato-avisos.test.ts`: nombre con `<script>`, `&` y saltos de línea; lote de 60 procesos dividido en mensajes ≤ 4.096 caracteres; asunto de una línea | `avisos/formato/*.ts` |
-| T3.5 | Conectar el ciclo con la bandeja (`encolar`) | `ciclo-vigilancia.test.ts`: una alerta nueva genera un aviso por canal activo | `vigilancia/ciclo.ts` |
+| T3.1 ✅ | `Alerta` y `crearAlerta()`: campos de R4.1, nombre recortado, `sinContactos`, sin descripción | `mensaje.test.ts`: con el fixture real de `enjambre2-detalles.json`, ningún teléfono ni correo en la alerta | `avisos/mensaje.ts` |
+| T3.2 ✅ | Interfaz `Canal`, `ResultadoEnvio` y clasificación transitorio/permanente | `canal.test.ts`: tabla de códigos HTTP y errores de red → tipo | `avisos/canal.ts` |
+| T3.3 ✅ | Bandeja: estados, id estable, lotes por canal, espera creciente, 8 intentos, silencio con `paredDeChile(ahora())`, retención y resumen | `bandeja.test.ts`: canal que falla 2 veces y entrega; 400 → fallido sin reintento; reinicio con pendientes; silencio de 22:00 a 07:00 con el cambio de horario de septiembre | `avisos/bandeja.ts` |
+| T3.4 ✅ | Formateadores puros de Telegram, correo y webhook, con su escapado y división por tope | `formato-avisos.test.ts`: nombre con `<script>`, `&` y saltos de línea; lote de 60 procesos dividido en mensajes ≤ 4.096 caracteres; asunto de una línea | `avisos/formato/*.ts` |
+| T3.5 ✅ | Conectar el ciclo con la bandeja (`encolar`) | `ciclo-vigilancia.test.ts`: una alerta nueva genera un aviso por canal activo | `vigilancia/ciclo.ts` |
 
 **Mutación obligatoria:** quitar el escapado en un formateador; quitar el «no reintentar» del permanente.
 
 **Sale:** la bandeja con un canal falso de prueba. Todavía no hay canales reales.
 
 **Puerta:** `secretos.test.ts` ampliado a los avisos formateados.
+
+**Resultado (7-oct):**
+- **Suite:** 723 tests en las tres zonas horarias. Cada archivo de `avisos/` tiene el 100 % de sus líneas cubiertas.
+- **Mutación:** los dos mutantes obligatorios fueron detectados. Uno quita el escapado de Telegram; el otro reintenta un error permanente.
+- **Secretos:** el test cubre ahora la bandeja y los tres formatos. Encontró que el motivo de error que devuelve un canal se guardaba en disco sin redactar, y ahora se redacta al guardarlo.
+- **Decisión:** el estado «retenido» del diagrama no se guarda. El horario de silencio se calcula al enviar, y los avisos creados durante el silencio salen marcados como resumen.
+- **T3.5:** la conexión con el ciclo se probó en `ronda-vigilancia.test.ts`, en vez de `ciclo-vigilancia.test.ts`, porque la ronda es la que encola y envía.
 
 ---
 
