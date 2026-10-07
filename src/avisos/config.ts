@@ -21,6 +21,7 @@ export interface ConfigAvisos {
   /** `apiBase`: solo para pruebas (COMPRA_AGIL_TELEGRAM_API apunta a la Bot API simulada). */
   telegram?: { token: string; chatId: string; apiBase?: string };
   webhook?: { url: string; secreto: string };
+  correo?: { host: string; puerto: number; usuario: string; clave: string; de: string; para: string[] };
   bandeja: ConfigBandeja;
   /** Hora de Chile «HH:MM» del resumen diario (fase 7). */
   resumen: string;
@@ -30,6 +31,7 @@ export interface ConfigAvisos {
 const CANALES: NombreCanal[] = ['telegram', 'webhook', 'correo'];
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const LARGO_MINIMO_SECRETO = 32;
+const CORREO = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
 
 /** https, o http solo hacia la propia máquina (R6.3). */
 function urlAceptable(texto: string): boolean {
@@ -55,6 +57,7 @@ export function leerConfigAvisos(env: Record<string, string | undefined>): Confi
   registrarSecreto(valor('COMPRA_AGIL_TELEGRAM_TOKEN'));
   registrarSecreto(valor('COMPRA_AGIL_WEBHOOK_URL'));
   registrarSecreto(valor('COMPRA_AGIL_WEBHOOK_SECRETO'));
+  registrarSecreto(valor('COMPRA_AGIL_SMTP_CLAVE'));
 
   if (pedidos.includes('telegram')) {
     const token = valor('COMPRA_AGIL_TELEGRAM_TOKEN');
@@ -81,6 +84,29 @@ export function leerConfigAvisos(env: Record<string, string | undefined>): Confi
     else {
       c.webhook = { url: url!, secreto: secreto! };
       c.canales.push('webhook');
+    }
+  }
+
+  if (pedidos.includes('correo')) {
+    const host = valor('COMPRA_AGIL_SMTP_HOST');
+    const usuario = valor('COMPRA_AGIL_SMTP_USUARIO');
+    const clave = valor('COMPRA_AGIL_SMTP_CLAVE');
+    const puerto = Number(valor('COMPRA_AGIL_SMTP_PUERTO') ?? 587);
+    const para = (valor('COMPRA_AGIL_CORREO_PARA') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    const de = valor('COMPRA_AGIL_SMTP_DE') ?? usuario;
+    const problemas: string[] = [];
+    for (const [k, v] of [['COMPRA_AGIL_SMTP_HOST', host], ['COMPRA_AGIL_SMTP_USUARIO', usuario], ['COMPRA_AGIL_SMTP_CLAVE', clave]] as const) {
+      if (!v) problemas.push(`falta ${k}`);
+    }
+    if (!Number.isInteger(puerto) || puerto < 1 || puerto > 65535) problemas.push('COMPRA_AGIL_SMTP_PUERTO no es un puerto válido');
+    if (para.length === 0) problemas.push('falta COMPRA_AGIL_CORREO_PARA (destinatarios separados por coma)');
+    const malos = para.filter((p) => !CORREO.test(p));
+    if (malos.length > 0) problemas.push(`COMPRA_AGIL_CORREO_PARA tiene direcciones inválidas: ${malos.join(', ')}`);
+    if (de && !CORREO.test(de)) problemas.push('COMPRA_AGIL_SMTP_DE no es una dirección de correo');
+    if (problemas.length > 0) c.errores.push(`El correo no se activa: ${problemas.join('; ')}.`);
+    else {
+      c.correo = { host: host!, puerto, usuario: usuario!, clave: clave!, de: de!, para };
+      c.canales.push('correo');
     }
   }
 

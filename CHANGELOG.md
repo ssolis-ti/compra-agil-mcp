@@ -16,6 +16,7 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Avisos por correo** (2.9.0, fase 6). Por SMTP, con TLS obligatorio y `nodemailer`, la única dependencia de producción nueva de la 2.9.0 (MIT-0, sin dependencias propias). Se activa con `COMPRA_AGIL_AVISOS=correo` y las variables `COMPRA_AGIL_SMTP_*` y `COMPRA_AGIL_CORREO_PARA`. Si el servidor rechaza las credenciales, el error no se reintenta y no muestra la clave.
 * **Webhook firmado** (2.9.0, fase 5). Con `COMPRA_AGIL_AVISOS=webhook`, el servidor envía las alertas por POST a tu URL: n8n, Make, Hermes o un servicio propio.
   * **Firma:** HMAC-SHA256 con marca de tiempo (`X-Compra-Agil-Firma`) e `Idempotency-Key` para descartar repetidos.
   * **URL:** solo `https`, salvo `localhost`.

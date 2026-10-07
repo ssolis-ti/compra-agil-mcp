@@ -65,8 +65,8 @@ Además de la puerta propia de cada fase en `tareas.md`:
 | 3 | Bandeja de salida y formato | ✅ 7-oct |
 | 4 | Canal Telegram | ✅ 7-oct (T4.4: prueba con bot real, la hace el dueño) |
 | 5 | Canal webhook | ✅ 7-oct |
-| 6 | Canal correo | 🔄 Siguiente |
-| 7 | Salud y cuota | ⏸ |
+| 6 | Canal correo | ✅ 7-oct (T6.3: prueba con cuenta real, la hace el dueño) |
+| 7 | Salud y cuota | 🔄 Siguiente |
 | 8 | Superficie: herramientas MCP, CLI y daemon | ⏸ |
 | 9 | Instalación y documentación | ⏸ |
 | 10 | Validación y cierre | ⏸ |

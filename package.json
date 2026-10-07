@@ -35,12 +35,14 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "nodemailer": "^10.0.16",
     "pdf-parse": "^2.4.5",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
+    "@types/nodemailer": "^8.0.2",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^10.12.0",
     "tsx": "^4.19.0",

@@ -193,7 +193,7 @@ reinicios y fallos, con contenido limpio.
 
 ---
 
-## Fase 6 — Canal correo ⏸
+## Fase 6 — Canal correo ✅ (7-oct-2026, salvo T6.3)
 
 **Objetivo:** el resumen diario y los fallos llegan por correo.
 **Cubre:** R7.1–R7.3, NF1.
@@ -201,13 +201,23 @@ reinicios y fallos, con contenido limpio.
 
 | Id | Tarea | Prueba primero | Archivos |
 | :--- | :--- | :--- | :--- |
-| T6.1 | Agregar `nodemailer` y revisar su `npm audit` y su licencia | `npm audit --omit=dev` en 0; licencia MIT | `package.json` |
-| T6.2 | Canal: TLS obligatorio, texto y HTML, asunto de una línea, clasificación | `canal-correo.test.ts` contra un servidor SMTP en proceso: entrega; `EAUTH` → fallido sin la clave en el texto | `avisos/canales/correo.ts` |
-| T6.3 | Prueba manual con la cuenta del dueño | Correo recibido, anotado | Nota en `docs/internals/qa/` |
+| T6.1 ✅ | Agregar `nodemailer` y revisar su `npm audit` y su licencia | `npm audit --omit=dev` en 0; licencia MIT | `package.json` |
+| T6.2 ✅ | Canal: TLS obligatorio, texto y HTML, asunto de una línea, clasificación | `canal-correo.test.ts` contra un servidor SMTP en proceso: entrega; `EAUTH` → fallido sin la clave en el texto | `avisos/canales/correo.ts` |
+| T6.3 ⏳ dueño | Prueba manual con la cuenta del dueño | Correo recibido, anotado | Nota en `docs/internals/qa/` |
 
 **Sale:** tres canales operativos.
 
 **Puerta:** `nodemailer` es la única dependencia nueva de producción (NF1).
+
+**Resultado (7-oct):**
+- **Dependencia:** `nodemailer` 10.0.16, con licencia MIT-0, sin dependencias propias y `npm audit --omit=dev` en 0. Es la única dependencia de producción nueva. `@types/nodemailer` entra como dependencia de desarrollo.
+- **Suite:** 758 tests en las tres zonas horarias, contra un servidor SMTP en proceso (`test/ayudas/smtp-falso.ts`) que cubre autenticación, 4xx, 5xx y red caída.
+- **TLS:** es obligatorio, salvo hacia la propia máquina, igual que el webhook.
+- **Queda T6.3** (la hace el dueño con su cuenta):
+  1. Crear la contraseña de aplicación de Gmail.
+  2. Poner las variables `COMPRA_AGIL_SMTP_*` y `COMPRA_AGIL_CORREO_PARA` en el `.env`.
+  3. Agregar `correo` a `COMPRA_AGIL_AVISOS`.
+  4. Correr `npm run monitor`.
 
 ---
 
