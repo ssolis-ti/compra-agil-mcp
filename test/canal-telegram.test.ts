@@ -100,3 +100,10 @@ describe('ultimoChat (para --telegram-chat-id, R5.4)', () => {
     expect(redact('bot111:otro-token-de-prueba-no-real-xx')).not.toContain('otro-token');
   });
 });
+
+describe('notificar (fase 7)', () => {
+  it('envía la notificación del sistema al chat', async () => {
+    expect(await canal().notificar({ clave: 'resumen:x', evento: 'resumen', titulo: 'Resumen', lineas: ['50 procesos revisados'] }, AHORA)).toEqual({ ok: true });
+    expect(String(t.recibidos.at(-1)!.text)).toMatch(/Resumen[\s\S]*50 procesos/);
+  });
+});

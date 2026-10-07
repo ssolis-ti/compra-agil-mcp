@@ -9,6 +9,7 @@
 
 import { safeError } from '../utils/redact.js';
 import type { Alerta } from './mensaje.js';
+import type { Notificacion } from './notificacion.js';
 
 export type NombreCanal = 'telegram' | 'webhook' | 'correo';
 
@@ -44,6 +45,8 @@ export interface Canal {
   enviar(lote: LoteDeAvisos, ahoraMs: number): Promise<ResultadoEnvio>;
   /** Mensaje de prueba (R10.2). Sin destino como parámetro: el destino lo fija el entorno (ADR 0023). */
   probar(ahoraMs: number): Promise<ResultadoEnvio>;
+  /** Notificación del sistema (ceguera, resumen, canal caído…), fuera de la bandeja (fase 7). */
+  notificar(n: Notificacion, ahoraMs: number): Promise<ResultadoEnvio>;
 }
 
 /** Retry-After en segundos o como fecha HTTP. */

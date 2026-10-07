@@ -149,3 +149,12 @@ describe('ejemplo en Python de la documentación (T5.3)', () => {
     expect(r.stdout.trim()).toBe('True False');
   });
 });
+
+describe('notificar (fase 7)', () => {
+  it('envía un cuerpo compra_agil.estado firmado', async () => {
+    expect(await canal().notificar({ clave: 'ceguera', evento: 'ceguera', titulo: 'Ciega', lineas: ['x'] }, AHORA)).toEqual({ ok: true });
+    const r = recibidos.at(-1)!;
+    expect(JSON.parse(r.cuerpo)).toMatchObject({ tipo: 'compra_agil.estado', evento: 'ceguera' });
+    expect(String(r.cabeceras['x-compra-agil-firma'])).toMatch(/^t=\d+,v1=[0-9a-f]{64}$/);
+  });
+});

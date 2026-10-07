@@ -13,6 +13,8 @@
 import { registrarSecreto, safeError } from '../../utils/redact.js';
 import { clasificarErrorDeRed, clasificarHttp, type Canal, type LoteDeAvisos, type ResultadoEnvio } from '../canal.js';
 import { formatearTelegram } from '../formato/telegram.js';
+import { sistemaTelegram } from '../formato/sistema.js';
+import type { Notificacion } from '../notificacion.js';
 
 export interface OpcionesTelegram {
   token: string;
@@ -77,6 +79,10 @@ export class CanalTelegram implements Canal {
       if (!r.ok) return r;
     }
     return { ok: true };
+  }
+
+  notificar(n: Notificacion): Promise<ResultadoEnvio> {
+    return this.enviarTexto(sistemaTelegram(n));
   }
 
   probar(): Promise<ResultadoEnvio> {

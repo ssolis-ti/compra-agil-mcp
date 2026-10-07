@@ -221,7 +221,7 @@ reinicios y fallos, con contenido limpio.
 
 ---
 
-## Fase 7 — Salud y cuota ⏸
+## Fase 7 — Salud y cuota ✅ (7-oct-2026)
 
 **Objetivo:** el silencio deja de ser ambiguo y la cuota no se agota sola.
 **Cubre:** R8.1–R8.5, NF3.
@@ -229,14 +229,29 @@ reinicios y fallos, con contenido limpio.
 
 | Id | Tarea | Prueba primero | Archivos |
 | :--- | :--- | :--- | :--- |
-| T7.1 | Ceguera y recuperación: episodio, un solo aviso, aviso de vuelta con rango y huecos | `salud.test.ts` con reloj falso: 3 h de 504 → 1 aviso de ceguera y 1 de recuperación | `vigilancia/salud.ts` |
-| T7.2 | Resumen diario a la hora configurada, una vez por día de Chile | Ídem: cruza la medianoche y el cambio de horario sin duplicar | Ídem |
-| T7.3 | Fallo de un canal avisado por otro a los 3 fallos seguidos | `bandeja.test.ts`: Telegram cae y avisa el correo | `avisos/bandeja.ts` |
-| T7.4 | Proyección de cuota y espaciado ante 429 o exceso | `salud.test.ts`: con el volumen de T0.4 la proyección por defecto cabe en NF3; con un 429, el intervalo se duplica y se avisa una vez | `vigilancia/salud.ts` |
+| T7.1 ✅ | Ceguera y recuperación: episodio, un solo aviso, aviso de vuelta con rango y huecos | `salud.test.ts` con reloj falso: 3 h de 504 → 1 aviso de ceguera y 1 de recuperación | `vigilancia/salud.ts` |
+| T7.2 ✅ | Resumen diario a la hora configurada, una vez por día de Chile | Ídem: cruza la medianoche y el cambio de horario sin duplicar | Ídem |
+| T7.3 ✅ | Fallo de un canal avisado por otro a los 3 fallos seguidos | `bandeja.test.ts`: Telegram cae y avisa el correo | `avisos/bandeja.ts` |
+| T7.4 ✅ | Proyección de cuota y espaciado ante 429 o exceso | `salud.test.ts`: con el volumen de T0.4 la proyección por defecto cabe en NF3; con un 429, el intervalo se duplica y se avisa una vez | `vigilancia/salud.ts` |
 
 **Sale:** la vigilancia completa y honesta en modo daemon.
 
 **Puerta:** una simulación de 6 h acelerada con fallos programados, sin procesos ni avisos perdidos (adelanto de la fase 10).
+
+**Resultado (7-oct):**
+- **Suite:** 776 tests en las tres zonas horarias.
+- **Simulación de 6 h** (`simulacion-vigilancia.test.ts`), con más de 2.200 procesos. Incluye:
+  - lotes de 0 a 60 y uno de 140 leído por región;
+  - 6 lotes con tres 504 cada uno;
+  - corrimientos durante la paginación;
+  - un proceso que muere a mitad de ronda;
+  - Telegram caído una hora.
+
+  **Resultado: 0 procesos sin alerta, 0 alertas repetidas, 0 avisos perdidos.** Además comprueba que hubo relecturas, lotes fallidos y reintentos de aviso, para no pasar solo por el camino feliz.
+- **Hallazgo en la propia simulación:** la primera versión simulaba la muerte del proceso con un error de la API. El ciclo lo toma como un lote fallido y la ronda termina y guarda, así que no era una muerte. Ahora la consulta queda colgada y la ronda se abandona sin guardar, como un proceso muerto.
+- **Cambio de R8.5:** con lotes, espaciar no ahorra cuota. Se espacia solo ante un 429; una proyección sobre el presupuesto se avisa.
+- **T7.3:** se probó en `salud.test.ts`, porque el conteo de fallos por canal vive en la salud y no en la bandeja.
+- **Notificaciones:** cada canal tiene `notificar()` para los avisos del sistema. El webhook los envía como `compra_agil.estado`, documentado en `docs/api/webhook-alertas.md`.
 
 ---
 

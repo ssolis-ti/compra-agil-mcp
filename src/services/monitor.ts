@@ -22,6 +22,7 @@ import { CanalTelegram } from '../avisos/canales/telegram.js';
 import { CanalWebhook } from '../avisos/canales/webhook.js';
 import { CanalCorreo } from '../avisos/canales/correo.js';
 import type { Canal } from '../avisos/canal.js';
+import { configSaludDesdeEntorno } from '../vigilancia/salud.js';
 
 loadEnvManual();
 
@@ -66,6 +67,9 @@ console.log(`Alertas en            : ${ALERTAS}`);
 console.log(`Avisos por            : ${canales.map((c) => c.nombre).join(', ') || '(ningún canal: solo alerts.log)'}`);
 if (configAvisos.bandeja.silencio) console.log(`Silencio              : ${configAvisos.bandeja.silencio.desde}–${configAvisos.bandeja.silencio.hasta} (hora de Chile)`);
 for (const error of configAvisos.errores) console.warn(`[AVISO] ${error}`);
+const salud = configSaludDesdeEntorno(process.env, canales.map((c) => c.nombre), INTERVALO_MIN * 60_000, configAvisos.resumen);
+console.log(`Aviso de ceguera tras   : ${salud.umbralCegueraMs / 60_000} min sin una revisión completa`);
+console.log(`Resumen diario         : ${salud.resumenHora} (hora de Chile)`);
 console.log('========================================================');
 
 const client = new CompraAgilClient(TICKET, BASE_URL, { persistir: true });
@@ -91,11 +95,20 @@ async function ronda(): Promise<void> {
         }
       },
       avisos: { canales, config: configAvisos.bandeja },
+      salud,
     });
     for (const aviso of r.avisos) console.warn(`[${t}] [AVISO] ${aviso}`);
     if (!r.tomada) {
       console.warn(`[${t}] Otro proceso (PID ${r.otroVigilante ?? '?'}) está vigilando: esta ronda no lee nada.`);
       return;
+    }
+    if (r.omitida) {
+      console.warn(`[${t}] Ronda saltada: tras un 429 de la API, las rondas se espacian hasta que se normalice.`);
+      return;
+    }
+    for (const n of r.notificaciones ?? []) {
+      const por = n.entregadaPor.length > 0 ? ` (avisado por ${n.entregadaPor.join(', ')})` : '';
+      console.warn(`[${t}] [${n.evento.toUpperCase()}] ${n.titulo}${por}: ${n.lineas.join(' ')}`);
     }
     const c = r.ciclo!;
     console.log(`[${t}] Lotes leídos: ${c.lotesLeidos}, fallidos: ${c.lotesFallidos}, incompletos: ${c.incompletosNuevos}, ` +

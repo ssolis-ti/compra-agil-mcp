@@ -102,3 +102,16 @@ describe('Webhook', () => {
     expect(JSON.parse(JSON.stringify(cuerpo)).alertas[0].nombre).toBe(malicioso.nombre);
   });
 });
+
+describe('notificaciones del sistema (fase 7)', () => {
+  it('Telegram, correo y webhook, con el texto escapado', async () => {
+    const { sistemaTelegram, sistemaCorreo, sistemaWebhook } = await import('../src/avisos/formato/sistema.js');
+    const n = { clave: 'ceguera', evento: 'ceguera' as const, titulo: 'La vigilancia no está viendo', lineas: ['Último error: <html> 504 & más'] };
+    expect(sistemaTelegram(n)).toContain('<b>La vigilancia no está viendo</b>');
+    expect(sistemaTelegram(n)).toContain('&lt;html&gt; 504 &amp; más');
+    const c = sistemaCorreo(n);
+    expect(c.asunto).toBe('[mcp-compra-agil] La vigilancia no está viendo');
+    expect(c.html).toContain('&lt;html&gt;');
+    expect(sistemaWebhook(n, AHORA)).toMatchObject({ tipo: 'compra_agil.estado', version: 1, evento: 'ceguera', lineas: n.lineas });
+  });
+});

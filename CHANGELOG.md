@@ -16,6 +16,12 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Salud de la vigilancia** (2.9.0, fase 7): el silencio deja de ser ambiguo.
+  * **Ceguera:** si pasan 2 h sin una revisión completa (`COMPRA_AGIL_AVISOS_CEGUERA_MIN`), avisa una sola vez, y avisa de nuevo al recuperarse, con lo que quedó sin revisar.
+  * **Resumen diario:** a las 08:00 de Chile (`COMPRA_AGIL_AVISOS_RESUMEN`); si no llega, la vigilancia está detenida.
+  * **Canal caído:** un canal que falla 3 rondas seguidas se avisa por los otros.
+  * **Cuota:** ante un 429 las rondas se espacian (×2, hasta ×8). Si el gasto proyectado supera `COMPRA_AGIL_VIGILANCIA_CONSULTAS_DIA` (1.500), se avisa.
+  * **Prueba:** una simulación de 6 h con 504, lotes grandes, corrimientos, un proceso muerto y un canal caído no perdió ningún proceso ni aviso.
 * **Avisos por correo** (2.9.0, fase 6). Por SMTP, con TLS obligatorio y `nodemailer`, la única dependencia de producción nueva de la 2.9.0 (MIT-0, sin dependencias propias). Se activa con `COMPRA_AGIL_AVISOS=correo` y las variables `COMPRA_AGIL_SMTP_*` y `COMPRA_AGIL_CORREO_PARA`. Si el servidor rechaza las credenciales, el error no se reintenta y no muestra la clave.
 * **Webhook firmado** (2.9.0, fase 5). Con `COMPRA_AGIL_AVISOS=webhook`, el servidor envía las alertas por POST a tu URL: n8n, Make, Hermes o un servicio propio.
   * **Firma:** HMAC-SHA256 con marca de tiempo (`X-Compra-Agil-Firma`) e `Idempotency-Key` para descartar repetidos.

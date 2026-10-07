@@ -91,6 +91,58 @@ describe('rondaDeVigilancia', () => {
     expect(recibidos.telegram).toEqual([codigo]);
   });
 
+  it('salud: 3 h de 504 dan un solo aviso de ceguera; al volver, uno de recuperación (fase 7)', async () => {
+    const r = rutas();
+    const c = nuevoCatalogo();
+    let caida = false;
+    const api = clienteFalso(c);
+    const intermitente = { buscar: async (p: Parameters<typeof api.buscar>[0]) => {
+      if (caida) { const { CompraAgilApiError } = await import('../src/utils/error-handler.js'); throw new CompraAgilApiError(504, [], 'GET'); }
+      return api.buscar(p);
+    } };
+    const notificaciones: string[] = [];
+    const canal = {
+      nombre: 'telegram' as const,
+      enviar: async () => ({ ok: true as const }),
+      probar: async () => ({ ok: true as const }),
+      notificar: async (n: { evento: string }) => { notificaciones.push(n.evento); return { ok: true as const }; },
+    };
+    const reloj = relojFalso(T0 + 2 * MIN);
+    const deps = {
+      api: intermitente, ahora: reloj.ahora, criterios, rutas: r, pid: process.pid, intervaloMs: 15 * MIN,
+      entregar: () => undefined, avisos: { canales: [canal] },
+      salud: { umbralCegueraMs: 120 * MIN, resumenHora: '08:00', presupuestoConsultasDia: 1500, canales: ['telegram' as const], intervaloMs: 15 * MIN },
+    };
+    await rondaDeVigilancia(deps); // ronda buena
+    caida = true;
+    for (let i = 0; i < 12; i++) { reloj.avanzar(15 * MIN); await rondaDeVigilancia(deps); }
+    expect(notificaciones).toEqual(['ceguera']);
+    caida = false;
+    reloj.avanzar(15 * MIN);
+    const vuelta = await rondaDeVigilancia(deps);
+    expect(notificaciones).toEqual(['ceguera', 'recuperacion']);
+    expect(vuelta.notificaciones?.map((n) => [n.evento, n.entregadaPor])).toEqual([['recuperacion', ['telegram']]]);
+  });
+
+  it('tras un 429, la ronda siguiente se salta sin consultar la API hasta la próxima ronda fijada', async () => {
+    const r = rutas();
+    const c = nuevoCatalogo();
+    const { CompraAgilApiError } = await import('../src/utils/error-handler.js');
+    let llamadas = 0;
+    const api = { buscar: async () => { llamadas++; throw new CompraAgilApiError(429, [], 'GET'); } };
+    const reloj = relojFalso(T0 + 2 * MIN);
+    const deps = { api, ahora: reloj.ahora, criterios, rutas: r, pid: process.pid, intervaloMs: 15 * MIN, entregar: () => undefined };
+    await rondaDeVigilancia(deps);
+    expect(llamadas).toBe(1);
+    reloj.avanzar(15 * MIN);
+    const saltada = await rondaDeVigilancia(deps);
+    expect(saltada.omitida).toBe(true);
+    expect(llamadas).toBe(1);
+    reloj.avanzar(15 * MIN);
+    await rondaDeVigilancia({ ...deps, api: clienteFalso(c) });
+    expect(c.llamadas()).toBeGreaterThan(0);
+  });
+
   it('si entregar falla, el estado no se guarda: las alertas vuelven en la ronda siguiente', async () => {
     const r = rutas();
     const c = nuevoCatalogo();

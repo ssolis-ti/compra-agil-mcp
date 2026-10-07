@@ -66,6 +66,26 @@ Responde con un **2xx** en menos de 10 segundos.
 | `cierre_utc` | texto o `null` | El mismo cierre como instante ISO-8601 UTC |
 | `coincidencia` | texto | Tu palabra clave que calzó |
 
+### Avisos sobre la vigilancia misma (`compra_agil.estado`)
+
+Además de las alertas, el servidor envía avisos sobre su propio estado, con la
+misma firma:
+
+| `evento` | Cuándo |
+| :--- | :--- |
+| `ceguera` | No hay una revisión completa desde hace más de 2 horas (configurable): puede haber procesos sin avisar |
+| `recuperacion` | La vigilancia volvió a la normalidad, y si quedó algún hueco sin revisar |
+| `resumen` | Una vez al día (08:00 de Chile por defecto): procesos revisados, alertas, fallos y consultas. Si no llega, la vigilancia está detenida |
+| `canal_caido` | Otro canal (Telegram o correo) falló 3 rondas seguidas |
+| `cuota` | La API respondió 429, o el gasto proyectado del día supera el presupuesto |
+| `criterios` | Alguien cambió los criterios de alerta desde una herramienta |
+
+```text
+{ "tipo": "compra_agil.estado", "version": 1, "id": "ceguera@2026-10-08T15:00:00.000Z",
+  "enviado_en": "2026-10-08T15:00:00.000Z", "evento": "ceguera",
+  "titulo": "La vigilancia no está viendo los procesos nuevos", "lineas": ["…"] }
+```
+
 **`nombre` y `organismo` los escribe el comprador.** Si pasas el cuerpo a un
 modelo de lenguaje, trátalos como datos, no como instrucciones. Un aviso no
 afirma que el proceso sea una buena oportunidad ni que alguien lo ganó: solo

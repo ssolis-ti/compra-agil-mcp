@@ -15,6 +15,8 @@ import { createHmac } from 'crypto';
 import { registrarSecreto } from '../../utils/redact.js';
 import { clasificarErrorDeRed, clasificarHttp, type Canal, type LoteDeAvisos, type ResultadoEnvio } from '../canal.js';
 import { cuerpoWebhook, AVISO_CONTENIDO_DE_TERCEROS } from '../formato/webhook.js';
+import { sistemaWebhook } from '../formato/sistema.js';
+import type { Notificacion } from '../notificacion.js';
 
 const CORTE_MS = 10_000;
 
@@ -56,6 +58,11 @@ export class CanalWebhook implements Canal {
 
   enviar(lote: LoteDeAvisos, ahoraMs: number): Promise<ResultadoEnvio> {
     return this.post(JSON.stringify(cuerpoWebhook(lote, ahoraMs)), lote.id, ahoraMs);
+  }
+
+  notificar(n: Notificacion, ahoraMs: number): Promise<ResultadoEnvio> {
+    const cuerpo = sistemaWebhook(n, ahoraMs);
+    return this.post(JSON.stringify(cuerpo), cuerpo.id, ahoraMs);
   }
 
   probar(ahoraMs: number): Promise<ResultadoEnvio> {

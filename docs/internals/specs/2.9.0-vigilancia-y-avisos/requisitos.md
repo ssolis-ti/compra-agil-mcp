@@ -103,7 +103,11 @@ daemon o una herramienta MCP llamada por un gateway.
 - **R8.2** Cuando la vigilancia se recupere, el sistema deberá avisarlo con el rango revisado y los huecos que no se pudieron cubrir.
 - **R8.3** A la hora configurada, el sistema deberá enviar un resumen diario: procesos revisados, alertas, lotes incompletos, huecos, fallos por canal y consultas gastadas.
 - **R8.4** Si un canal acumula 3 fallos seguidos, el sistema deberá avisarlo por los otros canales activos.
-- **R8.5** El sistema deberá proyectar las consultas diarias según la frecuencia. Si la proyección supera el presupuesto diario configurado, o llega un 429, deberá espaciar los ciclos y avisarlo una vez.
+- **R8.5** El sistema deberá proyectar las consultas diarias.
+  - Si llega un 429, deberá espaciar las rondas (×2 por cada 429, hasta ×8) y avisarlo una vez al día.
+  - Si la proyección supera el presupuesto configurado, deberá avisarlo una vez al día, sin espaciar.
+
+  *Cambio del 7-oct-2026 (fase 7):* con la lectura lote por lote cada lote se lee una vez, así que espaciar no ahorra consultas; solo atrasaría los avisos.
 
 ## R9 — Modo gateway (H4)
 

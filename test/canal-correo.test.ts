@@ -90,3 +90,10 @@ describe('configuración del correo', () => {
     expect(redact(`login con ${CLAVE}`)).not.toContain(CLAVE);
   });
 });
+
+describe('notificar (fase 7)', () => {
+  it('envía la notificación del sistema por correo', async () => {
+    expect(await canal().notificar({ clave: 'cuota:x', evento: 'cuota', titulo: 'Atención con la cuota', lineas: ['~2.000 consultas'] }, AHORA)).toEqual({ ok: true });
+    expect(smtp.recibidos.at(-1)!.datos).toMatch(/cuota/);
+  });
+});

@@ -33,6 +33,23 @@ export interface EstadoVigilancia {
     fallosSeguidos: number;
     /** Día UTC → consultas de la vigilancia. */
     consultasPorDia: Record<string, number>;
+    /** Primera ronda (para la ceguera cuando nunca hubo un ciclo bueno). */
+    inicio: string | null;
+    cegueraAvisada: boolean;
+    cegueraDesde: string | null;
+    /** Día de Chile del último resumen enviado (R8.3). */
+    ultimoResumen: string | null;
+    /** Lo ocurrido desde el último resumen. */
+    acumulado: Acumulado;
+    /** Rondas seguidas sin entregar nada, por canal (R8.4). */
+    fallosPorCanal: Record<string, number>;
+    canalesCaidosAvisados: string[];
+    /** 1 normal; ×2 por cada 429, hasta 8 (R8.5). */
+    factorIntervalo: number;
+    proximaRonda: string | null;
+    ultimo429: string | null;
+    /** Día UTC del último aviso de cuota. */
+    cuotaAvisada: string | null;
   };
   /** Fase 8 (alertas para el gateway). Se conserva tal cual. */
   alertas: Record<string, unknown>;
@@ -40,10 +57,24 @@ export interface EstadoVigilancia {
   bandeja: Bandeja;
 }
 
+export interface Acumulado {
+  revisados: number; alertas: number; lotesLeidos: number; lotesFallidos: number;
+  incompletos: number; huecos: number; consultas: number;
+  entregados: Record<string, number>; fallidos: Record<string, number>;
+}
+
+const acumuladoVacio = (): Acumulado => ({
+  revisados: 0, alertas: 0, lotesLeidos: 0, lotesFallidos: 0, incompletos: 0, huecos: 0, consultas: 0, entregados: {}, fallidos: {},
+});
+
 export function estadoVacio(): EstadoVigilancia {
   return {
     version: 2, marca: null, leidos: [], pendientes: [], incompletos: [], huecos: [], alertados: {},
-    salud: { ultimoCicloBueno: null, fallosSeguidos: 0, consultasPorDia: {} },
+    salud: {
+      ultimoCicloBueno: null, fallosSeguidos: 0, consultasPorDia: {}, inicio: null,
+      cegueraAvisada: false, cegueraDesde: null, ultimoResumen: null, acumulado: acumuladoVacio(),
+      fallosPorCanal: {}, canalesCaidosAvisados: [], factorIntervalo: 1, proximaRonda: null, ultimo429: null, cuotaAvisada: null,
+    },
     alertas: {}, bandeja: {},
   };
 }
@@ -74,6 +105,21 @@ export function parsearEstado(crudo: unknown): EstadoVigilancia {
     if (esFecha(crudo.salud.ultimoCicloBueno)) e.salud.ultimoCicloBueno = crudo.salud.ultimoCicloBueno;
     if (esNumero(crudo.salud.fallosSeguidos)) e.salud.fallosSeguidos = crudo.salud.fallosSeguidos;
     e.salud.consultasPorDia = numeros(crudo.salud.consultasPorDia);
+    const s = crudo.salud;
+    for (const k of ['inicio', 'cegueraDesde', 'proximaRonda', 'ultimo429'] as const) if (esFecha(s[k])) e.salud[k] = s[k];
+    for (const k of ['ultimoResumen', 'cuotaAvisada'] as const) if (typeof s[k] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s[k])) e.salud[k] = s[k];
+    if (typeof s.cegueraAvisada === 'boolean') e.salud.cegueraAvisada = s.cegueraAvisada;
+    if (esNumero(s.factorIntervalo) && s.factorIntervalo >= 1) e.salud.factorIntervalo = s.factorIntervalo;
+    e.salud.fallosPorCanal = numeros(s.fallosPorCanal);
+    if (Array.isArray(s.canalesCaidosAvisados)) e.salud.canalesCaidosAvisados = s.canalesCaidosAvisados.filter((c): c is string => typeof c === 'string');
+    if (esObjeto(s.acumulado)) {
+      const a = s.acumulado;
+      for (const k of ['revisados', 'alertas', 'lotesLeidos', 'lotesFallidos', 'incompletos', 'huecos', 'consultas'] as const) {
+        if (esNumero(a[k])) e.salud.acumulado[k] = a[k];
+      }
+      e.salud.acumulado.entregados = numeros(a.entregados);
+      e.salud.acumulado.fallidos = numeros(a.fallidos);
+    }
   }
   if (esObjeto(crudo.alertas)) e.alertas = crudo.alertas;
   if (esObjeto(crudo.bandeja)) {

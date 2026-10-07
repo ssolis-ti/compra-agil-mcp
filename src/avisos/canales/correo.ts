@@ -15,6 +15,8 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import { registrarSecreto, safeError } from '../../utils/redact.js';
 import type { Canal, LoteDeAvisos, ResultadoEnvio } from '../canal.js';
 import { formatearCorreo } from '../formato/correo.js';
+import { sistemaCorreo } from '../formato/sistema.js';
+import type { Notificacion } from '../notificacion.js';
 
 export interface OpcionesCorreo {
   host: string;
@@ -69,6 +71,11 @@ export class CanalCorreo implements Canal {
 
   enviar(lote: LoteDeAvisos, ahoraMs: number): Promise<ResultadoEnvio> {
     const c = formatearCorreo(lote, ahoraMs);
+    return this.mandar(c.asunto, c.texto, c.html);
+  }
+
+  notificar(n: Notificacion): Promise<ResultadoEnvio> {
+    const c = sistemaCorreo(n);
     return this.mandar(c.asunto, c.texto, c.html);
   }
 

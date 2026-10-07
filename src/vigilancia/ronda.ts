@@ -1,6 +1,6 @@
 /**
- * Una ronda de vigilancia (2.9.0, T2.6): tomar el vigilante, cargar el estado,
- * leer los lotes, entregar las alertas y guardar.
+ * Una ronda de vigilancia (2.9.0, T2.6 y fase 7): tomar el vigilante, cargar
+ * el estado, leer los lotes, entregar las alertas, revisar la salud y guardar.
  *
  * Las alertas se entregan ANTES de guardar el estado (ADR 0022): si el proceso
  * muere entre las dos cosas, la ronda siguiente las vuelve a encontrar y una
@@ -14,9 +14,11 @@
 import { ejecutarCiclo, type AlertaVigilancia, type DependenciasCiclo, type LimitesCiclo, type ResultadoCiclo } from './ciclo.js';
 import { cargarEstado, guardarEstado } from './estado.js';
 import { tomarVigilante, vigilanteActivo } from './vigilante.js';
+import { marcarNotificadas, notificacionesPendientes, registrarRonda, type ConfigSalud } from './salud.js';
 import { crearAlerta } from '../avisos/mensaje.js';
 import { encolar, enviarPendientes, podarBandeja, type ConfigBandeja, type ResultadoEnvios } from '../avisos/bandeja.js';
 import type { Canal } from '../avisos/canal.js';
+import type { Notificacion } from '../avisos/notificacion.js';
 
 export interface RutasVigilancia {
   estado: string;
@@ -32,16 +34,26 @@ export interface DependenciasRonda extends DependenciasCiclo {
   entregar: (alertas: AlertaVigilancia[]) => void | Promise<void>;
   /** Canales activos (fase 3). Sin canales, las alertas solo van a `entregar`. */
   avisos?: { canales: Canal[]; config?: ConfigBandeja };
+  /** Umbrales de salud (fase 7). Sin esto, valores por defecto. */
+  salud?: ConfigSalud;
+}
+
+export interface NotificacionEnviada extends Notificacion {
+  /** Canales que la entregaron. Vacío si no hay canales: solo queda en el log. */
+  entregadaPor: string[];
 }
 
 export interface ResultadoRonda {
   tomada: boolean;
+  /** La ronda se saltó: tras un 429, la próxima ronda quedó fijada más adelante (R8.5). */
+  omitida?: boolean;
   /** PID del vigilante activo cuando la ronda no se pudo tomar. */
   otroVigilante?: number;
   /** Migración, estado ilegible o disco que no dejó guardar. */
   avisos: string[];
   ciclo?: ResultadoCiclo;
   envios?: ResultadoEnvios;
+  notificaciones?: NotificacionEnviada[];
 }
 
 export async function rondaDeVigilancia(deps: DependenciasRonda, limites: LimitesCiclo = {}): Promise<ResultadoRonda> {
@@ -51,20 +63,46 @@ export async function rondaDeVigilancia(deps: DependenciasRonda, limites: Limite
     return { tomada: false, otroVigilante: vigilanteActivo(deps.rutas.vigilante, inicio, latidoMaxMs)?.pid, avisos: [] };
   }
   const { estado, avisos } = cargarEstado(deps.rutas.estado, deps.rutas.estadoViejo, inicio);
+  if (estado.salud.proximaRonda && inicio < Date.parse(estado.salud.proximaRonda)) {
+    return { tomada: true, omitida: true, avisos };
+  }
+  const canales = deps.avisos?.canales ?? [];
+  const salud: ConfigSalud = deps.salud ?? {
+    umbralCegueraMs: 120 * 60_000, resumenHora: '08:00', presupuestoConsultasDia: 1500, intervaloMs: deps.intervaloMs,
+    canales: canales.map((c) => c.nombre),
+  };
+
   const ciclo = await ejecutarCiclo(deps, estado, limites);
   if (ciclo.alertas.length > 0) await deps.entregar(ciclo.alertas);
   // Los avisos se encolan y se envían antes de guardar: lo que no se entregue
   // queda en la bandeja del estado y sale en la ronda siguiente (R3.5).
   let envios: ResultadoEnvios | undefined;
-  if (deps.avisos && deps.avisos.canales.length > 0) {
+  if (canales.length > 0) {
     const alertas = ciclo.alertas.map((a) => crearAlerta(a.item, a.coincidencia, a.cuando));
-    encolar(estado.bandeja, alertas, deps.avisos.canales.map((c) => c.nombre), deps.ahora());
-    envios = await enviarPendientes(estado.bandeja, deps.avisos.canales, deps.ahora(), deps.avisos.config);
+    encolar(estado.bandeja, alertas, canales.map((c) => c.nombre), deps.ahora());
+    envios = await enviarPendientes(estado.bandeja, canales, deps.ahora(), deps.avisos?.config);
   }
   podarBandeja(estado.bandeja, deps.ahora());
+
+  // Salud (fase 7): qué avisar sobre la vigilancia misma.
+  registrarRonda(estado, ciclo, envios, deps.ahora(), salud);
+  const notificaciones: NotificacionEnviada[] = [];
+  for (const n of notificacionesPendientes(estado, deps.ahora(), salud)) {
+    const entregadaPor: string[] = [];
+    for (const canal of canales) {
+      if (canal.nombre === n.excluirCanal || typeof canal.notificar !== 'function') continue;
+      const r = await canal.notificar(n, deps.ahora()).catch(() => ({ ok: false }));
+      if (r.ok) entregadaPor.push(canal.nombre);
+    }
+    notificaciones.push({ ...n, entregadaPor });
+  }
+  // Sin canales, la notificación queda en el log de la entrada: se da por hecha
+  // para no repetirla en cada ronda. Con canales, solo si alguno la entregó.
+  marcarNotificadas(estado, notificaciones.filter((n) => canales.length === 0 || n.entregadaPor.length > 0).map((n) => n.clave), deps.ahora());
+
   if (!guardarEstado(deps.rutas.estado, estado, deps.ahora())) {
     avisos.push(`No se pudo guardar ${deps.rutas.estado}: la próxima ronda repetirá estos lotes.`);
   }
   tomarVigilante(deps.rutas.vigilante, { pid: deps.pid, ahoraMs: deps.ahora(), latidoMaxMs });
-  return { tomada: true, avisos, ciclo, envios };
+  return { tomada: true, avisos, ciclo, envios, notificaciones };
 }
