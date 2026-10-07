@@ -11,156 +11,27 @@ Referencias a hallazgos: [auditoria-2.6.1.md](auditoria-2.6.1.md).
 
 ## Plan 2.9.0 — Vigilancia confiable y avisos (Telegram, correo, webhook)
 
-**Objetivo:** que un agente pueda instalar el servidor, dejar la vigilancia
-encendida y que el dueño reciba los avisos donde los lee, sin perder un
-proceso en silencio. Hoy el daemon escribe en `alerts.log` y nada más (revisión
-del 7-oct):
-- **Corte silencioso:** revisa como máximo 100 procesos por ciclo, y `verificar_ticket` vio 99 cambios en 10 minutos.
-- **Ventanas perdidas:** un ciclo que falla (504) no se recupera.
-- **Sin canal de aviso:** no avisa por ningún medio.
-- **Ceguera muda:** el silencio no distingue entre «no hay nada» y «no estoy viendo».
+**La especificación completa está en [specs/2.9.0-vigilancia-y-avisos/](../specs/2.9.0-vigilancia-y-avisos/README.md)** (desarrollo guiado por especificación). Esta sección es solo el resumen; el detalle no se duplica aquí.
 
-**Dos modos de uso, el mismo núcleo:**
-- **Con gateway** (OpenClaw, Hermes): el gateway está siempre encendido, programa la revisión y envía por su propio Telegram. El MCP entrega las alertas pendientes y el gateway confirma lo enviado.
-- **Sin gateway:** el daemon corre como tarea programada del sistema y envía por los canales de este plan.
+**Por qué:** la revisión del daemon del 7-oct-2026 mostró que solo escribe en `alerts.log`, corta en 100 procesos por ciclo sin decirlo, no recupera un ciclo que falla y no distingue «no hay nada» de «no estoy viendo».
 
-Los bloques van en orden y se cierran como dice el encabezado de este
-documento. Tamaños: S ≤ 1 día, M 2–3 días, L ~1 semana.
+**Objetivo:** que un agente instale el servidor, deje la vigilancia encendida y el dueño reciba los avisos (Telegram, correo o webhook firmado) sin perder un proceso en silencio. Funciona en dos modos sobre el mismo núcleo: con un gateway siempre encendido (OpenClaw, Hermes) o con el daemon propio.
 
-### Bloque A — Vigilancia sin huecos 🔴 · L
-Requisito de todo lo demás: un aviso confiable sobre una vigilancia con huecos es fachada.
-- **Marca del último ciclo bueno, guardada en disco.**
-  - Cada ciclo revisa desde `hasta` del último ciclo completo hasta `ahora()`, con el margen de 5 min actual.
-  - Si la API cae 3 horas, al volver revisa esas 3 horas.
-  - Tope de recuperación configurable (default 48 h). Lo que pase del tope se informa como hueco, no se descarta en silencio.
-- **Sin corte en 100.**
-  - Si `total_resultados` supera lo que cabe en 10 páginas, se parte la ventana en mitades por tiempo hasta que cada tramo quepa.
-  - Si un tramo sigue sin caber (tramo mínimo de 1 min), se informa como incompleto.
-  - Se usa `buscarInformado`, que ya trae `totalResultados`.
-- **Ventanas incompletas visibles.** Un tramo que falla queda pendiente con su rango y se reintenta en el ciclo siguiente. El estado lo lista.
-- **Un solo vigilante.** Un bloqueo (archivo con PID y hora) impide que dos procesos revisen y alerten a la vez. Un bloqueo de un proceso muerto se libera solo.
-- **Estado único y atómico:** marca, tramos pendientes, alertas y bandeja de salida, con la escritura atómica de la caché (fase 1.2).
-- **Criterios por defecto razonables.** El presupuesto mínimo de $5.000.000 casi no deja pasar nada (el tope de Compra Ágil es 100 UTM ≈ $7 millones). Se baja a un valor medido en la API real y se documenta por qué.
-- **Tests:**
-  - API simulada con más de 100 cambios en una hora: 0 procesos perdidos.
-  - Ráfaga de 504 durante 3 ciclos: se recupera la ventana completa.
-  - Reinicio a mitad de ciclo: ni duplica ni pierde.
-  - Dos procesos a la vez: uno espera.
+| Fase | Qué queda funcionando |
+| :--- | :--- |
+| 0 — Preparación | Decisiones del dueño (D1–D5), mediciones de la API (bordes de ventana, retraso de indexación, volumen por hora), ADR 0021–0026 aceptadas |
+| 1 — Cimientos | Escritura atómica y bloqueo compartidos, test de arquitectura (capas y ciclos), test de secretos, API simulada de cambios, reloj de prueba |
+| 2 — Vigilancia sin huecos | Marca del último tramo completo, tramos de una página, recuperación, vigilante único, migración del estado |
+| 3 — Bandeja de salida | Avisos persistentes por canal con reintento, lotes, horario de silencio, contenido limpio y escapado |
+| 4 — Telegram | Bot API con `fetch`, ritmo de envío y `retry_after`, ayuda para el chat id |
+| 5 — Webhook | POST firmado con HMAC y marca de tiempo, esquema versionado y documentado |
+| 6 — Correo | SMTP con `nodemailer` (única dependencia nueva) |
+| 7 — Salud y cuota | Aviso de ceguera y de recuperación, resumen diario, fallo de un canal avisado por otro, cuota proyectada |
+| 8 — Superficie | 5 herramientas MCP (modo gateway, estado, prueba, criterios), CLI `--check`, `--vigilar` y `--probar-avisos` |
+| 9 — Instalación | Tarea programada de Windows, systemd, guías de OpenClaw y Hermes, README corregido |
+| 10 — Validación | Simulación de 24 h sin pérdidas, instalación por un agente, una semana real contrastada con el buscador; publicación |
 
-### Bloque B — Bandeja de salida y núcleo de avisos 🔴 · M
-- **Bandeja de salida persistente.** Cada alerta genera un aviso por canal activo, con estado (pendiente, enviado, fallido), intentos y próximo intento.
-  - Entrega «al menos una vez», con un id de aviso que permite al receptor descartar repetidos.
-  - Espera creciente entre reintentos. Tras N intentos queda como fallido y se informa (bloque F).
-- **Interfaz común.** Un canal solo sabe enviar un lote y devolver qué se entregó (`Canal.enviar(lote) → resultado por aviso`). El daemon, la herramienta de prueba y los tests usan la misma.
-- **Agrupación.** Las alertas de un ciclo salen en un solo mensaje, con un tope por mensaje (Telegram: 4.096 caracteres) y división si pasa.
-- **Horario de silencio** opcional (ej. 22:00–07:00, hora de Chile: `paredDeChile(ahora())`). Lo que llega en ese horario se junta en un resumen de la mañana.
-- **Contenido de un aviso:**
-  - código, nombre (recortado), organismo, región, presupuesto;
-  - cierre en hora de Chile, con las horas que faltan;
-  - palabra que coincidió;
-  - enlace a la ficha pública.
-- **Lo que un aviso nunca lleva:**
-  - el ticket ni las credenciales de los canales;
-  - contactos personales (se pasa por `sinContactos`);
-  - una interpretación de «ganador».
-- **El texto de terceros es dato.** El nombre y la descripción los escribe el comprador.
-  - Se escapan para cada formato (HTML de Telegram, HTML del correo, JSON del webhook).
-  - El webhook lo marca como contenido no confiable, para quien lo pase a un modelo.
-- **Configuración solo por `.env` o CLI, nunca por una herramienta MCP.** Si el modelo pudiera cambiar el destino, una descripción maliciosa de un proceso podría desviar los avisos o filtrar datos (inyección de instrucciones). Las herramientas MCP pueden probar y consultar los canales, no configurarlos.
-- **Tests:**
-  - falla un canal y otro no;
-  - reinicio con avisos pendientes;
-  - mensaje que pasa el tope;
-  - nombre con HTML o con instrucciones;
-  - el ticket y los tokens nunca aparecen en un aviso ni en un log.
-
-### Bloque C — Telegram 🟠 · S
-- **Envío:** Bot API `sendMessage` con `fetch` nativo, sin dependencias nuevas. Va con `parse_mode: HTML` (solo hay que escapar `<`, `>` y `&`; MarkdownV2 exige escapar 18 caracteres) y `disable_web_page_preview`.
-- **Variables:** `COMPRA_AGIL_TELEGRAM_TOKEN` y `COMPRA_AGIL_TELEGRAM_CHAT_ID`.
-- **Redacción del token.** Va en la ruta de la URL (`/bot<token>/`), como el ticket en la API legada de OC, así que se registra en `redact.ts` al arrancar. Un error de `fetch` no debe mostrar la URL.
-- **Límites:**
-  - Un 429 trae `parameters.retry_after` y se honra.
-  - Envío de a un mensaje por segundo al mismo chat; los grupos tienen un límite menor.
-  - Un 403 (el usuario bloqueó al bot) es un fallo permanente que se informa, no se reintenta.
-- **Puesta en marcha guiada:** crear el bot con @BotFather; con `--telegram-chat-id`, el CLI lee `getUpdates` y muestra el chat id del último mensaje enviado al bot.
-- **Tests:** contra un servidor simulado de la Bot API (200, 429 con `retry_after`, 403, 400 por HTML mal formado).
-
-### Bloque D — Webhook 🟠 · M
-- **Formato.** POST JSON con un esquema versionado:
-  - `tipo: "compra_agil.alertas"`, `version: 1`, `id`, `enviado_en`, `alertas[]` y `_aviso_contenido_de_terceros`.
-  - El esquema se publica en `docs/api/` para que n8n, Make, Hermes o un servicio propio lo consuman.
-- **Firma HMAC-SHA256** con `COMPRA_AGIL_WEBHOOK_SECRETO`, en `X-Compra-Agil-Firma: t=<unix>,v1=<hex>` sobre `t.cuerpo`. Así el receptor descarta repeticiones viejas. La documentación trae un ejemplo de verificación en Node y en Python.
-- **Solo `https`**, salvo `localhost` para pruebas. Corte a los 10 s. 2xx es entregado; 4xx salvo 429 es fallo permanente; 5xx, 429 y timeout se reintentan.
-- **Cabecera `Idempotency-Key`** con el id del lote.
-- **Tests:**
-  - firma verificable con el ejemplo de la documentación;
-  - reintento ante 503;
-  - sin reintento ante 400;
-  - rechazo de `http://` externo;
-  - el secreto no aparece en logs.
-
-### Bloque E — Correo 🟡 · M
-- **SMTP con `nodemailer`**, la única dependencia nueva del plan: madura, sin dependencias propias. Se evita atarse a un proveedor (Resend, SendGrid); quien lo use puede apuntar su SMTP.
-- **Variables:** `COMPRA_AGIL_SMTP_HOST`, `_PUERTO`, `_USUARIO`, `_CLAVE`, `_DE` y `COMPRA_AGIL_CORREO_PARA` (varios destinatarios separados por coma). TLS obligatorio.
-- **Gmail:** exige una contraseña de aplicación (requiere 2FA). La guía lo explica; la clave la escribe el dueño en su `.env`, nunca un agente.
-- **Formato:** texto plano más una versión HTML simple. El asunto dice la cantidad y la primera coincidencia («3 oportunidades: resmas — cierra hoy 15:00»). Va con `List-Unsubscribe` hacia una nota de cómo desactivarlo.
-- **El correo como canal lento:** sirve para el resumen diario y para avisar de fallos de los otros canales, no para cada alerta urgente.
-- **Tests:** servidor SMTP simulado en proceso. Credenciales malas: fallo permanente, informado, sin repetir la clave.
-
-### Bloque F — Salud y aviso de ceguera 🟠 · M
-- **Aviso de ceguera** por todos los canales activos: «la API lleva 2 h sin responder: puede haber procesos que no estoy viendo». Va con umbral configurable y una sola vez por episodio, más el aviso de recuperación con el hueco que se revisó.
-- **Resumen diario** (hora configurable): procesos revisados, alertas, ventanas incompletas, fallos por canal y consultas gastadas. Es la prueba de vida: si no llega, algo está caído.
-- **Fallo de un canal, informado por otro.** Si Telegram falla N veces, se avisa por correo o webhook. Si todos fallan, queda en el estado y en el log.
-- **Cuota:**
-  - antes de arrancar se proyectan las consultas por día según la frecuencia;
-  - si se acerca al límite o llega un 429, se espacian los ciclos y se avisa una vez.
-
-### Bloque G — Herramientas MCP y CLI 🟠 · M
-- **`estado_vigilancia`:**
-  - último ciclo bueno, fallos seguidos y ventanas incompletas;
-  - avisos pendientes o fallidos por canal;
-  - proyección de cuota y si el daemon está vivo (bloqueo con hora reciente).
-- **`obtener_alertas_nuevas` y `confirmar_alertas`** para el modo con gateway. Lo no confirmado vuelve a salir en el ciclo siguiente.
-- **`probar_avisos`:** manda un mensaje de prueba a los canales configurados y dice cuál llegó. No acepta destino por parámetro (bloque B).
-- **Comandos de terminal:**
-  - `--check`: ticket, API, hora del SHOA, carpeta de datos y canales, con código de salida 0/1 para que un agente sepa si la instalación quedó lista;
-  - `--probar-avisos`;
-  - `--telegram-chat-id`.
-
-### Bloque H — Instalación y operación 🟡 · M
-- **Windows:** tarea programada que arranca el daemon al iniciar sesión, con reinicio ante fallo. Va un script `scripts/instalar-tarea-windows.ps1` y otro para quitarla.
-- **Linux:** unidad de `systemd --user` de ejemplo.
-- **Log del daemon con rotación** por tamaño.
-- **Guías para OpenClaw y Hermes:**
-  - registrar el MCP sin el ticket en la config;
-  - crear la tarea programada del gateway que llama `obtener_alertas_nuevas`, envía y confirma;
-  - verificar con `--check`.
-- **Una sección «Instalación por un agente»** en el README, con pasos exactos, qué secretos escribe el dueño y cómo comprobar que quedó encendido.
-- **README corregido** para que diga lo que el daemon hace de verdad (hoy dice que «notifica»).
-
-### Bloque I — Validación 🔴 · L
-- **Simulación de 24 h** contra `scripts/qa/mock-api.mjs`, a tiempo acelerado, con ráfagas de 504, horas de más de 100 cambios, reinicios, un canal caído y la Bot API respondiendo 429. Aceptación: 0 procesos perdidos y 0 avisos perdidos; los repetidos solo se aceptan si llevan el mismo id.
-- **Una semana real** en el equipo del dueño, con Telegram y el resumen diario por correo. Cada mañana se compara un día de alertas contra una búsqueda manual en el buscador de Mercado Público.
-- **Enjambre de agentes:** instalar desde cero con un agente siguiendo solo la guía, sin ayuda, y medir dónde se traba.
-
-### Fuera de la 2.9.0
-- **WhatsApp:** exige la API de WhatsApp Business (Meta), con verificación de empresa y costo por mensaje. Se evalúa después de una semana real con Telegram.
-- **SMS y notificaciones push móviles.**
-- **Varios perfiles de alerta** con destinos distintos, por ejemplo uno por rubro: el estado lo permite, pero se deja para cuando haya un caso real.
-
-### Decisiones abiertas (las toma el dueño antes del bloque C)
-1. Gateway que se usa de verdad: OpenClaw, Hermes o los dos. Define el orden de las guías del bloque H.
-2. Telegram a un chat personal o a un grupo de la oficina (cambia los límites de envío).
-3. Proveedor de correo: Gmail con contraseña de aplicación u otro SMTP.
-4. Frecuencia de revisión y presupuesto diario de consultas para la vigilancia.
-5. Horario de silencio y hora del resumen diario.
-
-### Definición de cerrada
-1. Los bloques A–H con sus tests; `tsc`, lint, suite en tres zonas horarias y cobertura sobre el umbral, también en la CI.
-2. La simulación de 24 h del bloque I sin procesos ni avisos perdidos.
-3. Ningún secreto en logs, avisos, estado ni respuestas: ticket, token de Telegram, secreto del webhook ni clave SMTP. Se verifica con un test que busca cada valor.
-4. La semana real terminada, con el contraste diario contra el buscador documentado en `docs/internals/qa/`.
-5. Un agente instaló y dejó encendida la vigilancia siguiendo solo la guía.
+Cada fase cierra con su puerta propia más la puerta común (tipos, lint, suite en tres zonas horarias, cobertura, grafo sin ciclos, test de secretos, CHANGELOG). La trazabilidad requisito → tarea → test está al final de [tareas.md](../specs/2.9.0-vigilancia-y-avisos/tareas.md#matriz-de-trazabilidad).
 
 ---
 

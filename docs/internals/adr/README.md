@@ -30,3 +30,9 @@ Una decisión nueva va en un archivo nuevo con el número siguiente. Una que cam
 | [0018](0018-comparables-solo-desiertos.md) | Los comparables de precios son procesos desiertos |
 | [0019](0019-servidor-construido-aparte-del-arranque.md) | Construir el servidor aparte de su arranque |
 | [0020](0020-cache-en-disco-por-rafaga-y-atomica.md) | La caché se escribe por ráfaga y de forma atómica |
+| [0021](0021-vigilancia-por-marca-y-tramos-de-una-pagina.md) | *Propuesta (2.9.0):* la vigilancia avanza por una marca y lee tramos de una sola página |
+| [0022](0022-bandeja-de-salida-al-menos-una-vez.md) | *Propuesta (2.9.0):* bandeja de salida persistente, entrega al menos una vez |
+| [0023](0023-destinos-de-aviso-fuera-del-alcance-del-modelo.md) | *Propuesta (2.9.0):* los destinos de aviso se configuran fuera del alcance del modelo |
+| [0024](0024-webhook-firmado-con-hmac-y-marca-de-tiempo.md) | *Propuesta (2.9.0):* webhook firmado con HMAC y marca de tiempo |
+| [0025](0025-canales-con-fetch-nativo-y-smtp-con-nodemailer.md) | *Propuesta (2.9.0):* Telegram y webhook con `fetch` nativo; correo con `nodemailer` |
+| [0026](0026-un-nucleo-dos-modos-gateway-y-daemon.md) | *Propuesta (2.9.0):* un núcleo, dos modos: el gateway entrega, el daemon vigila solo |
