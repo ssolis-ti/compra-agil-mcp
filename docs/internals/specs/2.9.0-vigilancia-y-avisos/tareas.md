@@ -22,7 +22,7 @@ flowchart LR
 
 ---
 
-## Fase 0 — Preparación: decisiones, mediciones y base 📋
+## Fase 0 — Preparación: decisiones, mediciones y base ✅ (7-oct-2026)
 
 **Objetivo:** que todo lo que el diseño supone esté medido o decidido, sin
 escribir código de producto.
@@ -31,14 +31,16 @@ escribir código de producto.
 
 | Id | Tarea | Prueba / evidencia | Dónde queda |
 | :--- | :--- | :--- | :--- |
-| T0.1 | El dueño resuelve D1–D5 (o acepta los valores por defecto) | Decisiones anotadas con fecha | `requisitos.md`, «Decisiones abiertas» |
-| T0.2 | Medir en la API real la semántica de `cambio_desde`/`cambio_hasta`: ¿bordes incluidos?, ¿resolución en segundos o minutos?, ¿`total_resultados` exacto con esos filtros? | 3 ventanas contiguas cuyos totales sumen el de la ventana completa; un cambio justo en el borde | `docs/internals/qa/medicion-ventanas.md` |
-| T0.3 | Medir el retraso de indexación: cuánto tarda un cambio en aparecer en la ventana que le corresponde | Repetir la misma ventana pasada a +1, +5 y +15 min y comparar totales | Ídem; fija `solape` |
-| T0.4 | Medir el volumen de cambios publicados por hora durante un día hábil (24 consultas de 1 página) y la distribución de presupuestos | Tabla hora a hora; percentiles de presupuesto | Ídem; fija intervalo, consultas/día y presupuesto mínimo (R2.3) |
-| T0.5 | Línea base del grafo: `graphify update .`, guardar el reporte y la tabla de capas | Reporte con 0 ciclos | `diseno.md` §1 (ya hecho el 7-oct; repetir si cambió `src/`) |
-| T0.6 | Revisar y aprobar `requisitos.md`, `diseno.md` y ADR 0021–0026 | Las ADR pasan de «propuesta» a «aceptada», con fecha | `docs/internals/adr/` |
+| T0.1 ✅ | El dueño resuelve D1–D5 (aceptó las propuestas) | Decisiones anotadas con fecha | `requisitos.md`, «Decisiones abiertas» |
+| T0.2 ✅ | Medir en la API real la semántica de `cambio_desde`/`cambio_hasta`: ¿bordes incluidos?, ¿resolución en segundos o minutos?, ¿`total_resultados` exacto con esos filtros? | 3 ventanas contiguas cuyos totales sumen el de la ventana completa; un cambio justo en el borde | `docs/internals/qa/medicion-ventanas.md` |
+| T0.3 ✅ | Medir el retraso de indexación: cuánto tarda un cambio en aparecer en la ventana que le corresponde | Repetir la misma ventana pasada a +1, +5 y +15 min y comparar totales | Ídem; fija `solape` |
+| T0.4 ✅ | Medir el volumen de cambios publicados por hora durante un día hábil (24 consultas de 1 página) y la distribución de presupuestos | Tabla hora a hora; percentiles de presupuesto | Ídem; fija intervalo, consultas/día y presupuesto mínimo (R2.3) |
+| T0.5 ✅ | Línea base del grafo: `graphify update .`, guardar el reporte y la tabla de capas | Reporte con 0 ciclos | `diseno.md` §1 (ya hecho el 7-oct; repetir si cambió `src/`) |
+| T0.6 ✅ | Revisar y aprobar `requisitos.md`, `diseno.md` y ADR 0021–0026 | Las ADR pasan de «propuesta» a «aceptada», con fecha | `docs/internals/adr/` |
 
-**Presupuesto de cuota de la fase:** ~40 consultas (T0.2: ~6, T0.3: ~6, T0.4: 24 + 4).
+**Presupuesto de cuota de la fase:** ~40 consultas; se usaron 40.
+
+**Resultado:** [medicion-ventanas.md](../../qa/medicion-ventanas.md). La API registra los cambios en lotes cada 5 minutos con una sola marca, así que el diseño cambió de «tramos de una página divididos por tiempo» a «lectura lote por lote con comprobación de consistencia» (ADR 0021 reescrita). Queda por repetir T0.3 en horario hábil, en la fase 10.
 
 **Sale:** constantes del diseño confirmadas o corregidas, ADR aceptadas y decisiones del dueño anotadas.
 
@@ -58,7 +60,7 @@ cambiar ningún comportamiento visible.
 | T1.1 | Extraer la escritura atómica de `cache.ts` y el bloqueo de `rate-limiter.ts` a módulos propios. `cache.ts` y `rate-limiter.ts` pasan a usarlos | `archivo-atomico.test.ts`: corte simulado entre escribir y renombrar deja el archivo anterior intacto. `bloqueo.test.ts`: dos tomas a la vez, una espera; un bloqueo viejo se libera. Los tests existentes de caché y cuota, sin cambios | `utils/archivo-atomico.ts`, `utils/bloqueo.ts` |
 | T1.2 | Test de arquitectura: lee los `import` de `src/` y verifica las reglas de `diseno.md` §2 y 0 ciclos. Las 3 deudas actuales figuran como excepciones con nombre | `arquitectura.test.ts`: falla si se agrega un `import` de `tools/` en `api/` (comprobado con mutación) | `test/arquitectura.test.ts` |
 | T1.3 | Test de secretos: arranca el núcleo con valores de prueba para ticket, token, secreto, URL y clave; recorre logs, estado, avisos y respuestas, y exige 0 apariciones | `secretos.test.ts` (se amplía en cada fase con los caminos nuevos) | `test/secretos.test.ts` |
-| T1.4 | API simulada de cambios: catálogo con un reloj controlable, filtro `cambio_desde`/`cambio_hasta` con la semántica medida en T0.2, densidad configurable por hora, ventanas con 504 programables y procesos que vuelven a cambiar durante la lectura | `mock-cambios.test.ts`: los totales por tramo suman el de la ventana; un 504 programado ocurre donde se pidió | `scripts/qa/mock-api.mjs` (modo `CAMBIOS`), `scripts/qa/catalogo-cambios.mjs` |
+| T1.4 | API simulada de cambios: catálogo con un reloj controlable, lotes cada 5 minutos con una sola marca, bordes incluidos (semántica de T0.2), cantidad configurable por lote y región, 504 programables y procesos que vuelven a cambiar (pasan al lote siguiente) entre dos páginas de una lectura | `mock-cambios.test.ts`: una ventana entre marcas da 0; una de ancho cero sobre la marca da el lote; la suma de ventanas contiguas cuenta dos veces el borde, como la API real | `scripts/qa/mock-api.mjs` (modo `CAMBIOS`), `scripts/qa/catalogo-cambios.mjs` |
 | T1.5 | Reloj de prueba: un `ahora()` inyectable para el núcleo (el de producción sigue siendo `utils/reloj.ts`) | Los tests de las fases 2 a 7 avanzan horas en milisegundos | `test/ayudas/reloj-falso.ts` |
 
 **Sale:** los cimientos probados y la API simulada con cambios. El comportamiento del servidor queda igual (la suite anterior sigue verde sin tocar sus aserciones).
@@ -77,13 +79,13 @@ fallos y lo dice cuando no puede.
 | Id | Tarea | Prueba primero | Archivos |
 | :--- | :--- | :--- | :--- |
 | T2.1 | Modelo de estado v2, carga, guardado atómico bajo bloqueo, poda y migración desde `.monitor-state.json` | `estado-vigilancia.test.ts`: migración conserva la dedupe; poda por antigüedad; archivo corrupto → estado vacío con aviso, sin excepción | `vigilancia/estado.ts` |
-| T2.2 | Planificación de tramos: ventana desde la marca, solape, asentamiento, tope de recuperación con hueco, división en ⌈total/8⌉ con tramo mínimo | `tramos.test.ts`: tabla de casos con bordes; la unión de los tramos cubre la ventana sin espacios | `vigilancia/tramos.ts` |
+| T2.2 | Lotes: marcas desde la siguiente a la marca hasta la última asentada, consulta de un lote (marca a marca + 4:59), tope de recuperación con hueco, comprobación de consistencia | `lotes.test.ts`: marcas en el cambio de horario de septiembre; ninguna marca saltada ni repetida; consistencia con totales y códigos | `vigilancia/lotes.ts` |
 | T2.3 | Criterios: mover `coincidenciaDeAlerta`, sumar exclusiones, regiones y «solo sin ofertas», leer las variables `MONITOR_*` actuales | `criterios.test.ts`: los casos de `ciclo-monitor.test.ts` siguen pasando; casos nuevos de exclusión y región | `vigilancia/criterios.ts` |
-| T2.4 | Ciclo: tramos en orden, división al frente de la cola, tramos pendientes ante errores, marca contigua, presupuesto de tiempo con avance parcial | `ciclo-vigilancia.test.ts` contra la API simulada: (a) 350 cambios en una hora → 350 revisados; (b) 504 en 3 ciclos seguidos → la ventana completa se recupera; (c) proceso que vuelve a cambiar durante la lectura → no se pierde ninguno; (d) corte a mitad → ni pérdida ni duplicado; (e) tramo de 1 min con 150 → incompleto informado | `vigilancia/ciclo.ts` |
+| T2.4 | Ciclo: lotes en orden, páginas con comprobación, relectura y región, lotes pendientes ante errores, marca contigua, presupuesto de tiempo con avance parcial | `ciclo-vigilancia.test.ts` contra la API simulada: (a) lotes de 35 durante una hora → todos revisados; (b) 504 en 3 ciclos seguidos → los lotes se recuperan; (c) proceso que pasa al lote siguiente entre dos páginas → la comprobación lo detecta y la relectura no pierde ninguno; (d) corte a mitad → ni pérdida ni duplicado; (e) lote de 150 → se lee por región; (f) lote que no cuadra ni por región → incompleto informado | `vigilancia/ciclo.ts` |
 | T2.5 | Vigilante único con latido; un vigilante muerto se reemplaza | `vigilante.test.ts`: dos procesos, uno ejecuta; PID inexistente → se toma | `vigilancia/vigilante.ts` |
 | T2.6 | El daemon (`services/monitor.ts`) pasa al núcleo nuevo, todavía escribiendo en `alerts.log`. Se borran `ciclo-monitor.ts` y `estado-monitor.ts` | `monitor-proceso.test.ts`: el daemon arranca contra la API simulada, escribe una alerta y el estado v2 | `services/monitor.ts` |
 
-**Mutación obligatoria:** romper a mano la condición de avance de la marca (T2.4) y la división de tramos (T2.2): algún test debe fallar en cada caso.
+**Mutación obligatoria:** romper a mano la condición de avance de la marca (T2.4) y la comprobación de consistencia (T2.2): algún test debe fallar en cada caso.
 
 **Sale:** el daemon con la vigilancia completa (los avisos siguen en el log).
 
@@ -254,14 +256,14 @@ reinicios y fallos, con contenido limpio.
 
 | Requisito | Tareas | Test principal |
 | :--- | :--- | :--- |
-| R1.1–R1.6 | T2.2, T2.4 | `tramos.test.ts`, `ciclo-vigilancia.test.ts` |
+| R1.1–R1.6 | T2.2, T2.4 | `lotes.test.ts`, `ciclo-vigilancia.test.ts` |
 | R1.7 | T1.1, T2.5 | `bloqueo.test.ts`, `vigilante.test.ts` |
 | R1.8 | T1.1, T2.1, T2.4 | `archivo-atomico.test.ts`, `ciclo-vigilancia.test.ts` (d) |
 | R1.9 | T2.1, T2.3 | `estado-vigilancia.test.ts` |
-| R1.10 | T2.2 | `tramos.test.ts` |
+| R1.10 | T2.2 | `lotes.test.ts` |
 | R2.1, R2.4 | T2.3 | `criterios.test.ts` |
 | R2.2 | T8.4 | `servidor-en-proceso.test.ts` |
-| R2.3 | T0.4 | `medicion-ventanas.md` |
+| R2.3 | T0.4, T2.3 | `medicion-ventanas.md`, `criterios.test.ts` |
 | R3.1–R3.5 | T3.3, T3.5 | `bandeja.test.ts` |
 | R4.1, R4.2, R4.6 | T3.1 | `mensaje.test.ts`, `secretos.test.ts` |
 | R4.3 | T3.4 | `formato-avisos.test.ts` |

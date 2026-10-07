@@ -10,7 +10,7 @@ especificación esté aprobada.
 | [requisitos.md](requisitos.md) | Historias, criterios de aceptación (EARS) con identificador, requisitos no funcionales, fuera de alcance, decisiones abiertas | ¿Qué tiene que pasar para que esté bien? |
 | [diseno.md](diseno.md) | Arquitectura sobre el grafo actual, módulos y capas, modelo de estado, algoritmos, contratos de canal, amenazas, cuota | ¿Cómo se construye sin romper lo que hay? |
 | [tareas.md](tareas.md) | 11 fases secuenciales con la misma estructura, tareas con prueba primero, trazabilidad a requisitos y puerta de salida | ¿En qué orden, y cómo sé que terminé cada paso? |
-| ADR [0021](../../adr/0021-vigilancia-por-marca-y-tramos-de-una-pagina.md)–[0026](../../adr/0026-un-nucleo-dos-modos-gateway-y-daemon.md) | Las decisiones que el diseño fija, en estado «propuesta» | ¿Por qué así y no de otra forma? |
+| ADR [0021](../../adr/0021-vigilancia-por-marca-y-tramos-de-una-pagina.md)–[0026](../../adr/0026-un-nucleo-dos-modos-gateway-y-daemon.md) | Las decisiones que el diseño fija, aceptadas el 7-oct | ¿Por qué así y no de otra forma? |
 
 Origen: la revisión del daemon del 7-oct-2026 (roadmap, «Plan 2.9.0») y la
 conversación sobre gateways siempre encendidos (OpenClaw, Hermes) con
@@ -59,8 +59,8 @@ Además de la puerta propia de cada fase en `tareas.md`:
 
 | Fase | Nombre | Estado |
 | :--- | :--- | :--- |
-| 0 | Preparación: decisiones, mediciones y base | 📋 Por empezar |
-| 1 | Cimientos compartidos | ⏸ Espera la fase 0 |
+| 0 | Preparación: decisiones, mediciones y base | ✅ 7-oct ([medición](../../qa/medicion-ventanas.md)) |
+| 1 | Cimientos compartidos | 🔄 En curso |
 | 2 | Vigilancia sin huecos | ⏸ |
 | 3 | Bandeja de salida y formato | ⏸ |
 | 4 | Canal Telegram | ⏸ |

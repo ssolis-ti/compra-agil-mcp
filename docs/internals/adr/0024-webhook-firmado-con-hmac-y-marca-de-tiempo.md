@@ -1,6 +1,6 @@
 # 0024. Webhook firmado con HMAC y marca de tiempo
 
-- **Estado:** propuesta
+- **Estado:** aceptada (7-oct-2026, fase 0)
 - **Origen:** 2.9.0, fase 0 ([diseño §6](../specs/2.9.0-vigilancia-y-avisos/diseno.md#6-canales))
 
 **Contexto:** un receptor de webhooks (n8n, Make, un servicio propio) es una URL pública. Sin firma, cualquiera que la conozca puede inyectarle alertas falsas. Sin marca de tiempo, una firma válida capturada se puede reenviar después.

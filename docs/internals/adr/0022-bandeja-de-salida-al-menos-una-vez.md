@@ -1,6 +1,6 @@
 # 0022. Bandeja de salida persistente, entrega al menos una vez
 
-- **Estado:** propuesta
+- **Estado:** aceptada (7-oct-2026, fase 0)
 - **Origen:** 2.9.0, fase 0 ([diseño §5](../specs/2.9.0-vigilancia-y-avisos/diseno.md#5-bandeja-de-salida))
 
 **Contexto:** si se envía directo desde el ciclo, un Telegram caído o un reinicio a mitad del envío pierden la alerta: el ciclo ya la marcó como alertada. Entregar «exactamente una vez» a un sistema externo no se puede garantizar sin su cooperación.

@@ -48,3 +48,6 @@ debug/
 # Grafo local de trabajo. No forma parte del servidor.
 graphify-out/
 coverage/
+
+# Mediciones de la fase 0 de la 2.9.0 (scripts/qa/medir-ventanas.mjs)
+.medicion-ventanas.json

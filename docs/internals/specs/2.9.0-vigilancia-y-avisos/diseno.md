@@ -2,7 +2,7 @@
 
 Cómo se cumplen los [requisitos](requisitos.md) sobre el código que existe
 hoy. Los identificadores R/NF remiten a ese archivo, y las decisiones de
-fondo están en las ADR 0021–0026 (estado «propuesta» hasta cerrar la fase 0).
+fondo están en las ADR 0021–0026, aceptadas al cerrar la fase 0.
 
 ## 1. Punto de partida: lo que dice el grafo
 
@@ -24,7 +24,7 @@ sintaxis, sin modelo): 1.202 nodos, 2.897 relaciones, 82 comunidades y
 
 | Pieza | Dónde | Uso en la 2.9.0 |
 | :--- | :--- | :--- |
-| `buscarInformado()` con `totalResultados` | `api/compra-agil-client.ts:619` | Saber si un tramo cabe en una página |
+| `buscarInformado()` con `totalResultados` | `api/compra-agil-client.ts:619` | Saber si un lote cabe en una página |
 | `aFormatoApi`, `ventanaUltimosMinutos` | `utils/fechas.ts` | Ventanas como la API compara (R1.10) |
 | `ahora()`, `paredDeChile()` | `utils/reloj.ts`, `utils/fechas.ts` | Reloj del SHOA, horario de silencio |
 | `registrarSecreto()` y `safeError()` | `utils/redact.ts` (20 módulos lo usan) | Redacción de los secretos nuevos (R4.5) |
@@ -60,7 +60,7 @@ flowchart TB
     servidor[servidor.ts] --> toolsV[tools/vigilancia.ts]
   end
   subgraph nucleo[Núcleo nuevo]
-    vig[vigilancia/<br/>ciclo · tramos · criterios<br/>estado · vigilante · salud]
+    vig[vigilancia/<br/>ciclo · lotes · criterios<br/>estado · vigilante · salud]
     av[avisos/<br/>bandeja · mensaje · config<br/>formato/* · canales/*]
   end
   subgraph base[Base existente]
@@ -91,9 +91,9 @@ flowchart TB
 | `utils/archivo-atomico.ts` | `escribirAtomico(ruta, texto)`, `leerJsonSeguro(ruta)` | — |
 | `utils/bloqueo.ts` | `conBloqueo(ruta, fn)` (corto, para escribir) y `tomarVigilante(ruta, latidoMs)` (largo, con PID y latido) | — |
 | `vigilancia/estado.ts` | Modelo v2, migración desde `.monitor-state.json`, poda, carga y guardado atómico | parcial |
-| `vigilancia/tramos.ts` | Planificar la ventana, dividir un tramo, ordenar pendientes | ✔ |
+| `vigilancia/lotes.ts` | Marcas de lote entre la marca y el último asentado, tope de recuperación, comprobación de consistencia | ✔ |
 | `vigilancia/criterios.ts` | `Criterios`, `coincidencia(item, criterios)`, validación y diferencia entre dos criterios (R2.2) | ✔ |
-| `vigilancia/ciclo.ts` | `ejecutarCiclo(deps, estado, limites)`: consulta tramos, genera alertas, avanza la marca | — |
+| `vigilancia/ciclo.ts` | `ejecutarCiclo(deps, estado, limites)`: lee lotes, genera alertas, avanza la marca | — |
 | `vigilancia/vigilante.ts` | Un solo vigilante: tomar, latir y soltar | — |
 | `vigilancia/salud.ts` | Ceguera, recuperación, resumen diario, proyección de cuota | ✔ |
 | `avisos/mensaje.ts` | `Alerta` (datos ya limpios) y `crearAlerta(item, coincidencia, ahora)` | ✔ |
@@ -117,9 +117,9 @@ tocar el daemon y el proceso del servidor MCP.
 ```ts
 interface EstadoVigilancia {
   version: 2;
-  marca: string | null;              // ISO UTC: fin del último tramo contiguo completado
-  pendientes: Tramo[];               // tramos que fallaron, en orden temporal
-  incompletos: TramoIncompleto[];    // tramos de 1 min con más de 100 resultados (R1.5)
+  marca: string | null;              // marca (hora de Chile con «Z») del último lote leído completo
+  pendientes: LotePendiente[];       // lotes que fallaron, en orden
+  incompletos: LoteIncompleto[];     // lotes que no cuadraron ni por región (R1.5)
   huecos: Rango[];                   // lo que quedó fuera del tope de recuperación (R1.3)
   alertados: Record<string, number>; // código → ms de la alerta (dedupe, poda 30 días)
   alertas: Record<string, AlertaGuardada>;   // id → alerta + lote del gateway
@@ -135,15 +135,24 @@ interface EstadoVigilancia {
     consultasPorDia: Record<string, number>; // día UTC → consultas de la vigilancia
   };
 }
-interface Tramo { desde: string; hasta: string; intentos: number; ultimoError?: string }
+interface LotePendiente { marca: string; intentos: number; ultimoError?: string }
+interface LoteIncompleto { marca: string; total: number; leidos: number }
 ```
 
 - **Poda:** alertas y avisos entregados o fallidos de más de 7 días; `alertados` de más de 30; `consultasPorDia` de más de 14.
 - **Migración (NF6):** si existe `.monitor-state.json` y no `.vigilancia.json`, se copian sus códigos a `alertados`, la marca queda en `null` (primer ciclo: la última hora) y el archivo viejo se renombra a `.monitor-state.json.migrado`.
 - **Sin secretos:** el estado solo guarda datos públicos de los procesos y metadatos de envío. `ultimoError` pasa por `safeError()`.
-- **Bloqueo del vigilante:** en un archivo aparte, `.vigilante.lock`, con `{ pid, inicio, latido }`. Se renueva en cada tramo. Está muerto si `latido` tiene más de 3 intervalos o si `process.kill(pid, 0)` falla (R1.7).
+- **Bloqueo del vigilante:** en un archivo aparte, `.vigilante.lock`, con `{ pid, inicio, latido }`. Se renueva en cada lote. Está muerto si `latido` tiene más de 3 intervalos o si `process.kill(pid, 0)` falla (R1.7).
 
 ## 4. El ciclo de vigilancia
+
+**La API registra los cambios por lotes cada 5 minutos** ([medición del 7-oct](../../qa/medicion-ventanas.md)):
+- todos los cambios de un lote llevan la misma marca (`hh:m0:00.380` o `hh:m5:00.380`), y entre lotes no hay nada;
+- los bordes de la ventana se incluyen en los dos extremos;
+- un lote puede tener más de 100 cambios.
+
+Por eso la unidad de lectura es **el lote**, no un rango de tiempo cualquiera
+([ADR 0021](../../adr/0021-vigilancia-por-marca-y-tramos-de-una-pagina.md)).
 
 ```mermaid
 sequenceDiagram
@@ -152,48 +161,54 @@ sequenceDiagram
   participant A as API Compra Ágil
   participant B as avisos/bandeja
   E->>V: ejecutarCiclo(deps, estado, límites)
-  V->>V: ventana = [marca − solape, ahora() − asentamiento]
-  V->>V: tramos = pendientes + planificar(ventana)
-  loop por tramo, en orden temporal, mientras quede tiempo y cuota
-    V->>A: buscar(cambio_desde, cambio_hasta, estado=publicada, página 1 de 10)
+  V->>V: lotes = pendientes + marcas desde (marca + 5 min) hasta el último asentado
+  loop por lote, en orden, mientras quede tiempo y cuota
+    V->>A: buscar(desde = marca del lote, hasta = marca + 4:59, publicada, página 1)
     alt total ≤ 10
-      A-->>V: ítems completos
-      V->>V: criterios → alertas nuevas (dedupe)
-    else total > 10 y tramo > 1 min
-      V->>V: dividir en ⌈total / 8⌉ partes al frente de la cola
-    else tramo de 1 min con total > 10
-      V->>A: paginar el tramo completo
-      V->>V: si total > 100 → incompleto (R1.5)
+      A-->>V: lote completo en una consulta
+    else 10 < total ≤ 100
+      V->>A: páginas 2..⌈total/10⌉, luego la página 1 otra vez
+      V->>V: ¿total igual y códigos distintos = total? si no, releer una vez; si no, por región
+    else total > 100
+      V->>A: por región (16 consultas, paginando las que pasen de 10)
     else error (504, 5xx, 429, timeout)
-      V->>V: tramo a pendientes; la marca no lo pasa (R1.6)
+      V->>V: lote a pendientes; la marca no lo pasa (R1.6)
     end
+    V->>V: criterios → alertas nuevas (dedupe)
   end
-  V->>V: marca = inicio del primer pendiente, o fin de la ventana
+  V->>V: marca = último lote completo antes del primer pendiente
   V->>B: encolar(alertas nuevas)
   V->>E: guardar estado (atómico, bajo bloqueo)
 ```
 
-**Por qué tramos de una página** (ADR 0021): al paginar una ventana, un
-proceso que cambia de nuevo durante la lectura sale de la ventana y corre las
-páginas siguientes: el que estaba primero en la página 2 pasa a la página 1,
-que ya se leyó, y se pierde sin que nadie lo note. Con tramos que caben en
-una página no hay corrimiento. El proceso que salió aparece en una ventana
-posterior, porque su `fecha_ultimo_cambio` es ahora mayor que `hasta`.
+**Por qué la comprobación de consistencia:** al paginar, un proceso que
+vuelve a cambiar sale de su lote y entra al siguiente. Si sale después de
+leída su página, el siguiente sube una posición y se salta. Los procesos solo
+se mueven cuando la API escribe un lote nuevo, cada 5 minutos, y una lectura
+de 4 páginas toma segundos. Aun así, el diseño no supone que no pasó: lo
+comprueba con el total y los códigos leídos. Un lote de una sola página se lee
+en una sola consulta y no puede correrse.
 
-**Constantes** (se confirman o ajustan con las mediciones de T0.2–T0.4):
+**Constantes** (medidas en la fase 0):
 
-| Constante | Valor inicial | Por qué |
+| Constante | Valor | Origen |
 | :--- | :--- | :--- |
-| `solape` | 5 min | Cambios que la API indexa tarde con una hora anterior (el `MARGEN_CICLO_MINUTOS` actual). El dedupe absorbe los repetidos |
-| `asentamiento` | 2 min | No pedir el borde que todavía se está escribiendo |
-| `dividirEn` | ⌈total / 8⌉ | Apunta a 8 por tramo para que la variación de densidad no obligue a otra división |
-| `tramoMinimo` | 1 min | Por debajo, la resolución de la API (a confirmar en T0.2) no garantiza bordes |
-| `topeRecuperacion` | 48 h | Más que eso es un hueco que se informa, no se revisa (R1.3) |
+| `periodoLote` | 5 min | Medido: marcas `hh:m0`/`hh:m5`, nada entre lotes |
+| `anchoConsulta` | marca a marca + 4 min 59 s | Los bordes se incluyen: así entra un solo lote aunque la marca traiga milisegundos |
+| `asentamiento` | 2 min | Medido: el lote estaba completo a los 2 min y no cambió a los 7 ni a los 10 |
+| `relecturas` | 1, luego por región | Consistencia de un lote paginado |
+| `topeRecuperacion` | 48 h (576 lotes) | Más que eso es un hueco que se informa (R1.3) |
 | `presupuestoTiempo` | 45 s por llamada de herramienta; sin tope en el daemon | Mismo presupuesto que el resto de las herramientas (fase 1.1) |
 
-**Costo esperado:** con `N` cambios publicados en la ventana, el ciclo hace
-alrededor de `⌈N / 8⌉ + d` consultas, donde `d` son las divisiones (una por
-tramo que no cupo). Los valores reales de `N` por hora salen de T0.4.
+**Señal de alarma:** si una consulta entre dos marcas (por ejemplo `hh:m2`
+a `hh:m3`) devolviera resultados, la API cambió su forma de marcar. El ciclo
+la hace una vez al día, gratis dentro del resumen, y la informa en
+`estado_vigilancia` y en el resumen diario.
+
+**Costo:** se lee cada lote una vez, sin importar el intervalo del ciclo:
+≈ 288 lotes al día más las páginas extra. Son unas 470 consultas con el
+volumen del lunes 6-oct (máximo ≈ 35 publicadas por lote). El intervalo del
+ciclo solo cambia la latencia del aviso.
 
 ## 5. Bandeja de salida
 
@@ -294,11 +309,11 @@ Solo por entorno o `.env` (R4.4; ADR 0023). Las variables de los criterios
 | :--- | :--- | :---: |
 | `MONITOR_KEYWORDS`, `MONITOR_EXCLUIR` | lista actual / vacío | |
 | `MONITOR_REGIONES` | todas | |
-| `MONITOR_MIN_BUDGET_CLP` | medido en T0.4 (hoy 5.000.000) | |
+| `MONITOR_MIN_BUDGET_CLP` | 0, sin filtro (hoy 5.000.000, que deja fuera el 84 %) | |
 | `MONITOR_SOLO_SIN_OFERTAS` | `true` | |
 | `MONITOR_INTERVAL_MINUTES` | 15 (hoy 60) | |
 | `COMPRA_AGIL_VIGILANCIA_RECUPERACION_H` | 48 | |
-| `COMPRA_AGIL_VIGILANCIA_CONSULTAS_DIA` | medido en T0.4 | |
+| `COMPRA_AGIL_VIGILANCIA_CONSULTAS_DIA` | 1.500 (gasto esperado ≈ 470) | |
 | `COMPRA_AGIL_AVISOS` | vacío (`telegram,webhook,correo`) | |
 | `COMPRA_AGIL_AVISOS_SILENCIO` | vacío (ej. `22:00-07:00`) | |
 | `COMPRA_AGIL_AVISOS_RESUMEN` | `08:00` | |
@@ -372,8 +387,9 @@ sequenceDiagram
 
 | Falla | Efecto sin diseño | Respuesta del diseño | Requisito |
 | :--- | :--- | :--- | :--- |
-| API con 504 durante horas | Horas no revisadas, en silencio | Tramos pendientes, marca detenida, aviso de ceguera y de recuperación | R1.6, R8.1, R8.2 |
-| Más de 100 cambios en la ventana | Corte silencioso | División en tramos de una página | R1.4, R1.5 |
+| API con 504 durante horas | Horas no revisadas, en silencio | Lotes pendientes, marca detenida, aviso de ceguera y de recuperación | R1.6, R8.1, R8.2 |
+| Más de 100 cambios en la ventana | Corte silencioso | Lectura lote por lote; un lote de más de 100 se lee por región | R1.4, R1.5 |
+| Un proceso cambia mientras se pagina su lote | Otro se salta sin aviso | Comprobación de total y códigos, relectura, región | R1.5 |
 | Corte del proceso al escribir | Estado ilegible, dedupe perdido | Escritura atómica bajo bloqueo | R1.8 |
 | Dos vigilantes (daemon + gateway) | Alertas dobles, el doble de cuota | Bloqueo del vigilante con latido | R1.7 |
 | Telegram caído | Avisos perdidos | Bandeja con reintento; aviso por otro canal a los 3 fallos | R3.2, R8.4 |
@@ -383,20 +399,18 @@ sequenceDiagram
 
 ## 11. Cuota
 
-`consultas/día ≈ (1440 / intervalo) × (⌈N_intervalo / 8⌉ + d) + recuperación`.
-`N_intervalo` es el número de cambios publicados por intervalo, que hoy no
-conocemos: verificar_ticket vio 99 cambios en 10 minutos, pero de todos los
-estados. T0.4 lo mide por hora a lo largo de un día hábil y fija:
+Medido en la fase 0 ([medición](../../qa/medicion-ventanas.md#cuota)):
 
-- el intervalo por defecto (15 min si la proyección cabe en NF3);
-- `COMPRA_AGIL_VIGILANCIA_CONSULTAS_DIA`;
-- el presupuesto mínimo por defecto (R2.3), con la distribución de presupuestos de los procesos publicados.
+- **Gasto:** `consultas/día ≈ Σ por lote ⌈publicadas / 10⌉ (+ relecturas)`. Con el volumen del lunes 6-oct (≈ 2.600 publicadas, pico de 420 por hora) son ≈ 470 consultas al día. No depende del intervalo del ciclo.
+- **Límite del ticket:** la documentación oficial no da un número (depende del tipo de ticket). `COMPRA_AGIL_VIGILANCIA_CONSULTAS_DIA` queda en 1.500, y la proyección de R8.5 avisa si el gasto real se acerca.
+- **Intervalo por defecto:** 15 min. Cada ciclo lee los 3 lotes nuevos y el aviso llega como máximo ≈ 17 min después del cambio (5 del lote + 2 de asentamiento + hasta 10 de espera del ciclo).
+- **Presupuesto mínimo por defecto:** 0. Con $5.000.000 se pierde el 84 % de los procesos publicados (mediana $800.000).
 
-## 12. Decisiones (ADR, estado «propuesta»)
+## 12. Decisiones (ADR, aceptadas el 7-oct-2026)
 
 | ADR | Decisión |
 | :--- | :--- |
-| [0021](../../adr/0021-vigilancia-por-marca-y-tramos-de-una-pagina.md) | La vigilancia avanza por una marca del último tramo completo y lee tramos de una sola página |
+| [0021](../../adr/0021-vigilancia-por-marca-y-tramos-de-una-pagina.md) | La vigilancia lee la API lote por lote, con una marca del último lote completo |
 | [0022](../../adr/0022-bandeja-de-salida-al-menos-una-vez.md) | Bandeja de salida persistente, entrega al menos una vez con id estable |
 | [0023](../../adr/0023-destinos-de-aviso-fuera-del-alcance-del-modelo.md) | Los destinos de aviso se configuran fuera del alcance del modelo |
 | [0024](../../adr/0024-webhook-firmado-con-hmac-y-marca-de-tiempo.md) | Webhook firmado con HMAC y marca de tiempo |

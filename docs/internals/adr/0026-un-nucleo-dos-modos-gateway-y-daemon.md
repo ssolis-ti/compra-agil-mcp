@@ -1,6 +1,6 @@
 # 0026. Un núcleo, dos modos: el gateway entrega, el daemon vigila solo
 
-- **Estado:** propuesta
+- **Estado:** aceptada (7-oct-2026, fase 0)
 - **Origen:** 2.9.0, fase 0 ([diseño §2 y §8](../specs/2.9.0-vigilancia-y-avisos/diseno.md#2-módulos-nuevos-y-capas))
 
 **Contexto:** el servidor MCP corre por stdio y vive mientras su cliente lo tiene abierto: no puede vigilar por su cuenta. Los gateways como OpenClaw o Hermes ya están siempre encendidos, programan tareas y tienen Telegram. Quien no usa un gateway necesita un proceso propio que se mantenga encendido.

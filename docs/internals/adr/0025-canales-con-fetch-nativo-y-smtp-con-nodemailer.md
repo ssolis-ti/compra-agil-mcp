@@ -1,6 +1,6 @@
 # 0025. Telegram y webhook con `fetch` nativo; correo con `nodemailer`
 
-- **Estado:** propuesta
+- **Estado:** aceptada (7-oct-2026, fase 0)
 - **Origen:** 2.9.0, fase 0 ([diseño §6](../specs/2.9.0-vigilancia-y-avisos/diseno.md#6-canales))
 
 **Contexto:** cada dependencia de producción suma superficie de ataque y avisos de `npm audit` que detienen la CI (pasó con el SDK de MCP en la 2.8.0). La Bot API de Telegram y un webhook son un POST HTTP. SMTP es un protocolo con TLS, autenticación y codificación MIME.

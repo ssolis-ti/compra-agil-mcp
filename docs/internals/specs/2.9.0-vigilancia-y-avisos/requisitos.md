@@ -36,12 +36,12 @@ daemon o una herramienta MCP llamada por un gateway.
 
 ## R1 — Vigilancia completa (H1)
 
-- **R1.1** Cuando un ciclo complete todos los tramos de su ventana, el sistema deberá avanzar la marca del último ciclo bueno hasta el final del último tramo completado.
-- **R1.2** Cuando empiece un ciclo, el sistema deberá revisar desde la marca hasta `ahora() − margen de asentamiento`, no desde «ahora − intervalo».
+- **R1.1** Cuando un ciclo lea completos los lotes de la API que le tocan, el sistema deberá avanzar la marca hasta el último lote leído completo, sin pasar el primer lote pendiente.
+- **R1.2** Cuando empiece un ciclo, el sistema deberá leer los lotes pendientes y todos los lotes desde el siguiente a la marca hasta el último con más de 2 minutos de asentamiento, no «ahora − intervalo».
 - **R1.3** Si la ventana pendiente supera el tope de recuperación (por defecto 48 h), el sistema deberá revisar solo las últimas 48 h, registrar el resto como hueco con su rango y avisarlo (R8.2).
-- **R1.4** Cuando la API informe para un tramo más resultados que los de una página, el sistema deberá dividir el tramo hasta que cada parte quepa en una sola página.
-- **R1.5** Si un tramo del tamaño mínimo (1 minuto) sigue sin caber en una página, el sistema deberá paginarlo y marcarlo como «posiblemente incompleto», con su rango y su total.
-- **R1.6** Si un tramo falla (504, timeout, 5xx o 429), el sistema deberá dejarlo pendiente y no avanzar la marca más allá de su inicio. El ciclo siguiente lo reintenta primero.
+- **R1.4** Cuando un lote tenga más publicadas que una página, el sistema deberá leer todas sus páginas y comprobar al final que el total no cambió y que los códigos distintos leídos son tantos como el total. Si el lote tiene más de 100, deberá leerlo por región.
+- **R1.5** Si la comprobación de R1.4 falla, el sistema deberá releer el lote una vez y luego por región. Si aun así no cuadra, lo deberá marcar como incompleto, con su marca, su total y los leídos.
+- **R1.6** Si la lectura de un lote falla (504, timeout, 5xx o 429), el sistema deberá dejarlo pendiente y la marca no lo deberá pasar. El ciclo siguiente lo reintenta primero.
 - **R1.7** Mientras un vigilante esté activo, otro proceso no deberá ejecutar ciclos. Un vigilante cuyo latido tenga más de 3 intervalos de antigüedad, o cuyo proceso ya no exista, se considera muerto.
 - **R1.8** Si el proceso se corta a mitad de un ciclo, el sistema deberá retomarlo sin perder ni duplicar alertas. El estado en disco es siempre el anterior o el siguiente, nunca uno a medias.
 - **R1.9** El sistema deberá alertar cada proceso una sola vez, salvo que vuelva a calzar con un criterio después de 30 días (la poda actual).
@@ -51,7 +51,7 @@ daemon o una herramienta MCP llamada por un gateway.
 
 - **R2.1** El sistema deberá filtrar por: palabras clave (en el nombre, sin tildes ni mayúsculas), palabras excluidas, regiones, presupuesto mínimo y, como opción activada por defecto, «solo con 0 ofertas».
 - **R2.2** Cuando una herramienta MCP cambie los criterios, el sistema deberá avisar del cambio por todos los canales activos, con el antes y el después. Así una inyección que los silencie queda a la vista.
-- **R2.3** El presupuesto mínimo por defecto se deberá fijar con la medición de la fase 0 (tarea T0.4) y documentar su origen.
+- **R2.3** El presupuesto mínimo por defecto será 0 (sin filtro): con $5.000.000 se perdía el 84 % de los procesos publicados (medición del 7-oct, T0.4).
 - **R2.4** Las variables actuales (`MONITOR_KEYWORDS`, `MONITOR_MIN_BUDGET_CLP`, `MONITOR_INTERVAL_MINUTES`) deberán seguir funcionando.
 
 ## R3 — Bandeja de salida (H2)
@@ -101,17 +101,17 @@ daemon o una herramienta MCP llamada por un gateway.
 
 - **R8.1** Si no hay un ciclo bueno durante el umbral de ceguera (por defecto 120 min), el sistema deberá avisar una sola vez por episodio que la vigilancia está ciega, desde cuándo y por qué.
 - **R8.2** Cuando la vigilancia se recupere, el sistema deberá avisarlo con el rango revisado y los huecos que no se pudieron cubrir.
-- **R8.3** A la hora configurada, el sistema deberá enviar un resumen diario: procesos revisados, alertas, tramos incompletos, huecos, fallos por canal y consultas gastadas.
+- **R8.3** A la hora configurada, el sistema deberá enviar un resumen diario: procesos revisados, alertas, lotes incompletos, huecos, fallos por canal y consultas gastadas.
 - **R8.4** Si un canal acumula 3 fallos seguidos, el sistema deberá avisarlo por los otros canales activos.
 - **R8.5** El sistema deberá proyectar las consultas diarias según la frecuencia. Si la proyección supera el presupuesto diario configurado, o llega un 429, deberá espaciar los ciclos y avisarlo una vez.
 
 ## R9 — Modo gateway (H4)
 
 - **R9.1** La herramienta `obtener_alertas_nuevas` deberá ejecutar un ciclo si el último tiene más de un intervalo de antigüedad, y devolver las alertas no confirmadas con un `lote_id`.
-- **R9.2** Si un ciclo no cabe en el presupuesto de tiempo de la herramienta (45 s), el sistema deberá guardar el avance de los tramos completados y decir que quedó parcial.
+- **R9.2** Si un ciclo no cabe en el presupuesto de tiempo de la herramienta (45 s), el sistema deberá guardar el avance de los lotes leídos completos y decir que quedó parcial.
 - **R9.3** Cuando el gateway llame `confirmar_alertas(lote_id)`, el sistema deberá marcar el lote como entregado. Un lote sin confirmar en 30 minutos se vuelve a ofrecer.
 - **R9.4** La herramienta `estado_vigilancia` deberá informar:
-  - marca y último ciclo bueno, fallos seguidos, tramos pendientes e incompletos, huecos;
+  - marca y último ciclo bueno, fallos seguidos, lotes pendientes e incompletos, huecos;
   - avisos por canal y estado;
   - proyección de cuota y si hay un vigilante vivo.
 
@@ -145,12 +145,12 @@ daemon o una herramienta MCP llamada por un gateway.
 - Varios perfiles de alerta con destinos distintos. El modelo de estado lo admite, pero no se expone.
 - Corregir las dependencias entre herramientas (`generar-informe` importa de otras 4 herramientas). Se registra en el diseño como deuda; no se toca en esta versión.
 
-## Decisiones abiertas (las toma el dueño en la fase 0)
+## Decisiones del dueño (fase 0, 7-oct-2026)
 
-| Id | Decisión | Propuesta por defecto si no hay respuesta |
+| Id | Decisión | Resuelto (el dueño aceptó las propuestas) |
 | :--- | :--- | :--- |
 | D1 | Gateway que se usa: OpenClaw, Hermes o los dos | Las dos guías; OpenClaw primero |
 | D2 | Telegram a un chat personal o a un grupo | Chat personal (límites más holgados) |
 | D3 | Proveedor de correo | Gmail con contraseña de aplicación |
-| D4 | Intervalo de revisión y presupuesto diario de consultas | 15 min y ≤ 30 % del límite diario medido |
+| D4 | Intervalo de revisión y presupuesto diario de consultas | 15 min; 1.500 consultas/día como techo (gasto esperado ≈ 470) |
 | D5 | Horario de silencio y hora del resumen | 22:00–07:00 y 08:00, hora de Chile |

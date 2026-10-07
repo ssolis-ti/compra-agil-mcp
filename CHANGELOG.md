@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Añadido
+* **`scripts/qa/medir-ventanas.mjs`**, mediciones de la fase 0 de la 2.9.0 contra la API real. La API registra los cambios en lotes cada 5 minutos con una sola marca y bordes incluidos, lo que cambió el diseño de la vigilancia ([medicion-ventanas.md](docs/internals/qa/medicion-ventanas.md), ADR 0021).
+
 ### Corregido
 * **El flujo de publicación ya reconoce una versión publicada a mano.** `actions/setup-node` deja un token de relleno en `NODE_AUTH_TOKEN`; con él, `npm view` recibía 401, el flujo creía que la versión no estaba en npm y caía por falta de `NPM_TOKEN` antes de crear la release (pasó con `v2.7.0` y `v2.8.0`). Ahora consulta el registro sin credenciales.
 
