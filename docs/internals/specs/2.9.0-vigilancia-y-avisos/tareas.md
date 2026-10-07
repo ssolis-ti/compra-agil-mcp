@@ -168,7 +168,7 @@ reinicios y fallos, con contenido limpio.
 
 ---
 
-## Fase 5 — Canal webhook ⏸
+## Fase 5 — Canal webhook ✅ (7-oct-2026)
 
 **Objetivo:** cualquier sistema puede recibir las alertas firmadas.
 **Cubre:** R6.1–R6.4, R4.5 (secreto y URL).
@@ -176,13 +176,20 @@ reinicios y fallos, con contenido limpio.
 
 | Id | Tarea | Prueba primero | Archivos |
 | :--- | :--- | :--- | :--- |
-| T5.1 | Esquema `compra_agil.alertas` v1 y su documentación, con ejemplos de verificación en Node y Python | `webhook-esquema.test.ts`: el cuerpo generado valida contra el esquema publicado | `docs/api/webhook-alertas.md` |
-| T5.2 | Canal: firma, `Idempotency-Key`, `https` obligatorio salvo local, corte a 10 s | `canal-webhook.test.ts` con un receptor local: firma válida con el código de la documentación; 503 → reintento; 400 → fallido; `http://` externo rechazado al configurar | `avisos/canales/webhook.ts` |
-| T5.3 | Ejecutar el ejemplo en Python de la documentación en la CI (si hay Python en el runner) | Paso de la CI que verifica una firma generada por Node | `.github/workflows/ci.yml` |
+| T5.1 ✅ | Esquema `compra_agil.alertas` v1 y su documentación, con ejemplos de verificación en Node y Python | `webhook-esquema.test.ts`: el cuerpo generado valida contra el esquema publicado | `docs/api/webhook-alertas.md` |
+| T5.2 ✅ | Canal: firma, `Idempotency-Key`, `https` obligatorio salvo local, corte a 10 s | `canal-webhook.test.ts` con un receptor local: firma válida con el código de la documentación; 503 → reintento; 400 → fallido; `http://` externo rechazado al configurar | `avisos/canales/webhook.ts` |
+| T5.3 ✅ | Ejecutar el ejemplo en Python de la documentación en la CI (si hay Python en el runner) | Paso de la CI que verifica una firma generada por Node | `.github/workflows/ci.yml` |
 
 **Sale:** el webhook funcionando y documentado para integradores.
 
 **Puerta:** los dos ejemplos de verificación de la documentación pasan contra una firma real.
+
+**Resultado (7-oct):**
+- **Suite:** 750 tests en las tres zonas horarias.
+- **Ejemplos de la documentación:** `canal-webhook.test.ts` ejecuta tal cual el ejemplo en Node (con `vm`) y el de Python (con el intérprete del equipo; hoy Python 3.14) contra firmas reales del canal, e incluye una repetición fuera de la ventana de 5 minutos.
+- **T5.3 sin paso nuevo en la CI:** el test corre el ejemplo en Python cuando hay intérprete, y lo hay en los runners de Ubuntu y Windows.
+- **Secreto mínimo:** se agregó una regla de 32 caracteres para el secreto.
+- **Pendiente para T9.5:** `docs/api/webhook-alertas.md` suma un documento a los que viajan en el paquete y busca `consultar_documentos_locales`. El README dice «10 documentos» y «13 recursos»: hay que actualizarlo.
 
 ---
 

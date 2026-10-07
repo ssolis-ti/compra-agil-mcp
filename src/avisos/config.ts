@@ -20,6 +20,7 @@ export interface ConfigAvisos {
   canales: NombreCanal[];
   /** `apiBase`: solo para pruebas (COMPRA_AGIL_TELEGRAM_API apunta a la Bot API simulada). */
   telegram?: { token: string; chatId: string; apiBase?: string };
+  webhook?: { url: string; secreto: string };
   bandeja: ConfigBandeja;
   /** Hora de Chile «HH:MM» del resumen diario (fase 7). */
   resumen: string;
@@ -28,6 +29,17 @@ export interface ConfigAvisos {
 
 const CANALES: NombreCanal[] = ['telegram', 'webhook', 'correo'];
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+const LARGO_MINIMO_SECRETO = 32;
+
+/** https, o http solo hacia la propia máquina (R6.3). */
+function urlAceptable(texto: string): boolean {
+  try {
+    const u = new URL(texto);
+    return u.protocol === 'https:' || (u.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname));
+  } catch {
+    return false;
+  }
+}
 
 export function leerConfigAvisos(env: Record<string, string | undefined>): ConfigAvisos {
   const c: ConfigAvisos = { canales: [], bandeja: {}, resumen: '08:00', errores: [] };
@@ -41,6 +53,8 @@ export function leerConfigAvisos(env: Record<string, string | undefined>): Confi
   // Los secretos se registran aunque el canal no esté pedido: si están en el
   // entorno, no deben salir en ningún texto.
   registrarSecreto(valor('COMPRA_AGIL_TELEGRAM_TOKEN'));
+  registrarSecreto(valor('COMPRA_AGIL_WEBHOOK_URL'));
+  registrarSecreto(valor('COMPRA_AGIL_WEBHOOK_SECRETO'));
 
   if (pedidos.includes('telegram')) {
     const token = valor('COMPRA_AGIL_TELEGRAM_TOKEN');
@@ -50,6 +64,23 @@ export function leerConfigAvisos(env: Record<string, string | undefined>): Confi
     else {
       c.telegram = { token: token!, chatId: chatId!, apiBase: valor('COMPRA_AGIL_TELEGRAM_API') };
       c.canales.push('telegram');
+    }
+  }
+
+  if (pedidos.includes('webhook')) {
+    const url = valor('COMPRA_AGIL_WEBHOOK_URL');
+    const secreto = valor('COMPRA_AGIL_WEBHOOK_SECRETO');
+    const problemas: string[] = [];
+    if (!url) problemas.push('falta COMPRA_AGIL_WEBHOOK_URL');
+    else if (!urlAceptable(url)) problemas.push('COMPRA_AGIL_WEBHOOK_URL debe ser https (o http a localhost / 127.0.0.1, para pruebas)');
+    if (!secreto) problemas.push('falta COMPRA_AGIL_WEBHOOK_SECRETO');
+    else if (secreto.length < LARGO_MINIMO_SECRETO) {
+      problemas.push(`COMPRA_AGIL_WEBHOOK_SECRETO debe tener al menos ${LARGO_MINIMO_SECRETO} caracteres (ej. openssl rand -hex 32)`);
+    }
+    if (problemas.length > 0) c.errores.push(`El webhook no se activa: ${problemas.join('; ')}.`);
+    else {
+      c.webhook = { url: url!, secreto: secreto! };
+      c.canales.push('webhook');
     }
   }
 

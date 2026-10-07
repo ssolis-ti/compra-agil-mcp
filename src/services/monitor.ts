@@ -19,6 +19,7 @@ import { criteriosDesdeEntorno, lineaDeAlerta } from '../vigilancia/criterios.js
 import { rondaDeVigilancia } from '../vigilancia/ronda.js';
 import { leerConfigAvisos } from '../avisos/config.js';
 import { CanalTelegram } from '../avisos/canales/telegram.js';
+import { CanalWebhook } from '../avisos/canales/webhook.js';
 import type { Canal } from '../avisos/canal.js';
 
 loadEnvManual();
@@ -57,6 +58,7 @@ console.log(`Solo sin ofertas      : ${criterios.soloSinOfertas ? 'sí' : 'no'}`
 const configAvisos = leerConfigAvisos(process.env);
 const canales: Canal[] = [];
 if (configAvisos.telegram) canales.push(new CanalTelegram(configAvisos.telegram));
+if (configAvisos.webhook) canales.push(new CanalWebhook(configAvisos.webhook));
 
 console.log(`Alertas en            : ${ALERTAS}`);
 console.log(`Avisos por            : ${canales.map((c) => c.nombre).join(', ') || '(ningún canal: solo alerts.log)'}`);

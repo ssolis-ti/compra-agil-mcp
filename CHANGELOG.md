@@ -16,6 +16,11 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Webhook firmado** (2.9.0, fase 5). Con `COMPRA_AGIL_AVISOS=webhook`, el servidor envía las alertas por POST a tu URL: n8n, Make, Hermes o un servicio propio.
+  * **Firma:** HMAC-SHA256 con marca de tiempo (`X-Compra-Agil-Firma`) e `Idempotency-Key` para descartar repetidos.
+  * **URL:** solo `https`, salvo `localhost`.
+  * **Secreto:** de 32 caracteres o más.
+  * **Contrato:** esquema `compra_agil.alertas` v1, con verificación en Node y Python, en [docs/api/webhook-alertas.md](docs/api/webhook-alertas.md). Un test ejecuta esos ejemplos.
 * **Avisos por Telegram** (2.9.0, fase 4). Con `COMPRA_AGIL_AVISOS=telegram`, `COMPRA_AGIL_TELEGRAM_TOKEN` y `COMPRA_AGIL_TELEGRAM_CHAT_ID`, el daemon envía las alertas al chat por la Bot API, con `fetch` nativo.
   * **Envío:** un mensaje por segundo al mismo chat, honrando `retry_after` ante un 429.
   * **Seguridad:** el token se registra para la redacción y nunca aparece en un error.
