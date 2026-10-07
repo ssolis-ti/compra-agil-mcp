@@ -48,7 +48,7 @@ escribir código de producto.
 
 ---
 
-## Fase 1 — Cimientos compartidos ⏸
+## Fase 1 — Cimientos compartidos ✅ (7-oct-2026)
 
 **Objetivo:** extraer y preparar lo que las fases siguientes usan, sin
 cambiar ningún comportamiento visible.
@@ -57,15 +57,20 @@ cambiar ningún comportamiento visible.
 
 | Id | Tarea | Prueba primero | Archivos |
 | :--- | :--- | :--- | :--- |
-| T1.1 | Extraer la escritura atómica de `cache.ts` y el bloqueo de `rate-limiter.ts` a módulos propios. `cache.ts` y `rate-limiter.ts` pasan a usarlos | `archivo-atomico.test.ts`: corte simulado entre escribir y renombrar deja el archivo anterior intacto. `bloqueo.test.ts`: dos tomas a la vez, una espera; un bloqueo viejo se libera. Los tests existentes de caché y cuota, sin cambios | `utils/archivo-atomico.ts`, `utils/bloqueo.ts` |
-| T1.2 | Test de arquitectura: lee los `import` de `src/` y verifica las reglas de `diseno.md` §2 y 0 ciclos. Las 3 deudas actuales figuran como excepciones con nombre | `arquitectura.test.ts`: falla si se agrega un `import` de `tools/` en `api/` (comprobado con mutación) | `test/arquitectura.test.ts` |
-| T1.3 | Test de secretos: arranca el núcleo con valores de prueba para ticket, token, secreto, URL y clave; recorre logs, estado, avisos y respuestas, y exige 0 apariciones | `secretos.test.ts` (se amplía en cada fase con los caminos nuevos) | `test/secretos.test.ts` |
-| T1.4 | API simulada de cambios: catálogo con un reloj controlable, lotes cada 5 minutos con una sola marca, bordes incluidos (semántica de T0.2), cantidad configurable por lote y región, 504 programables y procesos que vuelven a cambiar (pasan al lote siguiente) entre dos páginas de una lectura | `mock-cambios.test.ts`: una ventana entre marcas da 0; una de ancho cero sobre la marca da el lote; la suma de ventanas contiguas cuenta dos veces el borde, como la API real | `scripts/qa/mock-api.mjs` (modo `CAMBIOS`), `scripts/qa/catalogo-cambios.mjs` |
-| T1.5 | Reloj de prueba: un `ahora()` inyectable para el núcleo (el de producción sigue siendo `utils/reloj.ts`) | Los tests de las fases 2 a 7 avanzan horas en milisegundos | `test/ayudas/reloj-falso.ts` |
+| T1.1 ✅ | Extraer la escritura atómica de `cache.ts` y el bloqueo de `rate-limiter.ts` a módulos propios. `cache.ts` y `rate-limiter.ts` pasan a usarlos | `archivo-atomico.test.ts`: corte simulado entre escribir y renombrar deja el archivo anterior intacto. `bloqueo.test.ts`: dos tomas a la vez, una espera; un bloqueo viejo se libera. Los tests existentes de caché y cuota, sin cambios | `utils/archivo-atomico.ts`, `utils/bloqueo.ts` |
+| T1.2 ✅ | Test de arquitectura: lee los `import` de `src/` y verifica las reglas de `diseno.md` §2 y 0 ciclos. Las 3 deudas actuales figuran como excepciones con nombre | `arquitectura.test.ts`: falla si se agrega un `import` de `tools/` en `api/` (comprobado con mutación) | `test/arquitectura.test.ts` |
+| T1.3 ✅ | Test de secretos: arranca el núcleo con valores de prueba para ticket, token, secreto, URL y clave; recorre logs, estado, avisos y respuestas, y exige 0 apariciones | `secretos.test.ts` (se amplía en cada fase con los caminos nuevos) | `test/secretos.test.ts` |
+| T1.4 ✅ | API simulada de cambios: catálogo con un reloj controlable, lotes cada 5 minutos con una sola marca, bordes incluidos (semántica de T0.2), cantidad configurable por lote y región, 504 programables y procesos que vuelven a cambiar (pasan al lote siguiente) entre dos páginas de una lectura | `mock-cambios.test.ts`: una ventana entre marcas da 0; una de ancho cero sobre la marca da el lote; la suma de ventanas contiguas cuenta dos veces el borde, como la API real | `scripts/qa/mock-api.mjs` (modo `CAMBIOS`), `scripts/qa/catalogo-cambios.mjs` |
+| T1.5 ✅ | Reloj de prueba: un `ahora()` inyectable para el núcleo (el de producción sigue siendo `utils/reloj.ts`) | Los tests de las fases 2 a 7 avanzan horas en milisegundos | `test/ayudas/reloj-falso.ts` |
 
 **Sale:** los cimientos probados y la API simulada con cambios. El comportamiento del servidor queda igual (la suite anterior sigue verde sin tocar sus aserciones).
 
 **Puerta:** el test de arquitectura y el de secretos están en la CI.
+
+**Resultado (7-oct):**
+- 639 tests en las tres zonas horarias; cobertura del 94 %.
+- El test de arquitectura encontró un ciclo que graphify no reporta: `api/compra-agil-client.ts ↔ api/normalizar.ts`. Es solo de tipos (`import type`, que se borra al compilar), así que la regla de ciclos mira los imports de valores y la de capas mira todos.
+- La API simulada en modo `CATALOGO=cambios` se probó por HTTP.
 
 ---
 

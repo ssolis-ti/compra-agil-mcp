@@ -10,6 +10,7 @@
 import fs from 'fs';
 import { logger } from './logger.js';
 import { rutaDeDatos } from './rutas.js';
+import { conBloqueo } from './bloqueo.js';
 
 /** Archivo donde el servidor recuerda la cuota entre reinicios. */
 export function rutaEstadoPorDefecto(): string {
@@ -110,30 +111,7 @@ export class RateLimiter {
       fn();
       return;
     }
-    const lockPath = `${this.statePath}.lock`;
-    const inicio = Date.now();
-    let fd: number | undefined;
-    while (fd === undefined && Date.now() - inicio < 2000) {
-      try {
-        fd = fs.openSync(lockPath, 'wx');
-      } catch {
-        try {
-          const edad = Date.now() - fs.statSync(lockPath).mtimeMs;
-          if (edad > 5000) fs.unlinkSync(lockPath);
-        } catch {
-          // Otro proceso soltó el candado entre el fallo y el stat.
-        }
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 15);
-      }
-    }
-    try {
-      fn();
-    } finally {
-      if (fd !== undefined) {
-        fs.closeSync(fd);
-        try { fs.unlinkSync(lockPath); } catch { /* ya no está */ }
-      }
-    }
+    conBloqueo(this.statePath, fn);
   }
 
   private getTodayUTC(): string {

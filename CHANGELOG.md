@@ -8,6 +8,11 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ### Añadido
 * **`scripts/qa/medir-ventanas.mjs`**, mediciones de la fase 0 de la 2.9.0 contra la API real. La API registra los cambios en lotes cada 5 minutos con una sola marca y bordes incluidos, lo que cambió el diseño de la vigilancia ([medicion-ventanas.md](docs/internals/qa/medicion-ventanas.md), ADR 0021).
+* **Cimientos de la 2.9.0 (fase 1), sin cambio de comportamiento:**
+  * La escritura atómica y el candado entre procesos salen de la caché y del control de cuota a `utils/archivo-atomico.ts` y `utils/bloqueo.ts`, para que los use el estado de la vigilancia.
+  * Test de arquitectura que hace cumplir las capas de `src/` y la ausencia de ciclos, con las 9 dependencias cruzadas existentes registradas como excepciones con nombre.
+  * Test de secretos que busca ticket, token, secreto, URL y clave de prueba en respuestas, logs del protocolo, stderr y archivos de datos.
+  * Catálogo simulado de cambios por lotes (`scripts/qa/catalogo-cambios.mjs`, también como `CATALOGO=cambios` en la API simulada) y reloj de prueba.
 
 ### Corregido
 * **El flujo de publicación ya reconoce una versión publicada a mano.** `actions/setup-node` deja un token de relleno en `NODE_AUTH_TOKEN`; con él, `npm view` recibía 401, el flujo creía que la versión no estaba en npm y caía por falta de `NPM_TOKEN` antes de crear la release (pasó con `v2.7.0` y `v2.8.0`). Ahora consulta el registro sin credenciales.

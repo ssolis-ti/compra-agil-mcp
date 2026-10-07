@@ -19,6 +19,7 @@
 
 import fs from 'fs';
 import { logger } from './logger.js';
+import { escribirAtomico } from './archivo-atomico.js';
 
 /** Parámetros que jamás deben formar parte de la clave ni tocar el disco. */
 const PARAMS_SECRETOS = new Set(['ticket']);
@@ -206,13 +207,7 @@ export class ResponseCache {
    */
   private escribir(): void {
     if (!this.rutaEstado) return;
-    const temporal = `${this.rutaEstado}.${process.pid}.tmp`;
-    try {
-      fs.writeFileSync(temporal, JSON.stringify(Object.fromEntries(this.entradas)), 'utf8');
-      fs.renameSync(temporal, this.rutaEstado);
-    } catch {
-      // Si el disco no deja escribir, se sigue con la caché en memoria.
-      try { fs.rmSync(temporal, { force: true }); } catch { /* nada que limpiar */ }
-    }
+    // Si el disco no deja escribir, se sigue con la caché en memoria.
+    escribirAtomico(this.rutaEstado, JSON.stringify(Object.fromEntries(this.entradas)));
   }
 }

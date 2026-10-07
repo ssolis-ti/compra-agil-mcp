@@ -25,6 +25,9 @@
  *   CATALOGO=sintetico  ~40 procesos vigentes, desiertos y cerrados de varios
  *                       rubros y regiones, con filtros q/estado/region/página
  *                       (scripts/qa/catalogo-sintetico.mjs)
+ *   CATALOGO=cambios    lotes de cambios cada 5 min, como los registra la API
+ *                       real (scripts/qa/catalogo-cambios.mjs), para la
+ *                       vigilancia de la 2.9.0; CAMBIOS_POR_LOTE=35, FALLA_LOTE=0.1
  */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -37,8 +40,24 @@ const listado = leer('compra-agil-listado.json');
 const cot = leer('cotizaciones-reales.json');
 
 import { crearCatalogo, buscarEnCatalogo } from './catalogo-sintetico.mjs';
+import { crearCatalogoCambios, poblarLotes } from './catalogo-cambios.mjs';
 
 const catalogo = process.env.CATALOGO === 'sintetico' ? crearCatalogo() : null;
+
+// CATALOGO=cambios: lotes cada 5 min como la API real (scripts/qa/catalogo-cambios.mjs),
+// desde 48 h atrás y generados a medida que pasa el tiempo. CAMBIOS_POR_LOTE fija el
+// tamaño (por defecto 35, el pico medido el 6-oct); FALLA_LOTE la probabilidad de 504.
+const cambios = process.env.CATALOGO === 'cambios' ? crearCatalogoCambios() : null;
+const POR_LOTE = Number(process.env.CAMBIOS_POR_LOTE || 35);
+const FALLA_LOTE = Number(process.env.FALLA_LOTE || 0);
+const paredChileAhora = () => Date.parse(new Date().toLocaleString('sv-SE', { timeZone: 'America/Santiago' }).replace(' ', 'T') + 'Z');
+let pobladoHasta = paredChileAhora() - 48 * 3600_000;
+function ponerAlDia() {
+  const ahora = paredChileAhora();
+  if (ahora - pobladoHasta < 5 * 60_000) return;
+  poblarLotes(cambios, pobladoHasta, ahora, POR_LOTE);
+  pobladoHasta = ahora + 1;
+}
 const FALLA_DETALLE = Number(process.env.FALLA_DETALLE || 0);
 const LATENCIA_MS = Number(process.env.LATENCIA_MS || 0);
 let hits = 0;
@@ -67,6 +86,12 @@ function atender(req, res) {
   if (q === 'E429') return send(res, 429, { success: 'NOK', errors: [{ codigo: '429', mensaje: 'rate' }] }, { 'retry-after': '60' });
   if (q === 'BADJSON') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end('{"payload": [trunc'); }
 
+  if (cambios && u.pathname === '/v2/compra-agil') {
+    ponerAlDia();
+    if (FALLA_LOTE > 0 && Math.random() < FALLA_LOTE) return send(res, 504, 'Gateway Timeout');
+    const r = cambios.buscar(u.searchParams);
+    return send(res, r.status, r.body);
+  }
   if (catalogo && u.pathname === '/v2/compra-agil') {
     return send(res, 200, { success: 'OK', payload: buscarEnCatalogo(catalogo, u.searchParams) });
   }

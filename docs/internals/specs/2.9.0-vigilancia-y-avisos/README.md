@@ -60,8 +60,8 @@ Además de la puerta propia de cada fase en `tareas.md`:
 | Fase | Nombre | Estado |
 | :--- | :--- | :--- |
 | 0 | Preparación: decisiones, mediciones y base | ✅ 7-oct ([medición](../../qa/medicion-ventanas.md)) |
-| 1 | Cimientos compartidos | 🔄 En curso |
-| 2 | Vigilancia sin huecos | ⏸ |
+| 1 | Cimientos compartidos | ✅ 7-oct |
+| 2 | Vigilancia sin huecos | 🔄 En curso |
 | 3 | Bandeja de salida y formato | ⏸ |
 | 4 | Canal Telegram | ⏸ |
 | 5 | Canal webhook | ⏸ |
