@@ -83,13 +83,13 @@ verde, CHANGELOG, commit propio).
 ### Definición de cerrada
 La 2.8.0 se publica cuando se cumple todo esto:
 1. ✅ `tsc`, ESLint y la suite en verde; la suite pasa con `TZ` en UTC, `America/Santiago` y `Asia/Tokyo`.
-2. 🟡 Cobertura sobre los umbrales del bloque G (93 %): se verifica en `prepublishOnly`; en la CI falta el paso, porque modificar `.github/workflows/` requiere el permiso `workflow` del token de git.
+2. 🟡 Cobertura sobre los umbrales del bloque G (93 %): se verifica en `prepublishOnly`; en la CI falta el paso (el token de git ya tiene el permiso `workflow`; queda para la 2.8.1).
 3. ✅ Ningún defecto conocido de severidad media o alta abierto (los del segundo enjambre, corregidos).
 4. ✅ Contra la API real: batería 9 de 10, el error es un 504 de la API; monitoreo de 60 min con 49 cambios a las 20:33 (la 2.7.0 devolvía 0).
 5. ✅ (6-oct, [resultado](resultado-enjambre-api-real.md#validación-de-la-280-contra-la-api-real)) Enjambre de agentes repetido con presupuesto ≤ 60 consultas: 0 fugas del ticket, 0 hallazgos altos nuevos, y las estadísticas de precios recalculadas a mano sobre datos reales. Correrlo en un horario en que la API no esté degradada: el 6-oct los 504 del detalle impidieron obtener precios.
-6. ⏳ Etapa 2 hecha desde Claude Desktop (la hace el dueño).
+6. 🟡 Etapa 2 (7-oct) desde un cliente MCP real (Claude Code, servidor 2.8.0 por stdio): hora del SHOA activa, ticket válido sin exponerlo, búsqueda de resmas en la RM con horas de Chile coherentes, informe radar en `radar/octubre` con pie en hora de Chile, y rechazo de `C:\Windows` y de un código mal formado sin consultar la API. El detalle y el informe de precios en oficio quedaron sin probar: la API respondió 504 en todos los detalles, y el servidor lo informó como fallo de la API, sin reintentar en ráfaga. Pendiente repetirlos desde Claude Desktop con la API estable.
 7. ✅ README, `docs/api/manual_servidor_mcp.md`, glosario, instrucciones al conectar, `CLAUDE.md`, CHANGELOG y este punto de retome al día.
-8. ⏳ Publicada en npm con tag `v2.8.0` y release en GitHub (la hace el dueño: requiere 2FA y subir los commits locales, para lo que falta el permiso `workflow`).
+8. ✅ Publicada en npm el 7-oct (`latest`), tag `v2.8.0` y release en GitHub. La release se creó a mano: `publicar.yml` no reconocía una versión ya publicada (corregido en `a88e9b4`).
 
 ---
 

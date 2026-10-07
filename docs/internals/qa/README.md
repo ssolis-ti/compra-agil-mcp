@@ -17,7 +17,7 @@ sesión local.
 | Fases 1.0, 1.1 y 1.8 (S1–S9) más S1b, S11 y S16 | ✅ Hechas — PR #9 a #13 |
 | Versión 2.7.0 | ✅ Publicada en npm el 6-oct (`latest`); probada instalándola con `npx` desde una carpeta vacía. Tag `v2.7.0` y release en GitHub |
 | Publicación automática en npm | ✅ `publicar.yml`: un tag `v*` publica (requiere el secreto `NPM_TOKEN`); si la versión ya se publicó a mano, solo crea la release |
-| Versión 2.8.0 (cerrada) | ✅ Lista en `main` local — [Plan 2.8.0](roadmap.md#plan-280--versión-cerrada) completo (bloques A–H), validada contra la API real y con un segundo enjambre cuyos hallazgos se corrigieron. ⏳ Falta: subir los commits (el token de git necesita el permiso `workflow`), la etapa 2 en Claude Desktop y publicar en npm |
+| Versión 2.8.0 (cerrada) | ✅ Publicada en npm el 7-oct (`latest`), tag `v2.8.0` y release en GitHub — [Plan 2.8.0](roadmap.md#plan-280--versión-cerrada) completo (bloques A–H), validada contra la API real y con un segundo enjambre cuyos hallazgos se corrigieron. 🟡 Queda repetir en Claude Desktop el detalle y el informe de precios de la etapa 2 (el 7-oct la API respondió 504) |
 | Segundo enjambre contra la API real (6-oct, 2.8.0) | ✅ [resultado](resultado-enjambre-api-real.md#validación-de-la-280-contra-la-api-real): hora confirmada en vivo, estadísticas verificadas a mano sobre datos reales, 0 fugas; F1–F10 corregidos |
 
 Todo lo de la 2.7.0 se probó contra una API **simulada** con fallas

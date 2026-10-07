@@ -12,7 +12,7 @@ herramientas de ingeniería, no hacen falta para usarlo.
 
 El estado del proyecto, lo hecho y lo pendiente está en
 [`docs/internals/qa/README.md`](docs/internals/qa/README.md). Léelo antes de
-proponer cambios: la 2.8.0 está lista en `main` y falta publicarla (ver «Plan 2.8.0» en [`docs/internals/qa/roadmap.md`](docs/internals/qa/roadmap.md)). Las decisiones de arquitectura y su porqué están en [`docs/internals/adr/`](docs/internals/adr/README.md).
+proponer cambios: la 2.8.0 está publicada en npm (7-oct); lo que queda está en «Definición de cerrada» de [`docs/internals/qa/roadmap.md`](docs/internals/qa/roadmap.md). Las decisiones de arquitectura y su porqué están en [`docs/internals/adr/`](docs/internals/adr/README.md).
 
 ## Comandos
 
