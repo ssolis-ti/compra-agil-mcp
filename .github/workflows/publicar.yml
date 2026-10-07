@@ -34,9 +34,13 @@ jobs:
 
       # Si la versión ya se publicó a mano (npm publish desde un equipo), el tag
       # solo crea la release: npm no deja volver a publicar el mismo número.
+      # Se consulta el registro sin credenciales: setup-node deja un token de
+      # relleno en NODE_AUTH_TOKEN y con él `npm view` recibe 401, así que la
+      # versión parecía no publicada y el flujo caía por falta de NPM_TOKEN
+      # (pasó con v2.7.0 y v2.8.0 el 7-oct-2026).
       - name: ¿La versión ya está en npm?
         run: |
-          if npm view "@ssolis-ti/mcp-compra-agil@$VERSION" version >/dev/null 2>&1; then
+          if curl -fsS -o /dev/null "https://registry.npmjs.org/@ssolis-ti%2fmcp-compra-agil/$VERSION"; then
             echo "::notice::@ssolis-ti/mcp-compra-agil@$VERSION ya está en npm: no se vuelve a publicar, solo se crea la release."
             echo "YA_PUBLICADA=1" >> "$GITHUB_ENV"
           fi

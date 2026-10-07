@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Corregido
+* **El flujo de publicación ya reconoce una versión publicada a mano.** `actions/setup-node` deja un token de relleno en `NODE_AUTH_TOKEN`; con él, `npm view` recibía 401, el flujo creía que la versión no estaba en npm y caía por falta de `NPM_TOKEN` antes de crear la release (pasó con `v2.7.0` y `v2.8.0`). Ahora consulta el registro sin credenciales.
+
 ## [2.8.0] - 2026-10-06
 
 Versión cerrada: junta los arreglos que encontró el enjambre de agentes contra la API real (6-oct) y las dos simulaciones anteriores, las fases de calidad y rendimiento del Sprint 1 y las de operación del Sprint 2. El cambio de fondo es la hora: **la API entrega hora de Chile, no UTC**, y hasta la 2.7.0 cada cierre se mostraba 3 horas antes y el radar ocultaba los procesos que cerraban en las 3 horas siguientes. No hay cambios incompatibles en los parámetros; sí cambian los valores de las horas, que ahora son los correctos.
