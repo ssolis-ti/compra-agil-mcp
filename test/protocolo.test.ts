@@ -73,11 +73,11 @@ describe('servidor MCP por stdio', () => {
     expect(escriben.sort()).toEqual(['activar_vigilancia', 'conectar_telegram', 'configurar_criterios', 'confirmar_alertas', 'generar_informe', 'obtener_alertas_nuevas', 'probar_avisos']);
   });
 
-  it('registra los recursos y los tres prompts', async () => {
+  it('registra los recursos y los cuatro prompts', async () => {
     const plantillas = (await cliente.listResourceTemplates()).resourceTemplates.map((r) => r.uriTemplate);
     expect(plantillas).toEqual(expect.arrayContaining(['compra-agil://compras/{codigo}', 'compra-agil://documentacion/{filename}']));
     const prompts = (await cliente.listPrompts()).prompts.map((p) => p.name).sort();
-    expect(prompts).toEqual(['analizar_competencia', 'buscar_oportunidades_proveedor', 'configurar_vigilancia']);
+    expect(prompts).toEqual(['analizar_competencia', 'buscar_oportunidades_proveedor', 'configurar_vigilancia', 'empezar']);
   });
 
   it('responde una herramienta que no consulta la API', async () => {
@@ -149,7 +149,7 @@ describe('servidor MCP por stdio', () => {
 
   it('el log de arranque cuenta lo que de verdad se registró', () => {
     expect(stderr).toMatch(/23 herramientas registradas: buscar_compras_agiles,/);
-    expect(stderr).toMatch(/3 prompts registrados: buscar_oportunidades_proveedor, analizar_competencia, configurar_vigilancia/);
+    expect(stderr).toMatch(/4 prompts registrados: buscar_oportunidades_proveedor, analizar_competencia, empezar, configurar_vigilancia/);
   });
 
   it('el ticket no aparece en los logs del proceso', () => {

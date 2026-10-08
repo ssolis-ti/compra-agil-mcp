@@ -42,7 +42,7 @@ try {
   const herramientas = (await cliente.listTools()).tools.map((t) => t.name);
   ok(herramientas.length === 23, `${herramientas.length} herramientas`);
   const prompts = (await cliente.listPrompts()).prompts.map((p) => p.name);
-  ok(prompts.includes('configurar_vigilancia'), `prompts: ${prompts.join(', ')}`);
+  ok(prompts.includes('empezar') && prompts.includes('configurar_vigilancia'), `prompts: ${prompts.join(', ')}`);
   const docs = (await cliente.listResources()).resources.filter((r) => r.uri.includes('documentacion')).length;
   ok(docs >= 12, `${docs} documentos incluidos`);
   const estado = JSON.parse((await cliente.callTool({ name: 'estado_vigilancia', arguments: {} })).content[0].text);

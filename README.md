@@ -6,17 +6,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > ### 👋 Empieza aquí
-> **¿Vendes al Estado y quieres que te avisen por Telegram de las compras ágiles de lo tuyo?** No necesitas programar: sigue el [**manual de uso**](docs/api/manual-de-uso.md). Son cinco comandos y un asistente que te pregunta todo:
+> **¿Vendes al Estado y quieres que te avisen por Telegram de las compras ágiles de lo tuyo?** No necesitas programar. Elige tu camino; todos terminan diciéndole a tu asistente **«Ayúdame a empezar»** (prompt `empezar`), y él te guía con el resto:
 >
-> ```bash
-> git clone https://github.com/ssolis-ti/compra-agil-mcp.git mcp-compra-agil
-> cd mcp-compra-agil
-> npm install
-> npm run build
-> node dist/index.js --configurar
-> ```
+> | Si usas… | Instalas así | Tus claves van en |
+> | :--- | :--- | :--- |
+> | **Solo Claude Desktop** | Doble clic en el archivo `.mcpb` de [Releases](https://github.com/ssolis-ti/compra-agil-mcp/releases) | La ventana de configuración de la extensión |
+> | **Un agente con terminal** (Claude Code, Cursor) | Le pides al agente que lo instale | Un formulario local que abre `--configurar-web` |
+> | **La terminal tú mismo** | 5 comandos y `node dist/index.js --configurar` | El asistente de la terminal (entrada oculta) |
 >
-> ¿Usas Claude Desktop u otro cliente MCP? Más abajo está la [integración](#-integración-con-clientes-mcp-y-agentes); el prompt **configurar_vigilancia** ajusta los avisos a tu rubro conversando.
+> Paso a paso en el [**manual de uso**](docs/api/manual-de-uso.md). Avanzados (OpenClaw, Hermes, webhook, systemd): [guía de vigilancia y avisos](docs/api/guia-vigilancia-y-avisos.md). Nunca escribas el ticket ni el token del bot en el chat.
 
 Servidor [MCP (Model Context Protocol)](https://modelcontextprotocol.io) desarrollado en TypeScript que envuelve e integra de forma avanzada la API REST de **Compra Ágil v2** y la API de **Órdenes de Compra (OC)** de [Mercado Público](https://www.mercadopublico.cl). Permite a cualquier IA, agente autónomo o cliente compatible interrogar, filtrar, auditar y prospectar procesos de compra estatal del gobierno de Chile.
 
@@ -125,7 +123,7 @@ Una vez que tengas tu ticket alfanumérico copiado, puedes proceder a la instala
 ### Opción A: 🤖 Instalación Automatizada mediante tu Agente/Asistente de IA (Recomendado)
 Si estás utilizando un asistente o agente de IA en tu editor de código con permisos para ejecutar comandos (como Cursor Composer, Roo Code, Cline, Windsurf Agent o Claude Code), puedes delegar la configuración por completo. Simplemente copia y pega el siguiente prompt en el chat de tu IA:
 
-> "Configura el servidor MCP Compra Ágil en este proyecto. Instala dependencias, compila con `npm run build` y registra un servidor stdio llamado `compra-agil` cuyo comando sea `node` y cuyo argumento sea la ruta absoluta de `dist/index.js`. El ticket ya está en la variable de entorno `COMPRA_AGIL_TICKET`: referénciala, no la leas, no la imprimas y no la copies a un archivo del repositorio. Si falta, detente y pídemela."
+> "Instala el servidor MCP de https://github.com/ssolis-ti/compra-agil-mcp: clónalo, corre `npm install` y `npm run build`, y registra un servidor stdio llamado `compra-agil` cuyo comando sea `node` y cuyo argumento sea la ruta absoluta de `dist/index.js`. Para el ticket y el token del bot de Telegram corre `node dist/index.js --configurar-web`: abre un formulario local en mi navegador y yo los escribo ahí. No me los pidas en el chat, no los leas ni los imprimas. Después corre `node dist/index.js --check` y guíame con el prompt «empezar»."
 
 ---
 
@@ -432,6 +430,13 @@ Desde la 2.7.0 el paquete de npm incluye las guías y manuales de `docs/api` y `
 ### Prompts Disponibles
 
 * **`buscar_oportunidades_proveedor`:** Plantilla estructurada para guiar a la IA a consultar la región del proveedor, buscar compras publicadas afines y filtrar las 5 mejores ofertas libres de competidores.
+* **`empezar`:** Punto de partida para cualquier usuario nuevo. El agente revisa qué falta y lo resuelve conversando:
+  * criterios según lo que vendes;
+  * Telegram con código de verificación;
+  * encender la vigilancia;
+  * mensaje de prueba.
+
+  Termina cuando te llega el primer aviso. No pide secretos en el chat.
 * **`configurar_vigilancia`:** Ajusta la vigilancia a tu rubro conversando: pregunta qué vendes, dónde y desde qué monto, prueba las palabras clave contra compras reales, las guarda cuando confirmas y revisa que los avisos funcionen. No pide secretos en el chat.
 * **`analizar_competencia`:** Plantilla de comandos para comparar precios unitarios y totales de los participantes de un proceso finalizado, identificando la brecha económica (spread) entre ofertas. *Nota: el motivo de selección no está disponible — la API no publica adjudicaciones.*
 

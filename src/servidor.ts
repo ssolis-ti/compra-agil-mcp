@@ -47,6 +47,7 @@ import { registerDocumentacionResource } from './resources/documentacion.js';
 import { registerBuscarOportunidadesPrompt } from './prompts/buscar-oportunidades.js';
 import { registerAnalizarCompetenciaPrompt } from './prompts/analizar-competencia.js';
 import { registerConfigurarVigilanciaPrompt } from './prompts/configurar-vigilancia.js';
+import { registerEmpezarPrompt } from './prompts/empezar.js';
 
 /**
  * `opciones.vigilancia`: el control de la vigilancia dentro del servidor (modo
@@ -114,6 +115,7 @@ export function crearServidor(client: CompraAgilClient, version: string, opcione
   // Prompts
   registerBuscarOportunidadesPrompt(server);
   registerAnalizarCompetenciaPrompt(server);
+  registerEmpezarPrompt(server);
   registerConfigurarVigilanciaPrompt(server);
 
   return { server, registrados };

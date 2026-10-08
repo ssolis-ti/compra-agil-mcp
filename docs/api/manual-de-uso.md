@@ -18,17 +18,49 @@ está apagada.**
 
 ## Lo que necesitas antes
 
-1. **Un computador con Windows** que quede encendido en horario de oficina, con [Node.js](https://nodejs.org) instalado (la versión «LTS»).
-2. **Un ticket de Mercado Público.** Es gratis:
+1. **Un ticket de Mercado Público.** Es gratis:
    1. Entra a https://www.chilecompra.cl/api/ y presiona «Pide tu ticket».
    2. Entra con tu Clave Única.
    3. Te llega por correo en minutos.
-3. **Telegram** en tu teléfono.
+2. **Telegram** en tu teléfono, si quieres los avisos ahí.
+3. **Un computador con Windows** que quede encendido en horario de oficina, mientras quieras recibir avisos.
 
-## Instalar (una sola vez)
+## Instalar y configurar: elige tu camino
 
-Abre una terminal: en Windows, busca «PowerShell» en el menú de inicio. Copia
-estas líneas, una por una:
+Los tres caminos terminan igual: le dices a tu asistente **«Ayúdame a
+empezar»** y él te guía con lo que falta. En ninguno tienes que escribir el
+ticket ni el token del bot en el chat: van en un campo seguro.
+
+### Camino 1 — Solo uso Claude Desktop (el más simple)
+
+1. Descarga el archivo `compra-agil-…-win32.mcpb` de la última versión en
+   https://github.com/ssolis-ti/compra-agil-mcp/releases.
+2. Haz doble clic en él. Claude Desktop te pregunta si quieres instalar la
+   extensión «Compra Ágil — Mercado Público»: acepta.
+3. En la ventana de configuración de la extensión:
+   - pega tu **ticket**;
+   - si ya creaste tu bot de Telegram, pega también su **token**. Si no, puedes hacerlo después: tu asistente te explica cómo.
+4. En una conversación nueva, escribe: **«Ayúdame a empezar»**.
+
+No necesitas instalar nada más: Claude Desktop trae todo lo necesario.
+
+### Camino 2 — Mi asistente puede usar la terminal (Claude Code, Cursor)
+
+Pídele a tu asistente:
+
+> Instala el servidor MCP de https://github.com/ssolis-ti/compra-agil-mcp,
+> compílalo y regístralo como servidor «compra-agil». Para el ticket y el
+> token del bot, corre `node dist/index.js --configurar-web`: abre un
+> formulario en mi navegador y yo los escribo ahí. No me los pidas en el chat.
+> Después corre `node dist/index.js --check` y guíame con el prompt «empezar».
+
+Se abre una página en tu navegador (está solo en tu computador): pegas ahí el
+ticket y el token, y vuelves a la conversación.
+
+### Camino 3 — Prefiero hacerlo yo en la terminal
+
+Con [Node.js](https://nodejs.org) (versión «LTS») instalado, abre PowerShell
+y copia estas líneas, una por una:
 
 ```bash
 git clone https://github.com/ssolis-ti/compra-agil-mcp.git mcp-compra-agil
@@ -38,34 +70,28 @@ npm run build
 node dist/index.js --configurar
 ```
 
-Si `git` no está instalado, descarga el proyecto como ZIP desde
-https://github.com/ssolis-ti/compra-agil-mcp (botón «Code» → «Download ZIP»),
-descomprímelo y abre la terminal en esa carpeta.
+`--configurar` te pregunta el ticket (no se ve mientras lo escribes), qué
+vendes, la región, el monto mínimo y Telegram, y deja la vigilancia encendida.
+Para cambiar algo después, vuelve a correrlo: Enter deja cada respuesta como
+estaba.
 
-## Configurar: el asistente te pregunta todo
+### Usuarios avanzados
 
-`node dist/index.js --configurar` te hace cinco preguntas:
+Gateways siempre encendidos (OpenClaw, Hermes), webhook firmado, correo,
+servicio de Linux, variables de entorno: [guía de vigilancia y
+avisos](guia-vigilancia-y-avisos.md).
 
-1. **Tu ticket.** Pégalo; no se ve mientras lo escribes. El asistente comprueba que funcione.
-2. **Qué vendes.** Escribe palabras que aparecerían en el nombre de la compra, separadas por coma: `resma, papel, archivador`. El asistente te dice cuántas compras abiertas hay ahora con cada una. Si una da 0, prueba otra forma de decirlo.
-3. **Dónde y desde qué monto.** Por ejemplo `13` para la Región Metropolitana, y `200000` como mínimo. Ojo: la mitad de las compras ágiles es de menos de $800.000.
-4. **Telegram.** Te explica cómo crear tu bot con @BotFather (dos minutos). Después le escribes «hola» a tu bot y el asistente encuentra tu chat solo. Te llega un mensaje de prueba.
-5. **Dejarla encendida.** Responde «s» y la vigilancia arranca sola cada vez que prendes el computador.
+## Lo que hace tu asistente cuando le dices «Ayúdame a empezar»
 
-Para cambiar algo después, vuelve a correr `node dist/index.js --configurar`.
-Enter deja cada respuesta como estaba.
+1. **Revisa qué falta.**
+2. **Te pregunta qué vendes, dónde y desde qué monto.** Prueba las palabras contra compras reales («con "resma" hay 14 compras abiertas ahora; por ejemplo…») y guarda los criterios cuando le confirmas.
+3. **Conecta tu Telegram.** Le escribes «hola» a tu bot, te llega un **código de 6 dígitos** por Telegram y se lo dictas a tu asistente. Así nadie más puede desviar tus avisos.
+4. **Enciende la vigilancia.** Puede ser «mientras Claude esté abierto», sin instalar nada, o «siempre, aunque cierres Claude». Para la segunda te pide un sí explícito, porque instala una tarea en Windows.
+5. **Te manda un mensaje de prueba** y te resume cómo quedó.
 
-## Afinar lo que vendes conversando (con Claude Desktop)
-
-Si usas Claude Desktop con este servidor, elige el prompt **«configurar
-vigilancia»** o escríbele: «Ayúdame a configurar la vigilancia: vendo útiles
-de oficina en Santiago». Claude te pregunta, prueba las palabras contra
-compras reales, te muestra ejemplos y guarda los criterios cuando le
-confirmas. Cada cambio de criterios te llega también a Telegram, para que
-sepas si alguien los tocó.
-
-Claude **nunca** te va a pedir el ticket ni el token del bot en el chat: eso
-se escribe solo con el asistente de la terminal.
+Para cambiar algo después, pídeselo: «agrega "tóner" a lo que vigilo», «avísame
+solo desde $300.000», «apaga la vigilancia». Cada cambio de criterios te llega
+también a Telegram, para que sepas si alguien los tocó.
 
 ## Los mensajes que vas a recibir
 
@@ -100,6 +126,8 @@ Cada línea con ✘ dice qué falta. Lo más común:
 Lo que pasó queda anotado en `vigilancia.log`, en la carpeta del proyecto.
 
 ## Para apagarla
+
+Pídele a tu asistente «apaga la vigilancia». Si la instalaste como tarea de Windows desde la terminal, también puedes correr:
 
 ```bash
 powershell -ExecutionPolicy Bypass -File scripts\quitar-tarea-windows.ps1

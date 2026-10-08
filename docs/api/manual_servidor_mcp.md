@@ -50,7 +50,7 @@ Todo rechazo de una entrada llega como `Error de validación: <qué corregir>. N
 
 Recursos de código: `compra-agil://regiones`, `compra-agil://estados`, `compra-agil://glosario`, `compra-agil://compras/{codigo}`. Ese último trae `_nota_horaria` y `cierre_hora_chile`. Los documentos de `docs/` aparecen como `compra-agil://documentacion/{filename}`, también al instalar con npm.
 
-Prompts: `buscar_oportunidades_proveedor`, `analizar_competencia` y `configurar_vigilancia` (ajusta los criterios de la vigilancia conversando; no pide secretos en el chat). El segundo compara la oferta más barata y la más cara. No identifica un proveedor adjudicado ni pregunta si un seleccionado fue el más barato. Una marca en la cotización no es una adjudicación.
+Prompts: `buscar_oportunidades_proveedor`, `analizar_competencia`, `empezar` (de cero al primer aviso: criterios, Telegram con código, encendido) y `configurar_vigilancia` (ajusta los criterios de la vigilancia conversando; no pide secretos en el chat). El segundo compara la oferta más barata y la más cara. No identifica un proveedor adjudicado ni pregunta si un seleccionado fue el más barato. Una marca en la cotización no es una adjudicación.
 
 ## Vigilancia y avisos
 

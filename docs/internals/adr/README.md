@@ -36,3 +36,5 @@ Una decisión nueva va en un archivo nuevo con el número siguiente. Una que cam
 | [0024](0024-webhook-firmado-con-hmac-y-marca-de-tiempo.md) | *(2.9.0)* webhook firmado con HMAC y marca de tiempo |
 | [0025](0025-canales-con-fetch-nativo-y-smtp-con-nodemailer.md) | *(2.9.0)* Telegram y webhook con `fetch` nativo; correo con `nodemailer` |
 | [0026](0026-un-nucleo-dos-modos-gateway-y-daemon.md) | *(2.9.0)* un núcleo, dos modos: el gateway entrega, el daemon vigila solo |
+| [0027](0027-vincular-telegram-con-codigo.md) | *(2.9.0)* el chat de Telegram se vincula con un código que el usuario dicta |
+| [0028](0028-vigilancia-con-claude-o-siempre.md) | *(2.9.0)* dos modos de vigilancia: «con Claude» y «siempre» |

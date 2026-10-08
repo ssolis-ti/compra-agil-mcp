@@ -283,3 +283,16 @@ describe('prompt configurar_vigilancia (2.9.0)', () => {
     expect((sinRubro.messages[0].content as { text: string }).text).toMatch(/pregúntame mi rubro/);
   });
 });
+
+describe('prompt empezar (anexo de instalación por agente)', () => {
+  it('lleva de cero al primer aviso: diagnóstico, criterios, Telegram con código y encendido, sin secretos en el chat', async () => {
+    const r = await cliente.getPrompt({ name: 'empezar', arguments: {} });
+    const t = (r.messages[0].content as { text: string }).text;
+    for (const paso of ['estado_vigilancia', 'configurar_criterios', 'conectar_telegram', 'activar_vigilancia', 'probar_avisos']) expect(t).toContain(paso);
+    expect(t).toMatch(/Nunca inventes el código/);
+    expect(t).toMatch(/confirmo=true/);
+    expect(t).toMatch(/No me pidas en el chat el ticket, el token ni contraseñas/);
+    expect(t).toMatch(/Configuración → Extensiones → Compra Ágil/);
+    expect(t).not.toMatch(/Reglas:[\s\S]*Reglas:/); // un solo bloque de reglas
+  });
+});

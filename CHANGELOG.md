@@ -16,6 +16,13 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Instalación y configuración a través del agente, para cualquier nivel** (2.9.0, [anexo](docs/internals/specs/2.9.0-vigilancia-y-avisos/anexo-instalacion-por-agente.md)):
+  * **Extensión de Claude Desktop (`.mcpb`):** doble clic, sin terminal ni Node. El ticket y el token del bot se piden en la ventana de la extensión y quedan en la bóveda del sistema.
+  * **Prompt `empezar`:** lleva a cualquier usuario de cero al primer aviso conversando.
+  * **`conectar_telegram`:** vincula el chat con un código de 6 dígitos que el usuario dicta (ADR 0027), para que nadie pueda desviar los avisos.
+  * **`activar_vigilancia`:** «con_claude», mientras Claude está abierto y sin instalar nada, o «siempre», como tarea de Windows y con confirmación explícita (ADR 0028).
+  * **`--configurar-web`:** un formulario local para que un agente con terminal configure los secretos sin que pasen por el chat.
+  * **Manual y README por perfil.**
 * **Pensado para quien no programa** (2.9.0):
   * **`node dist/index.js --configurar`:** un asistente en la terminal pregunta el ticket (oculto), qué vendes (y dice cuántas compras abiertas hay con cada palabra), región y monto mínimo. Además conecta Telegram (encuentra el chat solo y manda una prueba), escribe el `.env` con respaldo del anterior y deja la vigilancia encendida al iniciar Windows.
   * **Prompt MCP `configurar_vigilancia`:** ajusta los criterios conversando, prueba las palabras contra compras reales y guarda solo con tu confirmación; no pide secretos en el chat.

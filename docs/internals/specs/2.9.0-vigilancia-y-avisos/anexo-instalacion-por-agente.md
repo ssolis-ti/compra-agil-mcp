@@ -44,6 +44,12 @@ de configuración de Claude Desktop, o un formulario local en su navegador.
   Pregunta el nivel solo si hace falta (si hay terminal o no).
 - **RA8** Manual y README por perfil: cada uno ve solo su camino.
 
+## Estado (8-oct-2026)
+
+RA1–RA8 implementados y probados (826 tests):
+- **Extensión:** `scripts/qa/probar-extension.mjs` la arranca como Claude Desktop y verifica herramientas, prompts, documentos y la carpeta de datos.
+- **Prueba manual pendiente:** la extensión instalada en Claude Desktop y la vinculación con un bot real, con el dueño.
+
 ## Seguridad
 
 - Ninguna herramienta acepta un secreto ni un destino como parámetro (ADR 0023 se mantiene). El código de RA3 no es un destino: es una prueba de que el dueño controla el chat.
