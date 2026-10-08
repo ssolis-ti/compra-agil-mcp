@@ -9,7 +9,7 @@ Servidor [MCP (Model Context Protocol)](https://modelcontextprotocol.io) desarro
 
 El proyecto está diseñado bajo una arquitectura modular y cuenta con tres modos de operación:
 1. **Servidor Interactivo MCP:** Comunicación bidireccional vía Stdio para integrarse directamente con el chat y herramientas de tu IDE o cliente (Cursor, Claude Desktop, Windsurf, etc.).
-2. **Daemon de Alertas en Segundo Plano:** Servicio de consulta incremental autónomo que rastrea procesos de alto valor con **0 oferentes** y guarda alertas automatizadas en un registro local.
+2. **Vigilancia con avisos (2.9.0):** lee los procesos nuevos lote por lote, sin huecos, y avisa por **Telegram, correo o webhook firmado**, o los entrega a un gateway siempre encendido (OpenClaw, Hermes). Avisa también cuando la vigilancia está ciega y manda un resumen diario. Ver la [guía](docs/api/guia-vigilancia-y-avisos.md).
 3. **Generador de Informes:** Produce documentos imprimibles autocontenidos en formatos **Carta, Oficio y A4**.
 
 > 📌 **Antes de usarlo en decisiones de negocio**, lee [Limitaciones conocidas de la API](#️-limitaciones-conocidas-de-la-api). La documentación oficial de ChileCompra difiere del comportamiento real en puntos importantes — este servidor implementa lo que la API **hace**, no lo que promete.
@@ -61,7 +61,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 ### 💼 Para Proveedores (Empresas y Pymes)
 * **Inteligencia de Precios:** Analiza a cuánto está cotizando la competencia en procesos del mismo rubro para posicionar tu oferta.
 * **Prospectar Oportunidades:** Monitorea llamados activos sin oferentes con un ranking ponderado (Hot Score) y filtros locales.
-* **Alertas Automatizadas:** El Daemon en segundo plano notifica oportunidades que coincidan con tu presupuesto mínimo y rubro.
+* **Vigilancia con avisos:** Telegram, correo o webhook cada vez que se publica un proceso que calza con tus palabras clave, región y presupuesto, sin perder procesos cuando la API falla.
 
 > ⚠️ **Importante:** la API de Mercado Público **no publica qué oferta ganó**. Todo el análisis de precios se basa en cotizaciones presentadas, no en adjudicaciones. Lee [Limitaciones conocidas](#️-limitaciones-conocidas-de-la-api) antes de usarlo en decisiones de negocio.
 
@@ -75,7 +75,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 * **Hora de Chile y reloj oficial:** La API entrega hora de Chile aunque algunos campos digan "Z" (ver [Limitaciones](#-las-fechas-están-en-hora-de-chile-aunque-digan-z)); el servidor la lee así, manda las ventanas de cambios como la API las compara y calcula los plazos con la hora del SHOA (`ntp.shoa.cl`), no solo con el reloj de la máquina.
 * **Errores en un solo formato:** Todo rechazo de una entrada llega como `Error de validación: … No se consultó la API.`, en español, venga del esquema o de la herramienta, y los códigos con formato imposible se rechazan antes de gastar cuota.
 * **Métricas de uso:** `obtener_estadisticas_uso` informa la latencia y los errores de cada herramienta y el resultado de las consultas a la API (caché, 504, 429, timeouts) desde que arrancó el servidor.
-* **Paginación Inteligente y Monitoreo Completo:** La herramienta de cambios recientes admite navegación de páginas (`numero_pagina`), y el demonio de monitoreo periódico procesa de forma recursiva todas las páginas de resultados (`client.buscarTodo()`) para evitar pérdidas de alertas.
+* **Paginación y vigilancia sin huecos:** La herramienta de cambios recientes admite navegación de páginas (`numero_pagina`). La vigilancia lee la API lote por lote (la API registra los cambios cada 5 minutos), comprueba cada lote paginado, reintenta los que fallan antes de avanzar e informa lo que no pudo leer.
 * **Integración del Detalle de OC:** Resuelve de forma dinámica el código alfanumérico o ID numérico de las Órdenes de Compra utilizando la API legada de Mercado Público.
 * **Validado contra la API real:** El comportamiento documentado por ChileCompra difiere del real en varios puntos. Este servidor implementa lo que la API **hace**, no lo que promete, y lo documenta en [Limitaciones conocidas](#️-limitaciones-conocidas-de-la-api). Hay tests de regresión que blindan cada hallazgo.
 * **Redacción de credenciales:** Todo texto que sale del proceso (logs, errores, respuestas) pasa por un punto único de redacción que borra el ticket. Es relevante porque `sendLoggingMessage` envía los logs al cliente MCP — es decir, al contexto del modelo y a la transcripción.
@@ -181,13 +181,15 @@ COMPRA_AGIL_BASE_URL=https://api2.mercadopublico.cl
 # Nivel de log: debug | info | warn | error
 LOG_LEVEL=info
 
-# --- Parámetros del Daemon de Monitoreo ---
-# Intervalo entre búsquedas en minutos (por defecto 1 hora)
-MONITOR_INTERVAL_MINUTES=60
-# Presupuesto mínimo en CLP para emitir alerta (ej: 5.000.000)
-MONITOR_MIN_BUDGET_CLP=5000000
-# Palabras clave a buscar separadas por coma
+# --- Vigilancia (ver docs/api/guia-vigilancia-y-avisos.md) ---
+# Minutos entre rondas (por defecto 15). Cada lote se lee una vez: no cambia la cuota.
+MONITOR_INTERVAL_MINUTES=15
+# Presupuesto mínimo en CLP (0 = sin mínimo; con 5.000.000 se pierde ~84 % de los procesos)
+MONITOR_MIN_BUDGET_CLP=0
+# Palabras clave en el nombre, separadas por coma (también MONITOR_EXCLUIR y MONITOR_REGIONES)
 MONITOR_KEYWORDS=software, desarrollo, licencias, plataforma, sistema, soporte, cloud
+# Avisos: telegram, webhook, correo (cada uno con sus variables; ver .env.example)
+# COMPRA_AGIL_AVISOS=telegram
 ```
 
 ### 🔐 Manejo seguro del ticket
@@ -218,10 +220,15 @@ npm start
 ```
 
 ### Monitoreo Autónomo
-Para ejecutar el Daemon de alertas en segundo plano (vigila oportunidades sin oferentes y escribe los reportes en `alerts.log`):
+La vigilancia revisa los procesos nuevos cada 15 minutos, sin huecos aunque la API falle. Avisa por los canales del `.env` (Telegram, correo, webhook firmado) y deja todo en `alerts.log` y `vigilancia.log`, rotado a los 5 MB:
 ```bash
-npm run monitor
+node dist/index.js --check          # ¿quedó bien instalado? (código 0 = sí)
+node dist/index.js --probar-avisos  # un mensaje de prueba por cada canal
+node dist/index.js --vigilar        # la vigilancia (también: npm run monitor)
 ```
+Para dejarla encendida sola: `scripts\instalar-tarea-windows.ps1` (Windows) o `scripts/compra-agil-vigilancia.service` (Linux, systemd). Con un gateway siempre encendido (OpenClaw, Hermes), el gateway llama `obtener_alertas_nuevas` y `confirmar_alertas` y avisa por su canal. Todo, paso a paso, en la [guía de vigilancia y avisos](docs/api/guia-vigilancia-y-avisos.md).
+
+**Instalación por un agente:** el agente clona, corre `npm install` y `npm run build`, y pide al dueño que escriba en el `.env` el ticket y los tokens de los canales (el agente no los lee ni los escribe). Después corre `node dist/index.js --check`: el código de salida 0 confirma que quedó listo.
 
 ### Testing con MCP Inspector
 Para probar las herramientas, recursos y prompts en una interfaz gráfica local:
@@ -402,7 +409,7 @@ const resources = await client.listResources();
 
 #### 📚 La documentación viaja en el paquete
 
-Desde la 2.7.0 el paquete de npm incluye las guías y manuales de `docs/api` y `docs/guias` (10 documentos, ~10 MB comprimido): con `npx` o `npm install` verás los 13 recursos y `consultar_documentos_locales` buscará en ellos igual que en un clon. Las notas de ingeniería (`docs/internals/`) no viajan y nunca se ofrecen como documentación.
+Desde la 2.7.0 el paquete de npm incluye las guías y manuales de `docs/api` y `docs/guias` (12 documentos, ~10 MB comprimido, entre ellos la guía de vigilancia y el contrato del webhook): con `npx` o `npm install` verás los 15 recursos y `consultar_documentos_locales` buscará en ellos igual que en un clon. Las notas de ingeniería (`docs/internals/`) no viajan y nunca se ofrecen como documentación.
 
 **Para agregar tus propios documentos** (bases técnicas, normativa interna), clona el repositorio y ponlos en `docs/`: el servidor usa la carpeta `docs/` del paquete cuando tiene documentos, así que en una instalación por npm una carpeta `docs/` en tu directorio de trabajo no se lee.
 

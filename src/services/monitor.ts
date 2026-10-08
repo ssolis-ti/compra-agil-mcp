@@ -20,6 +20,8 @@ import { rondaDeVigilancia } from '../vigilancia/ronda.js';
 import { leerConfigAvisos } from '../avisos/config.js';
 import { crearCanales } from '../avisos/canales/crear.js';
 import { configSaludDesdeEntorno } from '../vigilancia/salud.js';
+import { crearLogRotativo } from '../utils/log-rotativo.js';
+import { recuperacionDesdeEntorno } from '../vigilancia/lotes.js';
 
 loadEnvManual();
 
@@ -32,6 +34,18 @@ registrarSecreto(TICKET);
 if (!TICKET) {
   console.error('[ERROR] Variable de entorno COMPRA_AGIL_TICKET no definida en .env');
   process.exit(1);
+}
+
+// Todo lo que el daemon escribe en consola queda también en vigilancia.log,
+// rotado por tamaño (R10.4): instalado como tarea programada nadie mira la consola.
+const registrar = crearLogRotativo(rutaDeDatos('vigilancia.log'));
+for (const nivel of ['log', 'warn', 'error'] as const) {
+  const original = console[nivel].bind(console);
+  console[nivel] = (...partes: unknown[]) => {
+    original(...partes);
+    // eslint-disable-next-line no-control-regex
+    registrar(partes.map(String).join(' ').replace(/\u001b\[[0-9;]*m/g, ''));
+  };
 }
 
 const INTERVALO_MIN = Math.max(1, Number.parseInt(process.env.MONITOR_INTERVAL_MINUTES || '15', 10) || 15);
@@ -90,7 +104,7 @@ async function ronda(): Promise<void> {
       },
       avisos: { canales, config: configAvisos.bandeja },
       salud,
-    });
+    }, { recuperacionMs: recuperacionDesdeEntorno(process.env) });
     for (const aviso of r.avisos) console.warn(`[${t}] [AVISO] ${aviso}`);
     if (!r.tomada) {
       console.warn(`[${t}] Otro proceso (PID ${r.otroVigilante ?? '?'}) está vigilando: esta ronda no lee nada.`);

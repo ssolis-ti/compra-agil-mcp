@@ -1,0 +1,28 @@
+# Vigilancia de mcp-compra-agil como servicio de usuario de systemd (2.9.0, R10.3).
+#
+# Instalación (Linux), con el proyecto clonado y compilado en ~/mcp-compra-agil:
+#   mkdir -p ~/.config/systemd/user
+#   cp scripts/compra-agil-vigilancia.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now compra-agil-vigilancia
+#   loginctl enable-linger "$USER"     # para que siga corriendo sin sesión abierta
+# Estado y log:  systemctl --user status compra-agil-vigilancia
+#                journalctl --user -u compra-agil-vigilancia   (y vigilancia.log en la carpeta de datos)
+#
+# El ticket y los canales se leen del .env del proyecto: no los pongas aquí.
+# Si el proyecto está en otra carpeta, cambia WorkingDirectory y ExecStart.
+
+[Unit]
+Description=Vigilancia de Compra Ágil (mcp-compra-agil --vigilar)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/mcp-compra-agil
+ExecStart=/usr/bin/env node %h/mcp-compra-agil/dist/index.js --vigilar
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=default.target

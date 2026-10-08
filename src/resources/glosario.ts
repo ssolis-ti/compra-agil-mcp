@@ -64,6 +64,14 @@ export const GLOSARIO = [
     termino: 'Retry-After',
     definicion: 'Header HTTP que indica cuántos segundos esperar antes de volver a intentar una solicitud rechazada por exceso de cuota. Este servidor lo honra cuando la API lo envía; si no viene, aplica una espera creciente (15 → 30 → 60 → 120 min) que se reinicia con la primera consulta exitosa.',
   },
+  {
+    termino: 'Lote de cambios',
+    definicion: 'La API registra los cambios de procesos cada 5 minutos, todos con la misma marca de hora (hh:m0 o hh:m5). La vigilancia de este servidor lee lote por lote para no saltarse procesos (medido el 7-oct-2026).',
+  },
+  {
+    termino: 'Modo gateway',
+    definicion: 'Uso de la vigilancia desde un agente siempre encendido (OpenClaw, Hermes): pide las alertas con obtener_alertas_nuevas, las envía por su canal y las confirma con confirmar_alertas.',
+  },
 ];
 
 export function registerGlosarioResource(server: McpServer): void {

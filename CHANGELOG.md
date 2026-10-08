@@ -16,6 +16,12 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Instalación y documentación de la vigilancia** (2.9.0, fase 9).
+  * **Instaladores:** scripts para dejar la vigilancia como tarea programada de Windows (corren `--check` antes de instalar) y como servicio de usuario de systemd.
+  * **Log:** `vigilancia.log`, redactado y rotado a los 5 MB.
+  * **Guía:** [docs/api/guia-vigilancia-y-avisos.md](docs/api/guia-vigilancia-y-avisos.md), con los modos gateway y daemon.
+  * **Recuperación:** `COMPRA_AGIL_VIGILANCIA_RECUPERACION_H` fija cuántas horas hacia atrás se recuperan.
+  * **README y manual:** describen lo que la vigilancia hace de verdad (antes el README decía que el daemon «notificaba»).
 * **5 herramientas nuevas y comandos de terminal** (2.9.0, fase 8). El servidor pasa de 16 a 21 herramientas.
   * **`estado_vigilancia`:** qué ve y qué no ve la vigilancia.
   * **`obtener_alertas_nuevas` y `confirmar_alertas`:** el modo gateway, para OpenClaw o Hermes, que avisan por su propio canal.

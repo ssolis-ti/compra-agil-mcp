@@ -18,6 +18,12 @@ export const ASENTAMIENTO_MS = 2 * 60_000;
 export const ANCHO_CONSULTA_MS = PERIODO_LOTE_MS - 1000;
 /** Más atrás que esto no se lee: se informa como hueco (R1.3). */
 export const RECUPERACION_MS = 48 * 3600_000;
+
+/** COMPRA_AGIL_VIGILANCIA_RECUPERACION_H (1–168 h); fuera de rango o ausente, 48 h. */
+export function recuperacionDesdeEntorno(env: Record<string, string | undefined>): number {
+  const h = Number.parseInt(env.COMPRA_AGIL_VIGILANCIA_RECUPERACION_H ?? '', 10);
+  return Number.isInteger(h) && h >= 1 && h <= 168 ? h * 3600_000 : RECUPERACION_MS;
+}
 /** Primer ciclo, sin marca: la última hora. */
 export const PRIMERA_VENTANA_MS = 60 * 60_000;
 

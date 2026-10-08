@@ -285,7 +285,7 @@ reinicios y fallos, con contenido limpio.
 
 ---
 
-## Fase 9 — Instalación y documentación ⏸
+## Fase 9 — Instalación y documentación ✅ (7-oct-2026, salvo la instalación real de T9.1)
 
 **Objetivo:** un agente instala y deja encendida la vigilancia sin ayuda.
 **Cubre:** R10.3–R10.5, NF8.
@@ -293,15 +293,29 @@ reinicios y fallos, con contenido limpio.
 
 | Id | Tarea | Prueba / evidencia | Archivos |
 | :--- | :--- | :--- | :--- |
-| T9.1 | Script de tarea programada de Windows (instalar y quitar), con reinicio ante fallo | Instalada y reiniciada en el equipo del dueño | `scripts/instalar-tarea-windows.ps1`, `scripts/quitar-tarea-windows.ps1` |
-| T9.2 | Unidad de systemd de usuario de ejemplo | Probada en la CI de Ubuntu con `systemd-analyze verify` | `scripts/compra-agil-vigilancia.service` |
-| T9.3 | Rotación del log del daemon | `log-rotacion.test.ts` | `services/monitor.ts` |
-| T9.4 | Guías de OpenClaw y Hermes: registrar el MCP sin secretos, tarea programada del gateway, `--check` | Seguidas paso a paso por un agente en la fase 10 | `docs/api/guia-gateway-openclaw.md`, `docs/api/guia-gateway-hermes.md` |
-| T9.5 | README: sección «Vigilancia y avisos» e «Instalación por un agente»; corregir lo que hoy promete el daemon. Manual del servidor, `.env.example`, glosario | Enlaces y anclas verificados con `github-slugger` | `README.md`, `docs/api/manual_servidor_mcp.md`, `.env.example` |
+| T9.1 ⏳ dueño | Script de tarea programada de Windows (instalar y quitar), con reinicio ante fallo | Instalada y reiniciada en el equipo del dueño | `scripts/instalar-tarea-windows.ps1`, `scripts/quitar-tarea-windows.ps1` |
+| T9.2 ✅ | Unidad de systemd de usuario de ejemplo | Probada en la CI de Ubuntu con `systemd-analyze verify` | `scripts/compra-agil-vigilancia.service` |
+| T9.3 ✅ | Rotación del log del daemon | `log-rotacion.test.ts` | `services/monitor.ts` |
+| T9.4 ✅ | Guías de OpenClaw y Hermes: registrar el MCP sin secretos, tarea programada del gateway, `--check` | Seguidas paso a paso por un agente en la fase 10 | `docs/api/guia-gateway-openclaw.md`, `docs/api/guia-gateway-hermes.md` |
+| T9.5 ✅ | README: sección «Vigilancia y avisos» e «Instalación por un agente»; corregir lo que hoy promete el daemon. Manual del servidor, `.env.example`, glosario | Enlaces y anclas verificados con `github-slugger` | `README.md`, `docs/api/manual_servidor_mcp.md`, `.env.example` |
 
 **Sale:** todo documentado y con instaladores.
 
 **Puerta:** `.env.example` lista cada variable de `diseno.md` §7 sin ningún valor real.
+
+**Resultado (7-oct):**
+- **Suite:** 800 tests en las tres zonas horarias.
+- **`.env.example`:** tiene las 22 variables de §7 y ningún valor de secreto. Al comprobarlo apareció que `COMPRA_AGIL_VIGILANCIA_RECUPERACION_H` estaba en el diseño pero no en el código; se implementó (1–168 h, defecto 48).
+- **T9.1:** los scripts `scripts/instalar-tarea-windows.ps1` y `quitar-tarea-windows.ps1` corren `--check` antes de instalar.
+  - **Verificados:** pasan el analizador de PowerShell sin errores; un test lo comprueba en Windows, junto con su contenido y su BOM UTF-8, porque PowerShell 5.1 lee como ANSI los archivos sin BOM.
+  - **Falta (la hace el dueño):** instalar la tarea en su equipo, porque cambia la configuración del sistema.
+- **T9.2:** la unidad de systemd se verifica por contenido (`instalacion.test.ts`), no con `systemd-analyze verify` en la CI: ese comando valida rutas del equipo que la ejecuta.
+- **T9.3:** el daemon escribe todo en `vigilancia.log`, redactado, sin códigos de color y rotado a los 5 MB (3 archivos). Al cerrar la fase apareció una carrera en `monitor-proceso.test.ts`, que bajo carga leía el log antes de que el daemon escribiera la línea de la ronda; se corrigió.
+- **T9.4, una guía en vez de dos** (`docs/api/guia-vigilancia-y-avisos.md`): cubre los modos gateway y daemon. No inventa comandos de OpenClaw ni de Hermes para las tareas programadas, que no se pudieron verificar; da el texto exacto que debe ejecutar la tarea y remite al mecanismo de cada gateway.
+- **T9.5:**
+  - **README:** describe lo que la vigilancia hace de verdad; antes decía que el daemon «notifica». Suma la sección «Instalación por un agente» y los conteos reales: 12 documentos y 15 recursos, contados con el servidor.
+  - **Manual:** la sección del daemon describía la 2.8.0 (tope de 100 procesos, $5 millones, 60 min); quedó al día.
+  - **Glosario:** «Lote de cambios» y «Modo gateway».
 
 ---
 

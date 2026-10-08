@@ -18,7 +18,7 @@ Las fechas de la API están en hora de Chile, aunque `fecha_ultimo_cambio` traig
 
 Todo rechazo de una entrada llega como `Error de validación: <qué corregir>. No se consultó la API.` Los códigos de compra y de OC con formato imposible se rechazan sin gastar cuota.
 
-## Herramientas (16)
+## Herramientas (21)
 
 | Tool | Qué hace de verdad |
 | :--- | :--- |
@@ -50,9 +50,15 @@ Recursos de código: `compra-agil://regiones`, `compra-agil://estados`, `compra-
 
 Prompts: `buscar_oportunidades_proveedor` y `analizar_competencia`. El segundo compara la oferta más barata y la más cara. No identifica un proveedor adjudicado ni pregunta si un seleccionado fue el más barato. Una marca en la cotización no es una adjudicación.
 
-## Daemon
+## Vigilancia y avisos
 
-`src/services/monitor.ts` corre aparte del servidor MCP. Cada ciclo pide los cambios del intervalo más 5 minutos, como rango en hora de Chile y con la hora del SHOA y se queda con procesos `publicada`, con 0 ofertas, sobre `MONITOR_MIN_BUDGET_CLP` (default 5.000.000) y con alguna palabra de `MONITOR_KEYWORDS`. Appende a `alerts.log`. El intervalo es `MONITOR_INTERVAL_MINUTES` (default 60). Cada página pide 10 procesos y la auto-paginación corta a las 10 páginas, así que un ciclo mira como máximo 100 procesos. Una página de 50 cae en HTTP 504.
+`mcp-compra-agil --vigilar` (o `npm run monitor`) corre aparte del servidor MCP.
+- **Lectura:** cada 15 minutos (`MONITOR_INTERVAL_MINUTES`) lee la API lote por lote: la API registra los cambios cada 5 minutos con una sola marca. Empieza en el último lote revisado y pagina cada lote con comprobación (total y códigos); si un lote no cuadra, lo relee o lo lee por región. Un lote que falla se reintenta antes de avanzar, y más de 48 h sin leer se informa como hueco.
+- **Criterios:** `MONITOR_KEYWORDS`, `MONITOR_EXCLUIR`, `MONITOR_REGIONES`, `MONITOR_MIN_BUDGET_CLP` (default 0) y `MONITOR_SOLO_SIN_OFERTAS`; o los que fije `configurar_criterios`.
+- **Avisos:** por Telegram, correo o webhook firmado, según `COMPRA_AGIL_AVISOS`, y además en `alerts.log`. También avisa de ceguera (2 h sin revisión completa), recuperación, resumen diario y canal caído.
+- **Modo gateway:** en vez del daemon, un gateway llama `obtener_alertas_nuevas` y `confirmar_alertas`.
+
+`--check` diagnostica la instalación con código de salida. Instalación y canales: `docs/api/guia-vigilancia-y-avisos.md`; contrato del webhook: `docs/api/webhook-alertas.md`.
 
 ## Arranque
 

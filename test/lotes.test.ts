@@ -79,3 +79,13 @@ describe('lecturaConsistente', () => {
     expect(lecturaConsistente(35, 35, 34)).toBe(false); // páginas corridas: falta uno
   });
 });
+
+describe('recuperacionDesdeEntorno', () => {
+  it('48 h por defecto; acepta 1–168 h; lo demás vuelve al defecto', async () => {
+    const { recuperacionDesdeEntorno } = await import('../src/vigilancia/lotes.js');
+    expect(recuperacionDesdeEntorno({})).toBe(48 * 3600_000);
+    expect(recuperacionDesdeEntorno({ COMPRA_AGIL_VIGILANCIA_RECUPERACION_H: '72' })).toBe(72 * 3600_000);
+    expect(recuperacionDesdeEntorno({ COMPRA_AGIL_VIGILANCIA_RECUPERACION_H: '500' })).toBe(48 * 3600_000);
+    expect(recuperacionDesdeEntorno({ COMPRA_AGIL_VIGILANCIA_RECUPERACION_H: 'x' })).toBe(48 * 3600_000);
+  });
+});

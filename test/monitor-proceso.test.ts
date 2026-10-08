@@ -63,7 +63,9 @@ describe('daemon de vigilancia', () => {
 
     const estado = path.join(datos, '.vigilancia.json');
     const limite = Date.now() + 60_000;
-    while (!fs.existsSync(estado) && Date.now() < limite) await new Promise((r) => setTimeout(r, 200));
+    // Se espera la línea del resumen de la ronda: el daemon la escribe justo después de
+    // guardar el estado, y bajo carga mirar solo el archivo de estado era una carrera.
+    while (!/Lotes leídos/.test(salida) && Date.now() < limite) await new Promise((r) => setTimeout(r, 200));
     expect(fs.existsSync(estado), salida).toBe(true);
 
     const e = JSON.parse(fs.readFileSync(estado, 'utf8'));
@@ -75,6 +77,10 @@ describe('daemon de vigilancia', () => {
     expect(alertas.length).toBeGreaterThanOrEqual(30);
     expect(salida).toMatch(/Lotes leídos: 1[23], fallidos: 0/);
     expect(salida).not.toContain('TICKET-DE-PRUEBA-NO-REAL-0000');
+    // T9.3: la salida queda también en vigilancia.log, sin códigos de color.
+    const log = fs.readFileSync(path.join(datos, 'vigilancia.log'), 'utf8');
+    expect(log).toMatch(/Lotes leídos: 1[23]/);
+    expect(log).not.toMatch(new RegExp(String.fromCharCode(27)));
   }, 90_000);
 
   it('con Telegram configurado, las alertas llegan al chat (fase 4)', async () => {
