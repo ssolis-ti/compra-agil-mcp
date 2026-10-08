@@ -50,6 +50,13 @@ comando `node`, argumento la ruta absoluta de `dist/index.js`. No pongas el
 ticket en la configuración del gateway: el servidor lo lee del `.env` del
 proyecto. El README trae el bloque para OpenClaw y para Hermes.
 
+**Deja también el daemon encendido, sin canales** (paso 2b, sin
+`COMPRA_AGIL_AVISOS`). Él hace la lectura: la API real tarda unos 10 s por
+consulta y un lote de la mañana trae hasta 8 páginas, así que la herramienta,
+con unos 35 s por llamada, no alcanza a leer la API en hora punta (medido el
+8-oct-2026). Con el daemon activo, `obtener_alertas_nuevas` no lee: solo
+entrega lo que el daemon dejó en la cola.
+
 **Crea una tarea programada en el gateway, cada 15 minutos**, con el
 mecanismo de tareas de tu gateway (consulta su documentación). La tarea le
 pide al agente esto:
