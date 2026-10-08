@@ -12,7 +12,8 @@
  */
 
 import { ejecutarCiclo, type AlertaVigilancia, type DependenciasCiclo, type LimitesCiclo, type ResultadoCiclo } from './ciclo.js';
-import { cargarEstado, guardarEstado } from './estado.js';
+import { cargarEstado, guardarEstado, leerCriteriosGuardados, type EstadoVigilancia } from './estado.js';
+import { coincidencia } from './criterios.js';
 import { tomarVigilante, vigilanteActivo } from './vigilante.js';
 import { criteriosEfectivos, podarGateway, registrarParaGateway } from './gateway.js';
 import { marcarNotificadas, notificacionesPendientes, registrarRonda, type ConfigSalud } from './salud.js';
@@ -73,8 +74,23 @@ export async function rondaDeVigilancia(deps: DependenciasRonda, limites: Limite
     canales: canales.map((c) => c.nombre),
   };
 
-  // Los criterios fijados con configurar_criterios mandan sobre los del entorno (R2.2).
-  const ciclo = await ejecutarCiclo({ ...deps, criterios: criteriosEfectivos(estado, deps.criterios) }, estado, limites);
+  // Los criterios fijados con configurar_criterios mandan sobre los del entorno
+  // (R2.2), y se releen del disco: el dueño puede cambiarlos durante la ronda.
+  const vigentes = () => {
+    const guardados = leerCriteriosGuardados(deps.rutas.estado);
+    const masNuevos = guardados && (!estado.criterios || guardados.cambiadoEn >= estado.criterios.cambiadoEn) ? guardados : estado.criterios;
+    return criteriosEfectivos({ criterios: masNuevos } as EstadoVigilancia, deps.criterios);
+  };
+  const ciclo = await ejecutarCiclo({ ...deps, criterios: vigentes(), criteriosVigentes: vigentes }, estado, limites);
+  // Última revisión antes de avisar, con los criterios de este momento: lo que
+  // ya no calza no sale, y vuelve a poder alertarse si los criterios cambian.
+  const alFinal = vigentes();
+  ciclo.alertas = ciclo.alertas.flatMap((a) => {
+    const palabra = coincidencia(a.item, alFinal);
+    if (palabra) return [{ ...a, coincidencia: palabra }];
+    delete estado.alertados[a.codigo];
+    return [];
+  });
   if (ciclo.alertas.length > 0) await deps.entregar(ciclo.alertas);
   const alertasArmadas = ciclo.alertas.map((a) => crearAlerta(a.item, a.coincidencia, a.cuando));
   // Cola del modo gateway (R9): siempre, para que un gateway pueda pedirlas.

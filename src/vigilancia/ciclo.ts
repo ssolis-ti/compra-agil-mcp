@@ -28,6 +28,13 @@ export interface DependenciasCiclo {
   /** Instante UTC real (epoch ms): en producción, `ahora()` de utils/reloj.ts. */
   ahora: () => number;
   criterios: Criterios;
+  /**
+   * Los criterios vigentes en este momento. Si está, se consulta antes de
+   * cada lote: el dueño puede cambiarlos a mitad de una ronda de 4 minutos, y
+   * con los del inicio se avisó todo el país (prueba real del 8-oct, 169
+   * avisos de 16 regiones cuando ya había elegido una).
+   */
+  criteriosVigentes?: () => Criterios;
 }
 
 export interface LimitesCiclo {
@@ -167,12 +174,13 @@ export async function ejecutarCiclo(deps: DependenciasCiclo, estado: EstadoVigil
     }
     leidos.add(lote);
     avanzarMarca();
+    const criterios = deps.criteriosVigentes?.() ?? deps.criterios;
     for (const item of lectura.items.values()) {
       r.revisados++;
-      const palabra = coincidencia(item, deps.criterios);
+      const palabra = coincidencia(item, criterios);
       if (!palabra || item.codigo in estado.alertados) continue;
       // Criterios guardados antes de existir soloNuevas no lo traen: vale sí.
-      if (deps.criterios.soloNuevas !== false && !esNueva(item, lote)) continue;
+      if (criterios.soloNuevas !== false && !esNueva(item, lote)) continue;
       const cuando = deps.ahora();
       estado.alertados[item.codigo] = cuando;
       r.alertas.push({ codigo: item.codigo, coincidencia: palabra, item, cuando });

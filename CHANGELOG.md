@@ -7,6 +7,7 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 ## [Unreleased]
 
 ### Corregido
+* **Un cambio de criterios a mitad de ronda ya no avisa lo que no corresponde** (2.9.0, prueba real del 8-oct). Una ronda empezó con los criterios a medio configurar (sin región) y, aunque a los segundos ya decían «solo Aysén», mandó 169 avisos de 16 regiones. Ahora la ronda relee los criterios guardados antes de cada lote y vuelve a filtrar justo antes de avisar. Lo descartado no queda marcado como avisado.
 * **El modo «siempre» lo dice claro en la versión de la Microsoft Store** (2.9.0, prueba real del 8-oct). Ahí la extensión corre con el Node interno de Claude, que no se puede lanzar desde una tarea programada, y Windows guarda sus datos dentro del paquete (`LocalCache`), donde la tarea no los vería. `activar_vigilancia(siempre)` ahora responde qué usar en lugar de instalar una tarea que no funcionaría. El manual suma tres pasos que salieron de la prueba:
   * revisar que la extensión quedó habilitada;
   * qué significa el aviso de «no firmada»;

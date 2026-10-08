@@ -24,6 +24,21 @@ export interface AlertaGateway {
 
 export type CriteriosGuardados = Criterios & { cambiadoEn: string };
 
+/**
+ * Solo los criterios guardados en disco, sin cargar ni migrar el resto del
+ * estado: la ronda los consulta antes de cada lote y antes de avisar.
+ */
+export function leerCriteriosGuardados(ruta: string): CriteriosGuardados | null {
+  try {
+    const crudo = JSON.parse(fs.readFileSync(ruta, 'utf8')) as { criterios?: Record<string, unknown> };
+    const c = crudo?.criterios;
+    return c && Array.isArray(c.palabras) && typeof c.cambiadoEn === 'string' && !Number.isNaN(Date.parse(c.cambiadoEn))
+      ? (c as unknown as CriteriosGuardados) : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface LotePendiente { lote: string; intentos: number; ultimoError?: string }
 export interface LoteIncompleto { lote: string; total: number; leidos: number; registrado: number }
 export interface Hueco { desde: string; hasta: string; registrado: number }
