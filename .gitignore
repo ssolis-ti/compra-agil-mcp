@@ -22,6 +22,12 @@ alerts.log
 
 # Daemon state (deduplicación de alertas)
 .monitor-state.json
+.monitor-state.json.migrado
+# Estado de la vigilancia 2.9.0 (puede traer el chat de Telegram)
+.vigilancia.json
+.vigilancia.json.*
+.vigilante.lock
+.preferencias.json
 .rate-limit-state.json
 .api-cache.json
 
