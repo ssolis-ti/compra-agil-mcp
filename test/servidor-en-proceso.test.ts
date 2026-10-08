@@ -85,10 +85,10 @@ afterAll(async () => {
 });
 
 describe('servidor en proceso — conexión', () => {
-  it('publica instrucciones, capacidades y las 21 herramientas', async () => {
+  it('publica instrucciones, capacidades y las 23 herramientas', async () => {
     expect(cliente.getInstructions()).toMatch(/No declares un ganador/);
     expect(cliente.getServerCapabilities()).toMatchObject({ logging: {}, tools: {}, resources: {}, prompts: {} });
-    expect((await cliente.listTools()).tools).toHaveLength(21);
+    expect((await cliente.listTools()).tools).toHaveLength(23);
   });
 });
 

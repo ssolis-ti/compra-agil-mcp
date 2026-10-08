@@ -34,7 +34,7 @@ import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
 import { registerGenerarInforme } from './tools/generar-informe.js';
 import { registerVerificarTicket } from './tools/verificar-ticket.js';
 import { registerVerificarHora } from './tools/verificar-hora.js';
-import { registerVigilanciaTools } from './tools/vigilancia.js';
+import { registerVigilanciaTools, type ControlDeVigilancia } from './tools/vigilancia.js';
 
 // Resources
 import { registerRegionesResource } from './resources/regiones.js';
@@ -48,7 +48,11 @@ import { registerBuscarOportunidadesPrompt } from './prompts/buscar-oportunidade
 import { registerAnalizarCompetenciaPrompt } from './prompts/analizar-competencia.js';
 import { registerConfigurarVigilanciaPrompt } from './prompts/configurar-vigilancia.js';
 
-export function crearServidor(client: CompraAgilClient, version: string): { server: McpServer; registrados: Registrados } {
+/**
+ * `opciones.vigilancia`: el control de la vigilancia dentro del servidor (modo
+ * «con Claude», anexo RA5). Lo arma la entrada; en las pruebas puede faltar.
+ */
+export function crearServidor(client: CompraAgilClient, version: string, opciones: { vigilancia?: ControlDeVigilancia } = {}): { server: McpServer; registrados: Registrados } {
   const server = new McpServer(
     {
       name: 'mcp-compra-agil',
@@ -98,7 +102,7 @@ export function crearServidor(client: CompraAgilClient, version: string): { serv
   registerGenerarInforme(server, client);
   registerVerificarTicket(server, client);
   registerVerificarHora(server);
-  registerVigilanciaTools(server, client); // 5 herramientas de vigilancia y avisos (2.9.0)
+  registerVigilanciaTools(server, client, opciones.vigilancia); // 7 herramientas de vigilancia y avisos (2.9.0)
 
   // Recursos
   registerRegionesResource(server);

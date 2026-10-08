@@ -131,7 +131,9 @@ describe('herramientas de vigilancia', () => {
 
   it('ninguna herramienta acepta un destino de aviso (ADR 0023, R4.4)', async () => {
     const { tools } = await cliente.listTools();
-    const campos = tools.flatMap((t) => Object.keys((t.inputSchema as { properties?: object }).properties ?? {}).map((c) => `${t.name}.${c}`));
+    // Se miran los nombres de los campos, no el de la herramienta: conectar_telegram
+    // se llama así, pero no acepta un destino (solo el código de verificación).
+    const campos = tools.flatMap((t) => Object.keys((t.inputSchema as { properties?: object }).properties ?? {}));
     expect(campos.filter((c) => /url|chat|correo|mail|destin|token|webhook|telegram|smtp|para$/i.test(c))).toEqual([]);
   });
 });

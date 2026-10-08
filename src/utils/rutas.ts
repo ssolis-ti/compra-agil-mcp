@@ -74,7 +74,12 @@ export function carpetaDatos(e: EntornoRutas = {}): string {
   if (configurada) return path.resolve(configurada);
   const raiz = e.raiz ?? raizPaquete();
   const escribible = e.escribible ?? esEscribible;
-  if (!esInstalado(raiz) && escribible(raiz)) return raiz;
+  // Como extensión de Claude Desktop (.mcpb), la carpeta del paquete se reemplaza
+  // al actualizar: los datos van a la del usuario (anexo de instalación, RA2).
+  // También sin la variable: la tarea programada lanza el daemon sin el entorno de
+  // Claude, y la extensión se reconoce por el manifest.json de MCPB en su raíz.
+  const esExtension = env.COMPRA_AGIL_EXTENSION === '1' || fs.existsSync(path.join(raiz, 'manifest.json'));
+  if (!esInstalado(raiz) && !esExtension && escribible(raiz)) return raiz;
   return carpetaDeUsuario(e);
 }
 

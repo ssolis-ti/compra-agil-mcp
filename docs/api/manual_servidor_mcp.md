@@ -18,7 +18,7 @@ Las fechas de la API están en hora de Chile, aunque `fecha_ultimo_cambio` traig
 
 Todo rechazo de una entrada llega como `Error de validación: <qué corregir>. No se consultó la API.` Los códigos de compra y de OC con formato imposible se rechazan sin gastar cuota.
 
-## Herramientas (21)
+## Herramientas (23)
 
 | Tool | Qué hace de verdad |
 | :--- | :--- |
@@ -43,6 +43,8 @@ Todo rechazo de una entrada llega como `Error de validación: <qué corregir>. N
 | `confirmar_alertas` | Marca entregado un lote de `obtener_alertas_nuevas`. Idempotente. |
 | `probar_avisos` | Mensaje de prueba por cada canal configurado (Telegram, webhook, correo). Sin destino como parámetro. |
 | `configurar_criterios` | Cambia palabras, exclusiones, regiones, mínimo y «solo sin ofertas»; `restablecer` vuelve al `.env`. Cada cambio se avisa por los canales con el antes y el después. |
+| `conectar_telegram` | Dos pasos: sin código envía uno de 6 dígitos al chat que escribió al bot; con `codigo` lo verifica y fija ese chat. El código vence a los 10 min y admite 5 intentos. Nunca pide el token en el chat. |
+| `activar_vigilancia` | `con_claude` (bucle dentro del servidor, vuelve solo al reabrir Claude), `siempre` (tarea de Windows; exige `confirmo: true`) o `apagar`. |
 
 ## Recursos y prompts
 

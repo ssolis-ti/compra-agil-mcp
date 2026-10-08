@@ -8,16 +8,25 @@
 #
 # El ticket y los canales se leen del .env del proyecto: este script no los
 # toca ni los pide. El log queda en vigilancia.log de la carpeta de datos.
+#
+# -Node y -Entrada: los usa la herramienta activar_vigilancia cuando el
+# servidor corre como extensión de Claude Desktop, que trae su propio Node.
+
+param(
+    [string]$Node = '',
+    [string]$Entrada = ''
+)
 
 $ErrorActionPreference = 'Stop'
 $Nombre = 'mcp-compra-agil-vigilancia'
 $Proyecto = Split-Path -Parent $PSScriptRoot
-$Entrada = Join-Path $Proyecto 'dist\index.js'
+if (-not $Entrada) { $Entrada = Join-Path $Proyecto 'dist\index.js' }
+$Proyecto = Split-Path -Parent (Split-Path -Parent $Entrada)
 
 if (-not (Test-Path $Entrada)) {
     Write-Error "No existe $Entrada. Corre primero: npm install && npm run build"
 }
-$Node = (Get-Command node -ErrorAction SilentlyContinue).Source
+if (-not $Node) { $Node = (Get-Command node -ErrorAction SilentlyContinue).Source }
 if (-not $Node) {
     Write-Error 'No se encontró node en el PATH. Instala Node.js 20.16+ o 22.3+.'
 }

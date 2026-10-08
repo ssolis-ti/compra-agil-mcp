@@ -47,7 +47,7 @@ const llamar = async (name, args = {}) => JSON.parse((await cliente.callTool({ n
 try {
   await cliente.connect(transporte);
   const herramientas = (await cliente.listTools()).tools.map((t) => t.name);
-  verificar(herramientas.length === 21, `21 herramientas registradas (${herramientas.length})`);
+  verificar(herramientas.length === 23, `23 herramientas registradas (${herramientas.length})`);
   const estado = await llamar('estado_vigilancia');
   verificar(estado.ultimo_lote_revisado === null, 'estado_vigilancia: todavía no se ha revisado nada');
   const lote = await llamar('obtener_alertas_nuevas', { max: 50 });

@@ -410,6 +410,8 @@ const resources = await client.listResources();
 | `confirmar_alertas` | Marca como entregado un lote de `obtener_alertas_nuevas`. Llamarla dos veces no cambia nada. |
 | `probar_avisos` | Envía un mensaje de prueba por cada canal configurado (Telegram, webhook, correo) y dice cuál llegó. No acepta un destino: los destinos se fijan solo en el `.env`. |
 | `configurar_criterios` | Cambia qué se alerta: palabras clave, exclusiones, regiones, presupuesto mínimo y «solo sin ofertas»; `restablecer=true` vuelve al `.env`. **Todo cambio se avisa por los canales** con el antes y el después. |
+| `conectar_telegram` | Conecta los avisos a tu Telegram **conversando**: le envía un código de 6 dígitos al chat que le escribió a tu bot, y queda conectado cuando le dictas ese código al agente. Así un tercero o un texto inyectado no puede desviar los avisos. No pide el token en el chat. |
+| `activar_vigilancia` | Enciende la vigilancia: `con_claude` (mientras Claude Desktop esté abierto, sin instalar nada), `siempre` (tarea de Windows; pide confirmación explícita porque guarda el ticket en tu carpeta de usuario) o `apagar`. |
 
 ### Recursos Disponibles (Resources)
 

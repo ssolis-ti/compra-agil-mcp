@@ -16,7 +16,7 @@ import { carpetaDatos, rutaDeDatos } from '../utils/rutas.js';
 import { consultarHoraOficial } from '../utils/ntp.js';
 import { safeError, pista, registrarSecreto } from '../utils/redact.js';
 import { ventanaUltimosMinutos } from '../utils/fechas.js';
-import { leerConfigAvisos } from '../avisos/config.js';
+import { configAvisosDelEquipo } from '../avisos/preferencias.js';
 import { crearCanales } from '../avisos/canales/crear.js';
 import { vigilanteActivo } from '../vigilancia/vigilante.js';
 
@@ -56,7 +56,7 @@ export async function comandoCheck(env: Record<string, string | undefined>, escr
     mal(`Carpeta de datos ${carpeta}: no se puede escribir (${safeError(e)}).`);
   }
 
-  const avisos = leerConfigAvisos(env);
+  const avisos = configAvisosDelEquipo(env, rutaDeDatos('.preferencias.json'));
   for (const error of avisos.errores) mal(`Avisos: ${error}`);
   if (avisos.canales.length > 0) escribir(`${OK} Canales de aviso configurados: ${avisos.canales.join(', ')} (pruébalos con --probar-avisos).`);
   else if (avisos.errores.length === 0) escribir(`${OJO} Sin canales de aviso: las alertas solo quedan en alerts.log o en el modo gateway.`);
@@ -72,7 +72,7 @@ export async function comandoCheck(env: Record<string, string | undefined>, escr
 }
 
 export async function comandoProbarAvisos(env: Record<string, string | undefined>, escribir: Escribir): Promise<number> {
-  const avisos = leerConfigAvisos(env);
+  const avisos = configAvisosDelEquipo(env, rutaDeDatos('.preferencias.json'));
   for (const error of avisos.errores) escribir(`${MAL} ${error}`);
   const canales = crearCanales(avisos);
   if (canales.length === 0) {

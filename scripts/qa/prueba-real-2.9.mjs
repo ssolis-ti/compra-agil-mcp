@@ -40,7 +40,7 @@ const llamar = async (name, args = {}) => {
 try {
   await cliente.connect(transporte);
   const herramientas = (await cliente.listTools()).tools.map((t) => t.name);
-  ok(herramientas.length === 21, `21 herramientas (${herramientas.length})`);
+  ok(herramientas.length === 23, `23 herramientas (${herramientas.length})`);
 
   const hora = await llamar('verificar_hora_oficial');
   ok(hora.json?.sincronizado !== undefined, `hora oficial: ${hora.json?.diagnostico ?? hora.texto.slice(0, 80)}`);

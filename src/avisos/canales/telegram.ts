@@ -44,7 +44,8 @@ export class CanalTelegram implements Canal {
     this.reloj = o.reloj ?? (() => performance.now());
   }
 
-  private async enviarTexto(texto: string): Promise<ResultadoEnvio> {
+  /** Un mensaje suelto (HTML), con el mismo ritmo y la misma clasificación de errores. */
+  async enviarTexto(texto: string): Promise<ResultadoEnvio> {
     const espera = this.ultimoEnvio + PAUSA_ENTRE_MENSAJES_MS - this.reloj();
     if (espera > 0) await this.esperar(espera);
     this.ultimoEnvio = this.reloj();

@@ -43,11 +43,19 @@ function urlAceptable(texto: string): boolean {
   }
 }
 
-export function leerConfigAvisos(env: Record<string, string | undefined>): ConfigAvisos {
+/**
+ * `guardado.telegramChatId`: el chat confirmado con código por la herramienta
+ * conectar_telegram (anexo de instalación, RA3/RA4). El entorno manda si lo fija.
+ */
+export function leerConfigAvisos(env: Record<string, string | undefined>, guardado: { telegramChatId?: string } = {}): ConfigAvisos {
   const c: ConfigAvisos = { canales: [], bandeja: {}, resumen: '08:00', errores: [] };
   const valor = (k: string) => env[k]?.trim() || undefined;
 
   const pedidos = (valor('COMPRA_AGIL_AVISOS') ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  // Sin COMPRA_AGIL_AVISOS, Telegram se activa solo si ya tiene token y chat:
+  // así la extensión funciona sin que el usuario sepa de variables.
+  const chatTelegram = valor('COMPRA_AGIL_TELEGRAM_CHAT_ID') ?? guardado.telegramChatId;
+  if (!valor('COMPRA_AGIL_AVISOS') && valor('COMPRA_AGIL_TELEGRAM_TOKEN') && chatTelegram) pedidos.push('telegram');
   for (const p of pedidos) {
     if (!CANALES.includes(p as NombreCanal)) c.errores.push(`COMPRA_AGIL_AVISOS: canal desconocido «${p}» (válidos: ${CANALES.join(', ')}).`);
   }
@@ -61,7 +69,7 @@ export function leerConfigAvisos(env: Record<string, string | undefined>): Confi
 
   if (pedidos.includes('telegram')) {
     const token = valor('COMPRA_AGIL_TELEGRAM_TOKEN');
-    const chatId = valor('COMPRA_AGIL_TELEGRAM_CHAT_ID');
+    const chatId = chatTelegram;
     const faltan = [!token && 'COMPRA_AGIL_TELEGRAM_TOKEN', !chatId && 'COMPRA_AGIL_TELEGRAM_CHAT_ID'].filter(Boolean);
     if (faltan.length > 0) c.errores.push(`Telegram no se activa: falta ${faltan.join(' y ')}.`);
     else {

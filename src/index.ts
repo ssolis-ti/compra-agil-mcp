@@ -29,6 +29,7 @@ import { logger, setMcpServer } from './utils/logger.js';
 import { registrarSecreto } from './utils/redact.js';
 import { iniciarRelojOficial } from './utils/reloj.js';
 import { crearServidor } from './servidor.js';
+import { crearControlVigilancia } from './services/control-vigilancia.js';
 
 // ─── Configuración ──────────────────────────────────────────────────
 
@@ -99,7 +100,12 @@ async function main() {
   if (process.env.COMPRA_AGIL_NTP !== 'off' && !process.env.VITEST) iniciarRelojOficial();
   logger.info(`Cliente API configurado → ${BASE_URL}`);
 
-  const { server, registrados } = crearServidor(client, PKG_VERSION);
+  // La vigilancia «con Claude» corre dentro de este proceso (anexo de instalación, RA5).
+  const vigilancia = crearControlVigilancia({
+    client, env: process.env,
+    registrar: (nivel, mensaje) => (nivel === 'error' ? logger.error(mensaje) : nivel === 'aviso' ? logger.warn(mensaje) : logger.info(mensaje)),
+  });
+  const { server, registrados } = crearServidor(client, PKG_VERSION, { vigilancia });
   logger.info(`${registrados.herramientas.length} herramientas registradas: ${registrados.herramientas.join(', ')}`);
   logger.info(`${registrados.recursos.length} recursos registrados: ${registrados.recursos.join(', ')}`);
   logger.info(`${registrados.prompts.length} prompts registrados: ${registrados.prompts.join(', ')}`);
@@ -110,6 +116,8 @@ async function main() {
   setMcpServer(server);
 
   logger.info('Servidor MCP Compra Ágil v2 listo y escuchando via Stdio.');
+  // Si el usuario eligió vigilar «con Claude», vuelve sola al abrir Claude.
+  if (!process.env.VITEST) vigilancia.retomar();
 }
 
 main().catch((error) => {
