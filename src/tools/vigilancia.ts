@@ -52,6 +52,7 @@ const criteriosJson = (c: Criterios) => ({
   palabras: c.palabras, excluidas: c.excluidas, regiones: c.regiones,
   presupuesto_minimo: c.presupuestoMinimo, solo_sin_ofertas: c.soloSinOfertas,
   todas_en_region: c.todasEnRegion,
+  solo_nuevas: c.soloNuevas,
 });
 
 /** Lo que activar_vigilancia necesita del servidor (lo implementa services/control-vigilancia.ts). */
@@ -202,6 +203,7 @@ Todo cambio se avisa por los canales configurados con el antes y el después, pa
         regiones: z.array(z.number().int().min(1).max(16)).max(16).optional().describe('Códigos de región 1-16. Lista vacía: todas.'),
         presupuesto_minimo: z.number().min(0).optional().describe('En CLP. 0: sin mínimo.'),
         solo_sin_ofertas: z.boolean().optional(),
+        solo_nuevas: z.boolean().optional().describe('true (por defecto): solo compras publicadas en las últimas 24 h o reabiertas en segundo llamado sin ofertas. false: también las antiguas que se modifican.'),
         todas_en_region: z.boolean().optional().describe('true: además de las del rubro, avisa toda compra publicada en las regiones elegidas, sin mirar palabras ni monto (van en una sección aparte y más breve). Requiere regiones.'),
         restablecer: z.boolean().optional().describe('true: volver a los criterios del .env.'),
       },
@@ -220,6 +222,7 @@ Todo cambio se avisa por los canales configurados con el antes y el después, pa
           presupuestoMinimo: args.presupuesto_minimo ?? antes.presupuestoMinimo,
           soloSinOfertas: args.solo_sin_ofertas ?? antes.soloSinOfertas,
           todasEnRegion: args.todas_en_region ?? antes.todasEnRegion,
+          soloNuevas: args.solo_nuevas ?? antes.soloNuevas,
         };
         e.criterios = { ...despues, cambiadoEn: new Date(t).toISOString() };
         return { antes, despues };
@@ -227,7 +230,7 @@ Todo cambio se avisa por los canales configurados con el antes y el después, pa
       const describir = (c: Criterios) =>
         `palabras: ${c.palabras.join(', ') || '(cualquiera)'}; excluidas: ${c.excluidas.join(', ') || '(ninguna)'}; ` +
         `regiones: ${c.regiones.join(', ') || '(todas)'}; mínimo: ${c.presupuestoMinimo > 0 ? `$${c.presupuestoMinimo.toLocaleString('es-CL')}` : 'sin mínimo'}; ` +
-        `solo sin ofertas: ${c.soloSinOfertas ? 'sí' : 'no'}; todas las de la región: ${c.todasEnRegion ? 'sí' : 'no'}`;
+        `solo sin ofertas: ${c.soloSinOfertas ? 'sí' : 'no'}; todas las de la región: ${c.todasEnRegion ? 'sí' : 'no'}; solo nuevas: ${c.soloNuevas ? 'sí' : 'no'}`;
       const n = {
         clave: `criterios:${t}`, evento: 'criterios' as const,
         titulo: 'Cambiaron los criterios de alerta',

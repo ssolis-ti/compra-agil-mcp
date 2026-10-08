@@ -51,6 +51,8 @@ Responde con un **2xx** en menos de 10 segundos.
       "cierre_utc": "2026-10-09T15:00:00.000Z",
       "coincidencia": "resma",
       "nivel": "rubro",
+      "publicada_hora_chile": "2026-10-08 11:46",
+      "segundo_llamado": false,
       "ficha": "https://buscador.mercadopublico.cl/ficha?code=765973-8-COT26"
     }
   ]
@@ -67,6 +69,8 @@ Responde con un **2xx** en menos de 10 segundos.
 | `cierre_utc` | texto o `null` | El mismo cierre como instante ISO-8601 UTC |
 | `coincidencia` | texto | Tu palabra clave que calzó, o `(en tu región)` si entró solo por la alerta total de la región |
 | `nivel` | texto | `rubro` (calzó con tus palabras) o `region` (alerta total de la región, `MONITOR_TODAS_EN_REGION`) |
+| `publicada_hora_chile` | texto o `null` | Cuándo se publicó, en hora de Chile |
+| `segundo_llamado` | booleano | `true` si se reabrió en segundo llamado: la publicación es antigua, pero la oportunidad es nueva |
 
 ### Avisos sobre la vigilancia misma (`compra_agil.estado`)
 

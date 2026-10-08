@@ -98,6 +98,7 @@ también a Telegram, para que sepas si alguien los tocó.
 | Mensaje | Qué significa | Qué hacer |
 | :--- | :--- | :--- |
 | **N procesos nuevos calzan con tus criterios** | Hay compras abiertas de lo tuyo | Abre la ficha, revisa plazo y requisitos, y cotiza |
+| **🔁 Segundo llamado** (dentro de un aviso) | Una compra de días atrás se volvió a abrir porque el primer llamado no resultó | Es una oportunidad nueva: revísala igual que las demás |
 | **N de tu rubro y M compras más en tu región** | Con la alerta total de la región: arriba (🎯) lo de tu rubro, completo; abajo (📍) todo lo demás de tu región, una línea cada una | Lo de arriba, igual; lo de abajo, una mirada rápida por si algo te sirve |
 | **Procesos publicados durante el horario de silencio** | Lo que apareció de noche, junto | Igual que arriba |
 | **La vigilancia no está viendo los procesos nuevos** | Mercado Público no responde hace 2 h, o no hay internet | Nada: cuando vuelva, revisa lo que se perdió y te avisa |

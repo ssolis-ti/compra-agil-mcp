@@ -114,6 +114,8 @@ describe('Webhook', () => {
         cierre_utc: '2026-10-09T15:00:00.000Z',
         coincidencia: 'resma',
         nivel: 'rubro',
+        publicada_hora_chile: null,
+        segundo_llamado: false,
         ficha: 'https://buscador.mercadopublico.cl/ficha?code=765973-8-COT26',
       }],
     });

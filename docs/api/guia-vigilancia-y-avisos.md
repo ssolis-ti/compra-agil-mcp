@@ -35,6 +35,7 @@ MONITOR_KEYWORDS=resmas, papel, toner  # alguna debe estar en el nombre del proc
 MONITOR_REGIONES=13                    # vacío = todas
 MONITOR_MIN_BUDGET_CLP=0               # 0 = sin mínimo
 MONITOR_TODAS_EN_REGION=false          # true = además, toda compra nueva de MONITOR_REGIONES (alerta total)
+MONITOR_SOLO_NUEVAS=true               # solo publicadas en 24 h o en segundo llamado; false = también las modificadas
 ```
 
 Comprueba la instalación:

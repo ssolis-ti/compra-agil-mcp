@@ -9,7 +9,7 @@
 
 import type { CompraAgilItem } from '../api/compra-agil-client.js';
 import { normalizar } from '../utils/doc-search.js';
-import { enHoraDeChile } from '../utils/fechas.js';
+import { enHoraDeChile, parsearFechaApi } from '../utils/fechas.js';
 import { EN_TU_REGION } from '../avisos/mensaje.js';
 
 export interface Criterios {
@@ -28,7 +28,17 @@ export interface Criterios {
    * aplica (serían todas las del país, cientos al día).
    */
   todasEnRegion: boolean;
+  /**
+   * Solo compras nuevas (pedido del 8-oct): la API entrega lo que CAMBIÓ en
+   * cada lote, y eso incluye procesos de días atrás que recibieron una oferta
+   * o se modificaron. Con esto se avisan solo los publicados en las últimas
+   * 24 h y los que se reabren en segundo llamado sin ofertas. Por defecto, sí.
+   */
+  soloNuevas: boolean;
 }
+
+/** Ventana de «recién publicada», medida desde el lote en que se vio el cambio. */
+export const VENTANA_NUEVA_MS = 24 * 3600_000;
 
 export { EN_TU_REGION };
 
@@ -44,6 +54,7 @@ export const CRITERIOS_POR_DEFECTO: Criterios = {
   presupuestoMinimo: 0,
   soloSinOfertas: true,
   todasEnRegion: false,
+  soloNuevas: true,
 };
 
 const lista = (v: string | undefined) => (v ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -57,7 +68,21 @@ export function criteriosDesdeEntorno(env: Record<string, string | undefined>): 
     presupuestoMinimo: Number.isFinite(minimo) && minimo > 0 ? minimo : 0,
     soloSinOfertas: (env.MONITOR_SOLO_SIN_OFERTAS ?? 'true').trim().toLowerCase() !== 'false',
     todasEnRegion: (env.MONITOR_TODAS_EN_REGION ?? '').trim().toLowerCase() === 'true',
+    soloNuevas: (env.MONITOR_SOLO_NUEVAS ?? 'true').trim().toLowerCase() !== 'false',
   };
+}
+
+export const esSegundoLlamado = (item: CompraAgilItem) => item.convocatoria.estado_convocatoria === 2;
+
+/**
+ * Publicada en las 24 h previas al lote, o reabierta en segundo llamado y aún
+ * sin ofertas. Sin fecha de publicación no se puede saber: se avisa, porque
+ * perder una compra nueva es peor que avisar una de más.
+ */
+export function esNueva(item: CompraAgilItem, loteMs: number): boolean {
+  if (esSegundoLlamado(item)) return item.resumen.total_ofertas_recibidas === 0;
+  const publicada = parsearFechaApi(item.fechas.fecha_publicacion ?? null);
+  return !publicada || publicada.getTime() >= loteMs - VENTANA_NUEVA_MS;
 }
 
 /**

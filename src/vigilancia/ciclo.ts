@@ -19,7 +19,7 @@ import type { BuscarParams, BuscarResponse, CompraAgilItem } from '../api/compra
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { safeError } from '../utils/redact.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
-import { coincidencia, type Criterios } from './criterios.js';
+import { coincidencia, esNueva, type Criterios } from './criterios.js';
 import type { EstadoVigilancia } from './estado.js';
 import { PERIODO_LOTE_MS, lecturaConsistente, planificarLotes, ventanaDeLote, RECUPERACION_MS } from './lotes.js';
 
@@ -171,6 +171,8 @@ export async function ejecutarCiclo(deps: DependenciasCiclo, estado: EstadoVigil
       r.revisados++;
       const palabra = coincidencia(item, deps.criterios);
       if (!palabra || item.codigo in estado.alertados) continue;
+      // Criterios guardados antes de existir soloNuevas no lo traen: vale sí.
+      if (deps.criterios.soloNuevas !== false && !esNueva(item, lote)) continue;
       const cuando = deps.ahora();
       estado.alertados[item.codigo] = cuando;
       r.alertas.push({ codigo: item.codigo, coincidencia: palabra, item, cuando });

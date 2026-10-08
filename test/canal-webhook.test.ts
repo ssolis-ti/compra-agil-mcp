@@ -50,7 +50,7 @@ beforeEach(() => { recibidos.length = 0; respuestas.length = 0; });
 
 const alerta = (codigo: string): Alerta => ({
   codigo, nombre: 'COMPRA DE RESMAS', organismo: 'Juzgado', region: 'Metropolitana', presupuestoClp: 300_000,
-  cierreHoraChile: '2026-10-09 12:00', cierreUtc: '2026-10-09T15:00:00.000Z', coincidencia: 'resma',
+  cierreHoraChile: '2026-10-09 12:00', publicadaHoraChile: '2026-10-08 11:46', cierreUtc: '2026-10-09T15:00:00.000Z', coincidencia: 'resma',
   ficha: `https://buscador.mercadopublico.cl/ficha?code=${codigo}`, creada: AHORA,
 });
 const lote = (codigos: string[]): LoteDeAvisos => ({

@@ -28,6 +28,7 @@ function bloque(a: Alerta, n: number, ahoraMs: number): string {
   const palabra = palabraMostrable(a);
   return [
     `<b>${n}. ${escaparHtmlTelegram(a.nombre)}</b>`,
+    ...(a.segundoLlamado ? ['🔁 <b>Segundo llamado</b>: se volvió a abrir, aún sin ofertas'] : []),
     `🔖 Código: <code>${escaparHtmlTelegram(a.codigo)}</code>`,
     `🏛 Organismo: ${escaparHtmlTelegram(a.organismo)}`,
     `📍 Región: ${escaparHtmlTelegram(a.region)}`,
@@ -41,7 +42,7 @@ function bloque(a: Alerta, n: number, ahoraMs: number): string {
 
 /** Dos líneas por proceso: la alerta total de la región puede traer decenas. */
 function linea(a: Alerta, n: number, ahoraMs: number): string {
-  return `${n}. <a href="${escaparHtmlTelegram(a.ficha)}">${escaparHtmlTelegram(a.nombre)}</a>\n` +
+  return `${n}. ${a.segundoLlamado ? '🔁 ' : ''}<a href="${escaparHtmlTelegram(a.ficha)}">${escaparHtmlTelegram(a.nombre)}</a>\n` +
     `    🔖 <code>${escaparHtmlTelegram(a.codigo)}</code> · ⏰ ${fechaConDia(a.cierreHoraChile)}${plazo(a, ahoraMs)} · 💰 ${pesos(a.presupuestoClp)}`;
 }
 

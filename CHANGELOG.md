@@ -17,6 +17,10 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Avisos de Telegram más claros** (2.9.0, pedido del 8-oct):
   * **Una etiqueta por línea:** 🔖 Código, 🏛 Organismo, 📍 Región, 💰 Presupuesto, 🗓 Publicada, ⏰ Cierra (en negrita, con día de la semana y cuánto falta) y 🔗 Ver ficha.
   * **Orden:** las compras van numeradas y ordenadas por cierre, la más urgente primero. Las de la alerta total de la región ocupan dos líneas con código, cierre y monto.
@@ -144,6 +148,10 @@ Cuatro agentes usaron la 2.8.0 contra la API real (62 llamadas, 0 fugas del tick
 * **Menores:** las métricas cuentan los rechazos del esquema; fragmentos de documentos sin repetición a una línea de distancia; el rechazo de `ruta_salida` en el formato de validación; el detalle trae el enlace a la ficha y aclara `total_ofertas`, `multa_sancion` y `total_demandas`.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **`palabras_clave_requeridas` y `palabras_clave_excluidas` en `analizar_precios_mercado`, `auditar_compras_desiertas`, `generar_borrador_cotizacion` y `generar_informe` (E7).** La búsqueda de texto de la API es amplia: en el enjambre, «guantes nitrilo» trajo una actividad de fútbol recreativo y guantes térmicos de panadería, que se colaban en la muestra de precios. El filtro se aplica al listado antes de pedir los detalles, así que no gasta cuota extra; la cobertura informa cuántos procesos descartó, y si no queda ninguno lo dice sin pedir detalles. Misma semántica que en `buscar_compras_agiles` —requeridas: todas; excluidas: basta una—, ahora insensible a tildes en las cinco herramientas: «camion» encuentra «camión».
 * **El servidor usa la hora del SHOA como referencia.** Mide el desfase contra `ntp.shoa.cl` al arrancar y cada 30 minutos, en segundo plano, y corrige con eso los plazos, el radar, las ventanas del monitoreo y el daemon (`utils/reloj.ts`). Si el UDP 123 está bloqueado sigue con el reloj local; si el desfase pasa de un minuto, lo advierte (`_aviso_reloj`) en toda respuesta con fechas. `COMPRA_AGIL_NTP=off` lo desactiva.
 * **`verificar_hora_oficial` informa el reloj que usa el servidor y la base de zonas horarias.** El NTP da la hora UTC exacta, no la zona: el paso a UTC-3/UTC-4 sale de la base de zonas de Node, y Chile cambia su horario por decreto. Advierte si la base es anterior a la 2025b.
@@ -240,6 +248,10 @@ Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a 
   * ⚠ **Cambio de comportamiento:** quien pasaba una ruta absoluta fuera de `informes/` debe configurar `COMPRA_AGIL_INFORMES_DIR`.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **CI en GitHub Actions** (`.github/workflows/ci.yml`): tipos, build y tests en Ubuntu y Windows con Node 20 y 22, más `npm audit` de producción con nivel alto. El repositorio no tenía ninguna verificación automática antes de un merge.
 * **Prueba de humo por el protocolo MCP** (`test/protocolo.test.ts`): arranca el servidor real por stdio y comprueba versión, capacidades, las 16 herramientas, recursos, prompts, una llamada válida, una inválida y que el ticket no salga en los logs. Hasta ahora ningún test verificaba que el servidor arrancara.
 * **Banco de pruebas `scripts/qa/`**: API simulada con fallas inyectadas (cuelgue, 504, 429, JSON cortado, nulos, XSS) y un cliente MCP que corre escenarios por stdio contra el servidor compilado. Con `QA_API_REAL=1` corre una batería acotada contra la API real. Para simular uso con agentes: catálogo sintético con fallas aleatorias calibradas con la API real (`CATALOGO=sintetico`, `FALLA_DETALLE`, `LATENCIA_MS`) y un puente HTTP (`puente-mcp.mjs`) hacia una sola instancia del servidor. Documentación de la auditoría, el Sprint 0 y el roadmap en `docs/internals/qa/`.
@@ -274,6 +286,10 @@ Respuestas que dejan de contradecir lo ya medido. No hubo llamada nueva a la API
 Informes para el resto del flujo, y respuestas que dejan de tirar lo que la API ya manda. `generar_informe` con `tipo=radar` sigue igual.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **`generar_informe` tiene cuatro plantillas además del radar.** `cotizacion` presenta el borrador (ítems, neto, IVA 19 % y carta). `precio` grafica la distribución cotizada. `auditoria` muestra las brechas y las recomendaciones. `competencia` compara cotizantes y la brecha entre montos, sin nombrar un adjudicado. Cada una usa la misma recolección que la herramienta JSON. El archivo sigue siendo HTML.
 
 ### Corregido
@@ -310,6 +326,10 @@ Es el mismo defecto que la búsqueda documental de la 2.2.0: convertir un fallo 
 * `auditar_compras_desiertas` informa cuántas consultas fallaron junto a su comparativo.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **23 tests de exactitud estadística** (211 en total) sobre una muestra fija: mediana frente a promedio, percentil 25 por interpolación, comportamiento con n par e impar, resistencia a valores atípicos, y que el orden de entrada no altere el resultado ni mute el arreglo recibido. Validados por mutación: alterar el índice de la mediana rompe 2 tests, y calcular el p25 como p75 rompe otros 2.
   Esta muestra es **sintética**, con valores elegidos para cubrir casos límite que rara vez coinciden en datos reales (n par e impar, muestra de un elemento, atípicos, precios nulos o negativos). La verificación sobre datos reales se logró después y está más abajo.
 
@@ -393,6 +413,10 @@ Resuelve un problema **distinto y anterior** al de la interpretación de fechas:
 ## [2.4.0] - 2026-09-07
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **El radar considera el segundo llamado.** `convocatoria.estado_convocatoria` era el único campo que la API entrega en cada respuesta y que **ninguna herramienta usaba**. Un segundo llamado significa que el primero no logró adjudicar: el comprador vuelve con urgencia y existe un motivo de fracaso concreto que conviene averiguar antes de cotizar —si sabes cumplir lo que otros no pudieron es tu ventaja; si el presupuesto era corto, es una pérdida de tiempo—. Suma 10 pts al Hot Score (máximo teórico: 115) y cada oportunidad expone ahora el campo `llamado`.
 * 5 tests de regresión (188 en total).
 
@@ -422,6 +446,10 @@ Tres herramientas prometían cosas que la API no puede cumplir. Ninguna se elimi
 * **`obtener_detalle_orden_compra` advierte de dónde sacar el código.** Su descripción prometía el detalle de una OC sin decir que el código hay que traerlo de otra fuente: consulta la API legada de Órdenes de Compra, y la de Compra Ágil no entrega códigos de OC (`id_orden_compra` viene null en el 100% de los procesos). Sirve cuando ya tienes el código —la OC que te emitieron, un correo de Mercado Público, la ficha pública—, no para descubrirlo.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **`CompraAgilClient.detalleEnCache()`** — lee el detalle solo si ya está en caché, sin salir nunca a la red. Es lo que permite que `verificar_orden_compra` siga siendo útil a costo cero.
 * 12 tests más (183 en total), incluidos 9 que blindan `detalleEnCache()`: que nunca genera tráfico, que construye la misma clave que `detalle()`, que no confunde un proceso con otro ni una búsqueda con un detalle, y que sin persistencia cada instancia arranca limpia. Se validaron por mutación —al alterar a propósito la construcción de la clave, fallan 4 de los 9—, de modo que no pasan por casualidad.
 
@@ -432,6 +460,10 @@ Tres herramientas prometían cosas que la API no puede cumplir. Ninguna se elimi
 Auditoría de las 15 herramientas contra la API de producción, desde la óptica de un proveedor PyME buscando venderle al Estado. Cuatro estaban rotas en la práctica y una limitación de diseño dejaba el servidor inutilizable por horas.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Caché de respuestas con vencimiento y persistencia** (`utils/cache.ts`). Las tres herramientas de análisis repiten exactamente la misma pareja de llamadas —`buscar({q, estado:'desierta'})` y luego `detalle()` de los primeros resultados— y no existía ninguna reutilización: el mismo histórico se descargaba hasta tres veces en minutos. Vigencia de 15 min para el detalle (un proceso desierto es inmutable) y 5 min para las búsquedas. El ticket queda excluido de la clave y nunca se escribe en disco. **Medido: repetir `generar_borrador_cotizacion` pasó de 6 consultas y 11.254 ms a 0 consultas y 41 ms; `analizar_precios_mercado` de 48.696 ms a 5 ms.**
 * **`getCacheStats()` y `limpiarCache()`** en el cliente.
 * **26 tests nuevos** (171 en total) sobre caché, búsqueda documental, estimación de precio y política de reintento.
@@ -479,6 +511,10 @@ Se investigó abriendo la ficha pública en un navegador real, y el hallazgo exp
 Cotejo de la Guía oficial v3.0 (mayo 2026) contra la implementación, con re-verificación en vivo de los hallazgos de v2.0.0.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Ventana de cambios por rango de fechas en `monitorear_cambios_recientes`.** La API documenta dos formas excluyentes de acotar los cambios (§5.1, Grupo 1): `ttl_cambio_ms` (opción A) y el par `cambio_desde`/`cambio_hasta` (opción B, con su propio Ejemplo 8.2). La opción B estaba tipada en `BuscarParams` pero **ninguna herramienta la exponía**: la sincronización incremental de un período arbitrario era inalcanzable desde el MCP y el único modo disponible tenía techo de 24 horas. Ahora ambos modos están disponibles y son mutuamente excluyentes.
 * **Validación local de la ventana** (`resolverVentanaCambios`): rechaza combinar ambos modos, `cambio_hasta` sin `cambio_desde`, fechas no ISO-8601, fechas sin zona horaria y rangos invertidos. Falla antes de salir a la red para no gastar cuota.
 * **`scripts/debug-ventana-cambios.ts`**: comprueba la opción B contra la API real. Verificado — rango cerrado (2.165 resultados con `fecha_ultimo_cambio` dentro del rango pedido), rango abierto (892 resultados), y **combinar ambas opciones devuelve HTTP 400**, que es lo que la validación local anticipa.
@@ -523,6 +559,10 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 * **`verificar_orden_compra` es honesto:** un resultado "sin OC" ya no implica que la OC no exista, sino que la API no la publica.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Control de dispersión en `analizar_precios_mercado`:** si el precio máximo supera 10 veces la mediana, advierte que el término de búsqueda está mezclando productos distintos y que la sugerencia tiene poco valor. Evita entregar números con falsa precisión (verificado: "reparacion" → 500× la mediana, advierte; "resmas papel" → 2,8×, no advierte).
 * **Percentil 25 como criterio de sugerencia**, en reemplazo de "5% bajo el promedio": resiste valores atípicos y ubica la oferta en el cuarto más económico.
 * **Herramientas de depuración** (`scripts/debug-*.ts`): consultan la API real y redactan su propia salida, escribiendo el crudo en `debug/` (gitignored) para inspección humana. Son las que produjeron los hallazgos de esta versión.
@@ -543,6 +583,10 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 * **El cliente HTTP se auto-protege:** `CompraAgilClient` registra el ticket como secreto en su constructor, cubriendo a cualquier consumidor (servidor MCP, daemon, scripts, tests) sin que tenga que acordarse.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Tool `verificar_ticket`:** valida la credencial contra la API real sin revelarla — solo muestra una pista (`••••2345`). Permite hacer el primer diagnóstico end-to-end sin imprimir, pegar ni compartir el ticket.
 * **Tests E2E con fixtures (`test/e2e-informe.test.ts`):** ejercitan por primera vez el camino completo cliente HTTP → `recolectarDatosRadar` → plantilla, sustituyendo `fetch` por una respuesta grabada y sanitizada (`test/fixtures/`). Se prueba el código real (incluido `handleApiResponse` y el parseo del envoltorio `payload`) **sin que exista credencial alguna**.
 * **21 tests nuevos** (86 en total) cubriendo la redacción — incluida la fuga concreta demostrada — y el camino E2E.
@@ -555,6 +599,10 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 ## [1.2.0] - 2026-07-15
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Capa de informes (`src/reports/`):** Nueva arquitectura para generar informes profesionales imprimibles en HTML autocontenido (sin scripts ni recursos externos).
   * `theme.ts`: design system print-first — tokens de color/tipografía/espaciado y CSS de impresión como fuente única de verdad.
   * `components.ts`: componentes puros (`portada`, `kpiRow`, `tabla`, `badge`, `callout`, `barChartSVG`, `pieDoc`) con escapado HTML obligatorio.
@@ -590,6 +638,10 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 * **Manejo defensivo de `TotalLnea`/`TotalLinea`:** `obtener_detalle_orden_compra` tolera ambas variantes del campo de total de línea de la API legada.
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Rate limiter proactivo (throttle):** El `RateLimiter` ahora espacia las solicitudes por debajo de un máximo por minuto (configurable) antes de enviarlas, además de reaccionar al 429. Alinea el comportamiento con lo documentado.
 * **`radar_oportunidades_calientes` con auto-paginación:** Escanea más allá de la primera página para no perder oportunidades relevantes.
 * **Daemon de monitoreo con deduplicación:** Las alertas ya no se repiten entre ciclos gracias a un archivo de estado (`.monitor-state.json`).
@@ -622,6 +674,10 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 > Nota: esta entrada estaba erróneamente etiquetada como `1.1.0` y fechada fuera de orden. Se renumeró a `1.0.1` para respetar el orden cronológico y SemVer (precede a `1.0.3`).
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Integración de Órdenes de Compra (OC API):**
   * Nuevas interfaces TypeScript (`OrdenCompraDetalle`, `OrdenCompraResponse`) para modelar las respuestas legadas de ChileCompra.
   * Implementación del método `obtenerDetalleOC(idOC)` en el cliente HTTP.
@@ -643,6 +699,10 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 ## [1.0.0] - 2026-06-03
 
 ### Añadido
+* **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
+  * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
+  * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
+  * **Integraciones:** el webhook y el gateway reciben `publicada_hora_chile` y `segundo_llamado`.
 * **Migración SDK MCP v1.12+:**
   * Actualización de registros de herramientas para utilizar `server.registerTool` en lugar del método deprecado `server.tool`.
   * Actualización de registros de recursos para utilizar `server.registerResource` en lugar del deprecado `server.resource`.

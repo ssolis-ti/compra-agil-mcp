@@ -18,6 +18,7 @@ export interface ProcesoParaAviso {
   codigo: string;
   nombre: string;
   fechas?: { fecha_cierre?: string | null; fecha_publicacion?: string | null } | null;
+  convocatoria?: { estado_convocatoria?: number | null } | null;
   montos?: { monto_disponible_clp?: number | null } | null;
   institucion?: { organismo_comprador?: string | null; region?: number | null; nombre_region?: string | null } | null;
 }
@@ -32,6 +33,8 @@ export interface Alerta {
   cierreUtc: string | null;
   /** «AAAA-MM-DD HH:MM» en hora de Chile. Las alertas guardadas antes de este campo no lo traen. */
   publicadaHoraChile?: string | null;
+  /** Reabierta en segundo llamado: la publicación es de días atrás, pero la oportunidad es nueva. */
+  segundoLlamado?: boolean;
   /** La palabra clave del dueño que calzó (no es texto de terceros). */
   coincidencia: string;
   /**
@@ -74,6 +77,7 @@ export function crearAlerta(proceso: ProcesoParaAviso, coincidencia: string, cre
     cierreHoraChile: enHoraDeChile(proceso.fechas?.fecha_cierre ?? null),
     cierreUtc: cierre ? cierre.toISOString() : null,
     publicadaHoraChile: enHoraDeChile(proceso.fechas?.fecha_publicacion ?? null),
+    segundoLlamado: proceso.convocatoria?.estado_convocatoria === 2,
     coincidencia,
     nivel: coincidencia === EN_TU_REGION ? 'region' : 'rubro',
     ficha: `https://buscador.mercadopublico.cl/ficha?code=${encodeURIComponent(proceso.codigo)}`,

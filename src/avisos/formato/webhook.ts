@@ -19,6 +19,8 @@ export const alertaJson = (a: Alerta) => ({
   cierre_utc: a.cierreUtc,
   coincidencia: a.coincidencia,
   nivel: a.nivel ?? 'rubro',
+  publicada_hora_chile: a.publicadaHoraChile ?? null,
+  segundo_llamado: a.segundoLlamado ?? false,
   ficha: a.ficha,
 });
 
