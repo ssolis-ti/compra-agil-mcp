@@ -17,6 +17,10 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Avisos de Telegram más claros** (2.9.0, pedido del 8-oct):
+  * **Una etiqueta por línea:** 🔖 Código, 🏛 Organismo, 📍 Región, 💰 Presupuesto, 🗓 Publicada, ⏰ Cierra (en negrita, con día de la semana y cuánto falta) y 🔗 Ver ficha.
+  * **Orden:** las compras van numeradas y ordenadas por cierre, la más urgente primero. Las de la alerta total de la región ocupan dos líneas con código, cierre y monto.
+  * **Coincidencia:** «Calza con» solo aparece cuando hay una palabra clave.
 * **Alerta total de la región** (2.9.0, pedido del 8-oct): con `todas_en_region` en `configurar_criterios` o `MONITOR_TODAS_EN_REGION=true`, además de lo del rubro llega toda compra ágil nueva publicada en las regiones elegidas, sin mirar palabras ni monto.
   * **Formato:** el aviso pone primero lo del rubro, completo (🎯), y después lo demás de la región, en una línea cada una (📍). Funciona igual en Telegram y en el correo, y el webhook y el gateway reciben el campo `nivel` (`rubro` o `region`).
   * **Límites:** sin regiones no aplica, para no avisar todo el país. Las exclusiones y «solo sin ofertas» siguen valiendo, y no gasta consultas extra, porque la vigilancia ya lee todo el país.

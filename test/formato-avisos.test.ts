@@ -27,12 +27,15 @@ const malicioso = alerta('765973-8-COT26', {
 describe('Telegram', () => {
   it('lleva los datos de R4.1 y el enlace a la ficha', () => {
     const [m] = formatearTelegram(lote([alerta('765973-8-COT26')]), AHORA);
-    expect(m).toContain('<b>Compra de resmas tamaño oficio</b>');
-    expect(m).toContain('765973-8-COT26');
-    expect(m).toContain('$300.000');
-    expect(m).toMatch(/cierra 09-10 12:00 \(en 41 h\)/);
-    expect(m).toContain('«resma»');
-    expect(m).toContain('<a href="https://buscador.mercadopublico.cl/ficha?code=765973-8-COT26">Ver ficha</a>');
+    expect(m).toContain('<b>1. Compra de resmas tamaño oficio</b>');
+    expect(m).toContain('🔖 Código: <code>765973-8-COT26</code>');
+    expect(m).toContain('🏛 Organismo: 14° Juzgado de Garantía');
+    expect(m).toContain('📍 Región: Región Metropolitana de Santiago');
+    expect(m).toContain('💰 Presupuesto: $300.000');
+    expect(m).toContain('⏰ <b>Cierra: vie 09-10 12:00</b> (en 1 d 17 h)');
+    expect(m).toContain('🔎 Calza con: «resma»');
+    expect(m).toContain('🔗 <a href="https://buscador.mercadopublico.cl/ficha?code=765973-8-COT26">Ver ficha</a>');
+    expect(m).toContain('Horas de Chile');
   });
 
   it('escapa &, < y > del texto de terceros; solo quedan las etiquetas propias', () => {
@@ -49,6 +52,24 @@ describe('Telegram', () => {
     expect(mensajes.length).toBeGreaterThan(1);
     for (const m of mensajes) expect(m.length).toBeLessThanOrEqual(LIMITE_TELEGRAM);
     for (let i = 0; i < 60; i++) expect(mensajes.filter((m) => m.includes(`${1000 + i}-1-COT26`))).toHaveLength(1);
+  });
+
+  it('ordena por cierre, la más urgente primero, y numera', () => {
+    const tarde = alerta('TARDE-1-COT26', { cierreHoraChile: '2026-10-12 10:00', cierreUtc: '2026-10-12T13:00:00.000Z' });
+    const sinCierre = alerta('SIN-1-COT26', { cierreHoraChile: null, cierreUtc: null });
+    const pronto = alerta('PRONTO-1-COT26', { cierreHoraChile: '2026-10-08 09:00', cierreUtc: '2026-10-08T12:00:00.000Z', publicadaHoraChile: '2026-10-07 18:30' });
+    const [m] = formatearTelegram(lote([tarde, sinCierre, pronto]), AHORA);
+    const pos = ['PRONTO', 'TARDE', 'SIN'].map((c) => m.indexOf(`${c}-1-COT26`));
+    expect(pos).toEqual([...pos].sort((a, b) => a - b));
+    expect(m).toMatch(/<b>1\. [^\n]*<\/b>\n🔖 Código: <code>PRONTO/);
+    expect(m).toContain('⏰ <b>Cierra: jue 08-10 09:00</b> (en 14 h)');
+    expect(m).toContain('🗓 Publicada: mié 07-10 18:30');
+    expect(m).toContain('⏰ <b>Cierra: sin fecha</b>');
+  });
+
+  it('sin palabras clave no muestra «Calza con» (sería «(cualquier proceso)»)', () => {
+    const [m] = formatearTelegram(lote([alerta('A-1-COT26', { coincidencia: '(cualquier proceso)' })]), AHORA);
+    expect(m).not.toContain('Calza con');
   });
 
   it('el resumen tras el silencio lo dice en el encabezado', () => {

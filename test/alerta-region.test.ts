@@ -85,27 +85,31 @@ describe('formato con alerta total de la región', () => {
     expect(alerta('B', EN_TU_REGION).nivel).toBe('region');
   });
 
-  it('Telegram: las del rubro primero y completas, las de la región después y en una línea', () => {
+  it('Telegram: las del rubro primero y completas, las de la región después y en dos líneas', () => {
     const [m] = formatearTelegram(lote([alerta('R1', EN_TU_REGION), alerta('A1', 'aseo'), alerta('R2', EN_TU_REGION)]), AHORA);
-    expect(m).toMatch(/^<b>1 de tu rubro y 2 compras más en tu región<\/b>/);
+    expect(m).toMatch(/^🆕 <b>1 de tu rubro y 2 compras más en tu región<\/b>/);
     const rubro = m.indexOf('🎯 <b>De tu rubro</b>');
     const region = m.indexOf('📍 <b>Otras en tu región</b>');
     expect(rubro).toBeGreaterThan(0);
     expect(region).toBeGreaterThan(m.indexOf('Proceso A1'));
     expect(m.indexOf('Proceso R1')).toBeGreaterThan(region);
-    expect(m).toContain('• <a href="https://buscador.mercadopublico.cl/ficha?code=R2">Proceso R2</a>');
+    expect(m).toMatch(/\d\. <a href="https:\/\/buscador\.mercadopublico\.cl\/ficha\?code=R2">Proceso R2<\/a>\n {4}🔖 <code>R2<\/code> · ⏰ /);
+    // La numeración sigue de las del rubro a las de la región.
+    expect(m).toContain('<b>1. Proceso A1</b>');
+    expect(m).toMatch(/\n2\. <a /);
+    expect(m).toMatch(/\n3\. <a /);
     expect(m).not.toContain(`«${EN_TU_REGION}»`);
   });
 
   it('Telegram: solo de la región, sin secciones', () => {
     const [m] = formatearTelegram(lote([alerta('R1', EN_TU_REGION)]), AHORA);
-    expect(m).toMatch(/^<b>1 compra nueva en tu región<\/b>\n\n• /);
+    expect(m).toMatch(/^🆕 <b>1 compra nueva en tu región<\/b>\n<i>Ordenadas por cierre[^\n]*\n\n1\. <a /);
     expect(m).not.toContain('De tu rubro');
   });
 
   it('Telegram: sin alerta total, el mensaje es el de siempre', () => {
     const [m] = formatearTelegram(lote([alerta('A1', 'aseo')]), AHORA);
-    expect(m).toMatch(/^<b>1 proceso nuevo calza con tus criterios<\/b>\n\n<b>Proceso A1<\/b>/);
+    expect(m).toMatch(/^🆕 <b>1 compra nueva que calza con tus criterios<\/b>\n<i>[^\n]*\n\n<b>1\. Proceso A1<\/b>/);
   });
 
   it('Telegram: muchas de la región se parten en mensajes ≤ 4.096 sin perder ninguna', () => {

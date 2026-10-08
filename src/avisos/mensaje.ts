@@ -17,7 +17,7 @@ import { sinContactos } from '../utils/privacidad.js';
 export interface ProcesoParaAviso {
   codigo: string;
   nombre: string;
-  fechas?: { fecha_cierre?: string | null } | null;
+  fechas?: { fecha_cierre?: string | null; fecha_publicacion?: string | null } | null;
   montos?: { monto_disponible_clp?: number | null } | null;
   institucion?: { organismo_comprador?: string | null; region?: number | null; nombre_region?: string | null } | null;
 }
@@ -30,6 +30,8 @@ export interface Alerta {
   presupuestoClp: number | null;
   cierreHoraChile: string | null;
   cierreUtc: string | null;
+  /** «AAAA-MM-DD HH:MM» en hora de Chile. Las alertas guardadas antes de este campo no lo traen. */
+  publicadaHoraChile?: string | null;
   /** La palabra clave del dueño que calzó (no es texto de terceros). */
   coincidencia: string;
   /**
@@ -71,6 +73,7 @@ export function crearAlerta(proceso: ProcesoParaAviso, coincidencia: string, cre
     presupuestoClp: typeof monto === 'number' && Number.isFinite(monto) ? monto : null,
     cierreHoraChile: enHoraDeChile(proceso.fechas?.fecha_cierre ?? null),
     cierreUtc: cierre ? cierre.toISOString() : null,
+    publicadaHoraChile: enHoraDeChile(proceso.fechas?.fecha_publicacion ?? null),
     coincidencia,
     nivel: coincidencia === EN_TU_REGION ? 'region' : 'rubro',
     ficha: `https://buscador.mercadopublico.cl/ficha?code=${encodeURIComponent(proceso.codigo)}`,
@@ -89,5 +92,23 @@ export function fechaCorta(horaChile: string | null): string {
   const m = horaChile?.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/);
   return m ? `${m[3]}-${m[2]} ${m[4]}` : 'sin fecha';
 }
+
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** «2026-10-09 14:00» → «jue 09-10 14:00»: con el día de la semana, que es lo que se mira para cotizar a tiempo. */
+export function fechaConDia(horaChile: string | null | undefined): string {
+  const m = horaChile?.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/);
+  if (!m) return 'sin fecha';
+  const dia = DIAS[new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay()];
+  return `${dia} ${m[3]}-${m[2]} ${m[4]}`;
+}
+
+/** La que cierra antes primero; sin cierre, al final. Estable para el mismo cierre. */
+export const porCierre = <T extends { alerta: Alerta }>(xs: T[]): T[] =>
+  [...xs].sort((x, y) => (x.alerta.cierreUtc ? Date.parse(x.alerta.cierreUtc) : Infinity) - (y.alerta.cierreUtc ? Date.parse(y.alerta.cierreUtc) : Infinity));
+
+/** La coincidencia que vale la pena mostrar: la palabra del dueño, no los marcadores. */
+export const palabraMostrable = (a: Alerta): string | null =>
+  a.coincidencia.startsWith('(') ? null : a.coincidencia;
 
 export const pesos = (n: number | null) => (n === null ? 'sin monto publicado' : `$${n.toLocaleString('es-CL')}`);
