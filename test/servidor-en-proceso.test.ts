@@ -269,3 +269,17 @@ describe('servidor en proceso — recursos y prompts', () => {
     expect(b.messages.length).toBeGreaterThan(0);
   });
 });
+
+describe('prompt configurar_vigilancia (2.9.0)', () => {
+  it('guía al agente a preguntar, comprobar, confirmar y guardar, sin pedir secretos en el chat', async () => {
+    const r = await cliente.getPrompt({ name: 'configurar_vigilancia', arguments: { rubro: 'útiles de oficina' } });
+    const t = (r.messages[0].content as { text: string }).text;
+    expect(t).toMatch(/útiles de oficina/);
+    expect(t).toMatch(/buscar_compras_agiles/);
+    expect(t).toMatch(/Solo con mi sí, llama a "configurar_criterios"/);
+    expect(t).toMatch(/estado_vigilancia/);
+    expect(t).toMatch(/No me pidas en el chat el ticket, el token del bot ni contraseñas/);
+    const sinRubro = await cliente.getPrompt({ name: 'configurar_vigilancia', arguments: {} });
+    expect((sinRubro.messages[0].content as { text: string }).text).toMatch(/pregúntame mi rubro/);
+  });
+});

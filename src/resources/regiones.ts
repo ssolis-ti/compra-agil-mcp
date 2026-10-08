@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-const REGIONES = [
+export const REGIONES = [
   { codigo: 1, nombre: 'Tarapacá' },
   { codigo: 2, nombre: 'Antofagasta' },
   { codigo: 3, nombre: 'Atacama' },

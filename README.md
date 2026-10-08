@@ -5,6 +5,19 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20.16+%20%7C%2022.3+-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> ### 👋 Empieza aquí
+> **¿Vendes al Estado y quieres que te avisen por Telegram de las compras ágiles de lo tuyo?** No necesitas programar: sigue el [**manual de uso**](docs/api/manual-de-uso.md). Son cinco comandos y un asistente que te pregunta todo:
+>
+> ```bash
+> git clone https://github.com/ssolis-ti/compra-agil-mcp.git mcp-compra-agil
+> cd mcp-compra-agil
+> npm install
+> npm run build
+> node dist/index.js --configurar
+> ```
+>
+> ¿Usas Claude Desktop u otro cliente MCP? Más abajo está la [integración](#-integración-con-clientes-mcp-y-agentes); el prompt **configurar_vigilancia** ajusta los avisos a tu rubro conversando.
+
 Servidor [MCP (Model Context Protocol)](https://modelcontextprotocol.io) desarrollado en TypeScript que envuelve e integra de forma avanzada la API REST de **Compra Ágil v2** y la API de **Órdenes de Compra (OC)** de [Mercado Público](https://www.mercadopublico.cl). Permite a cualquier IA, agente autónomo o cliente compatible interrogar, filtrar, auditar y prospectar procesos de compra estatal del gobierno de Chile.
 
 El proyecto está diseñado bajo una arquitectura modular y cuenta con tres modos de operación:
@@ -222,6 +235,7 @@ npm start
 ### Monitoreo Autónomo
 La vigilancia revisa los procesos nuevos cada 15 minutos, sin huecos aunque la API falle. Avisa por los canales del `.env` (Telegram, correo, webhook firmado) y deja todo en `alerts.log` y `vigilancia.log`, rotado a los 5 MB:
 ```bash
+node dist/index.js --configurar     # asistente: ticket, rubro, región, Telegram y encendido automático
 node dist/index.js --check          # ¿quedó bien instalado? (código 0 = sí)
 node dist/index.js --probar-avisos  # un mensaje de prueba por cada canal
 node dist/index.js --vigilar        # la vigilancia (también: npm run monitor)
@@ -409,13 +423,14 @@ const resources = await client.listResources();
 
 #### 📚 La documentación viaja en el paquete
 
-Desde la 2.7.0 el paquete de npm incluye las guías y manuales de `docs/api` y `docs/guias` (12 documentos, ~10 MB comprimido, entre ellos la guía de vigilancia y el contrato del webhook): con `npx` o `npm install` verás los 15 recursos y `consultar_documentos_locales` buscará en ellos igual que en un clon. Las notas de ingeniería (`docs/internals/`) no viajan y nunca se ofrecen como documentación.
+Desde la 2.7.0 el paquete de npm incluye las guías y manuales de `docs/api` y `docs/guias` (13 documentos, ~10 MB comprimido, entre ellos el manual de uso, la guía de vigilancia y el contrato del webhook): con `npx` o `npm install` verás los 16 recursos y `consultar_documentos_locales` buscará en ellos igual que en un clon. Las notas de ingeniería (`docs/internals/`) no viajan y nunca se ofrecen como documentación.
 
 **Para agregar tus propios documentos** (bases técnicas, normativa interna), clona el repositorio y ponlos en `docs/`: el servidor usa la carpeta `docs/` del paquete cuando tiene documentos, así que en una instalación por npm una carpeta `docs/` en tu directorio de trabajo no se lee.
 
 ### Prompts Disponibles
 
 * **`buscar_oportunidades_proveedor`:** Plantilla estructurada para guiar a la IA a consultar la región del proveedor, buscar compras publicadas afines y filtrar las 5 mejores ofertas libres de competidores.
+* **`configurar_vigilancia`:** Ajusta la vigilancia a tu rubro conversando: pregunta qué vendes, dónde y desde qué monto, prueba las palabras clave contra compras reales, las guarda cuando confirmas y revisa que los avisos funcionen. No pide secretos en el chat.
 * **`analizar_competencia`:** Plantilla de comandos para comparar precios unitarios y totales de los participantes de un proceso finalizado, identificando la brecha económica (spread) entre ofertas. *Nota: el motivo de selección no está disponible — la API no publica adjudicaciones.*
 
 ---

@@ -16,6 +16,10 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Pensado para quien no programa** (2.9.0):
+  * **`node dist/index.js --configurar`:** un asistente en la terminal pregunta el ticket (oculto), qué vendes (y dice cuántas compras abiertas hay con cada palabra), región y monto mínimo. Además conecta Telegram (encuentra el chat solo y manda una prueba), escribe el `.env` con respaldo del anterior y deja la vigilancia encendida al iniciar Windows.
+  * **Prompt MCP `configurar_vigilancia`:** ajusta los criterios conversando, prueba las palabras contra compras reales y guarda solo con tu confirmación; no pide secretos en el chat.
+  * **[Manual de uso](docs/api/manual-de-uso.md) en lenguaje simple** y un «Empieza aquí» al inicio del README.
 * **Vigilancia probada contra la API real (8-oct):** la primera prueba no leyó ningún lote en 15 minutos. La API tardaba ~10 s por consulta, con timeouts, y los lotes de la mañana traían hasta 8 páginas que se pedían una por una, en rondas que solo guardaban al final.
   * **Arreglos:** las páginas de un lote van en paralelo, y el daemon hace rondas de 4 minutos como máximo, que guardan, avisan y siguen enseguida si quedaron atrasadas.
   * **Resultado de la segunda prueba:** 11 lotes y 592 procesos en ~9 minutos.

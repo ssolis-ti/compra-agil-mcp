@@ -13,6 +13,8 @@ Los dos usan el mismo núcleo: leen la API lote por lote (la API registra los
 cambios cada 5 minutos), recuperan lo que no pudieron leer cuando la API
 falla y avisan cuando la vigilancia está ciega.
 
+> **¿No eres técnico?** El [manual de uso](manual-de-uso.md) explica lo mismo en lenguaje simple, y `node dist/index.js --configurar` te pregunta todo y deja la vigilancia encendida.
+
 ## 1. Lo común: instalar y comprobar
 
 ```bash

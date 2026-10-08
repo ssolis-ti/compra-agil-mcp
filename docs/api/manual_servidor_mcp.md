@@ -48,7 +48,7 @@ Todo rechazo de una entrada llega como `Error de validación: <qué corregir>. N
 
 Recursos de código: `compra-agil://regiones`, `compra-agil://estados`, `compra-agil://glosario`, `compra-agil://compras/{codigo}`. Ese último trae `_nota_horaria` y `cierre_hora_chile`. Los documentos de `docs/` aparecen como `compra-agil://documentacion/{filename}`, también al instalar con npm.
 
-Prompts: `buscar_oportunidades_proveedor` y `analizar_competencia`. El segundo compara la oferta más barata y la más cara. No identifica un proveedor adjudicado ni pregunta si un seleccionado fue el más barato. Una marca en la cotización no es una adjudicación.
+Prompts: `buscar_oportunidades_proveedor`, `analizar_competencia` y `configurar_vigilancia` (ajusta los criterios de la vigilancia conversando; no pide secretos en el chat). El segundo compara la oferta más barata y la más cara. No identifica un proveedor adjudicado ni pregunta si un seleccionado fue el más barato. Una marca en la cotización no es una adjudicación.
 
 ## Vigilancia y avisos
 
@@ -58,7 +58,7 @@ Prompts: `buscar_oportunidades_proveedor` y `analizar_competencia`. El segundo c
 - **Avisos:** por Telegram, correo o webhook firmado, según `COMPRA_AGIL_AVISOS`, y además en `alerts.log`. También avisa de ceguera (2 h sin revisión completa), recuperación, resumen diario y canal caído.
 - **Modo gateway:** en vez del daemon, un gateway llama `obtener_alertas_nuevas` y `confirmar_alertas`.
 
-`--check` diagnostica la instalación con código de salida. Instalación y canales: `docs/api/guia-vigilancia-y-avisos.md`; contrato del webhook: `docs/api/webhook-alertas.md`.
+`--configurar` es un asistente en la terminal que escribe el `.env` (ticket, criterios, Telegram) y deja la vigilancia encendida; `--check` diagnostica la instalación con código de salida. Manual para usuarios no técnicos: `docs/api/manual-de-uso.md`. Instalación y canales: `docs/api/guia-vigilancia-y-avisos.md`; contrato del webhook: `docs/api/webhook-alertas.md`.
 
 ## Arranque
 

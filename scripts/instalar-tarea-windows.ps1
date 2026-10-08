@@ -36,6 +36,11 @@ $Ajustes = New-ScheduledTaskSettingsSet `
     -ExecutionTimeLimit ([TimeSpan]::Zero) `
     -MultipleInstances IgnoreNew -StartWhenAvailable
 
+# Si ya estaba instalada y corriendo, se detiene: la vigilancia lee el .env al
+# arrancar, y así toma la configuración nueva (por ejemplo, tras --configurar).
+if (Get-ScheduledTask -TaskName $Nombre -ErrorAction SilentlyContinue) {
+    Stop-ScheduledTask -TaskName $Nombre -ErrorAction SilentlyContinue
+}
 Register-ScheduledTask -TaskName $Nombre -Action $Accion -Trigger $Disparador -Settings $Ajustes `
     -Description 'Vigilancia de Compra Ágil (mcp-compra-agil --vigilar): lee los procesos nuevos y avisa por los canales del .env.' `
     -Force | Out-Null

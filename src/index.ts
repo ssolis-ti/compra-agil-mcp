@@ -40,6 +40,20 @@ if (process.argv.includes('--telegram-chat-id')) {
   const { comandoTelegramChatId } = await import('./cli/avisos.js');
   process.exit(await comandoTelegramChatId(process.env, (linea) => console.log(linea)));
 }
+if (process.argv.includes('--configurar')) {
+  const { comandoConfigurar } = await import('./cli/configurar.js');
+  const { consolaDeTerminal, instaladorDeArranque } = await import('./cli/consola.js');
+  const { raizPaquete, carpetaDatos } = await import('./utils/rutas.js');
+  const fsMod = await import('fs');
+  const pathMod = await import('path');
+  // El .env del proyecto si existe (instalación desde el repositorio); si no, el de la carpeta de datos.
+  const enProyecto = pathMod.join(raizPaquete(), '.env');
+  const rutaEnv = fsMod.existsSync(enProyecto) || fsMod.existsSync(pathMod.join(raizPaquete(), '.git')) ? enProyecto : pathMod.join(carpetaDatos(), '.env');
+  const consola = consolaDeTerminal();
+  const codigo = await comandoConfigurar({ env: process.env, rutaEnv, consola, instalarArranque: instaladorDeArranque(raizPaquete()) });
+  consola.cerrar();
+  process.exit(codigo);
+}
 if (process.argv.includes('--check')) {
   const { comandoCheck } = await import('./cli/check.js');
   process.exit(await comandoCheck(process.env, (linea) => console.log(linea)));

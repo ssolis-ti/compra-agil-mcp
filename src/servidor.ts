@@ -46,6 +46,7 @@ import { registerDocumentacionResource } from './resources/documentacion.js';
 // Prompts
 import { registerBuscarOportunidadesPrompt } from './prompts/buscar-oportunidades.js';
 import { registerAnalizarCompetenciaPrompt } from './prompts/analizar-competencia.js';
+import { registerConfigurarVigilanciaPrompt } from './prompts/configurar-vigilancia.js';
 
 export function crearServidor(client: CompraAgilClient, version: string): { server: McpServer; registrados: Registrados } {
   const server = new McpServer(
@@ -109,6 +110,7 @@ export function crearServidor(client: CompraAgilClient, version: string): { serv
   // Prompts
   registerBuscarOportunidadesPrompt(server);
   registerAnalizarCompetenciaPrompt(server);
+  registerConfigurarVigilanciaPrompt(server);
 
   return { server, registrados };
 }
