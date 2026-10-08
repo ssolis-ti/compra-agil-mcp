@@ -18,6 +18,7 @@ import fs from 'fs';
 import type { CompraAgilClient } from '../api/compra-agil-client.js';
 import { rutaDeDatos } from '../utils/rutas.js';
 import { safeError } from '../utils/redact.js';
+import { fueraDeLaHerramienta } from '../utils/presupuesto.js';
 import { ahora } from '../utils/reloj.js';
 import { criteriosDesdeEntorno, lineaDeAlerta } from '../vigilancia/criterios.js';
 import { rondaDeVigilancia } from '../vigilancia/ronda.js';
@@ -115,7 +116,9 @@ export function crearBucleVigilancia(o: { client: CompraAgilClient; env: Record<
     iniciar(): void {
       if (activo) return;
       activo = true;
-      void siguiente();
+      // Se enciende desde activar_vigilancia: sin esto, las rondas heredan el
+      // presupuesto de 45 s de esa herramienta (ver utils/presupuesto.ts).
+      fueraDeLaHerramienta(() => void siguiente());
     },
     detener(): void {
       activo = false;

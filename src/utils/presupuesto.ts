@@ -45,6 +45,19 @@ export function conPresupuesto<T>(fn: () => Promise<T>, presupuestoMs = presupue
   return almacen.run({ vence: Date.now() + presupuestoMs, presupuestoMs, omitidas: [], ultimoHttp: null }, fn);
 }
 
+/**
+ * Corre `fn` fuera de toda llamada a herramienta. Lo que `fn` deje programado
+ * (temporizadores, promesas) tampoco hereda el presupuesto.
+ *
+ * ⚠ Para trabajo que sobrevive a la herramienta que lo lanza: la vigilancia
+ *   encendida con activar_vigilancia heredaba los 45 s de esa llamada y, ya
+ *   vencidos, cada consulta de las rondas siguientes se cancelaba o ni se
+ *   enviaba (prueba real del 8-oct: 11 lotes pendientes en una hora).
+ */
+export function fueraDeLaHerramienta<T>(fn: () => T): T {
+  return almacen.exit(fn);
+}
+
 export function contextoActual(): ContextoLlamada | undefined {
   return almacen.getStore();
 }
