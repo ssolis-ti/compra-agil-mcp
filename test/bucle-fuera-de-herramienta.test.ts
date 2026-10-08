@@ -48,3 +48,23 @@ describe('bucle de vigilancia encendido desde una herramienta', () => {
     expect(restantes.every((r) => r === undefined)).toBe(true);
   });
 });
+
+describe('bucle con «sigue» (apagar desde otro proceso)', () => {
+  it('antes de cada ronda consulta sigue(); si da false, se detiene sin consultar la API', async () => {
+    process.env.COMPRA_AGIL_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'bucle-'));
+    let consultas = 0;
+    let preferencia = 'con_claude';
+    const mensajes: string[] = [];
+    const client = { buscarFresco: async () => { consultas++; throw new Error('sin API'); } } as unknown as CompraAgilClient;
+    const bucle = crearBucleVigilancia({
+      client, env: { COMPRA_AGIL_AVISOS: '' }, registrar: (_n, m) => mensajes.push(m),
+      sigue: () => preferencia === 'con_claude',
+    });
+    preferencia = 'apagada'; // otro proceso la apagó antes de la primera ronda
+    bucle.iniciar();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(consultas).toBe(0);
+    expect(bucle.activo).toBe(false);
+    expect(mensajes.join(' ')).toMatch(/apagó desde otro proceso/);
+  });
+});

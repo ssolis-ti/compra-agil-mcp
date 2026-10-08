@@ -40,7 +40,16 @@ export function intervaloDesdeEntorno(env: Record<string, string | undefined>): 
  * `mantenerVivo`: el daemon sí quiere que el temporizador mantenga vivo el proceso;
  * dentro del servidor MCP, el que manda es stdio y el temporizador no debe retenerlo.
  */
-export function crearBucleVigilancia(o: { client: CompraAgilClient; env: Record<string, string | undefined>; registrar: Registro; mantenerVivo?: boolean }) {
+export function crearBucleVigilancia(o: {
+  client: CompraAgilClient; env: Record<string, string | undefined>; registrar: Registro; mantenerVivo?: boolean;
+  /**
+   * Se consulta antes de cada ronda; si devuelve false, el bucle se detiene.
+   * El modo «con Claude» lo usa para leer la preferencia guardada: apagar la
+   * vigilancia desde un proceso detiene también el bucle de los demás (prueba
+   * real del 8-oct: otra sesión siguió avisando después de apagarla).
+   */
+  sigue?: () => boolean;
+}) {
   const { client, env, registrar } = o;
   // La vigilancia necesita respuestas frescas: la comprobación de un lote vuelve
   // a pedir la página 1, y desde la caché sería la misma respuesta.
@@ -106,6 +115,11 @@ export function crearBucleVigilancia(o: { client: CompraAgilClient; env: Record<
   // no espera el intervalo.
   async function siguiente(): Promise<void> {
     if (!activo) return;
+    if (o.sigue && !o.sigue()) {
+      activo = false;
+      registrar('info', 'La vigilancia se apagó desde otro proceso: este deja de vigilar.');
+      return;
+    }
     const atrasada = await ronda();
     if (!activo) return;
     temporizador = setTimeout(() => void siguiente(), atrasada ? PAUSA_SI_ATRASADA_MS : intervaloDesdeEntorno(env));

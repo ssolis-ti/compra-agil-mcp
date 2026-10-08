@@ -44,7 +44,10 @@ function powershell(script: string, args: string[]): Promise<{ codigo: number | 
 
 export function crearControlVigilancia(o: { client: CompraAgilClient; env: Record<string, string | undefined>; registrar: Registro }): ControlVigilancia {
   const preferencias = () => rutaDeDatos('.preferencias.json');
-  const bucle = crearBucleVigilancia({ client: o.client, env: o.env, registrar: o.registrar });
+  const bucle = crearBucleVigilancia({
+    client: o.client, env: o.env, registrar: o.registrar,
+    sigue: () => leerPreferencias(preferencias()).vigilancia === 'con_claude',
+  });
   const guardar = (modo: ModoVigilancia) => actualizarPreferencias(preferencias(), (p) => { p.vigilancia = modo; });
   const scripts = path.join(raizPaquete(), 'scripts');
 
@@ -56,8 +59,9 @@ export function crearControlVigilancia(o: { client: CompraAgilClient; env: Recor
     },
     async activar(modo) {
       if (modo === 'con_claude') {
-        bucle.iniciar();
+        // Primero la preferencia: el bucle la consulta antes de cada ronda.
         guardar('con_claude');
+        bucle.iniciar();
         return { ok: true, detalle: 'La vigilancia corre mientras Claude Desktop esté abierto. Al cerrarlo se detiene, y al abrirlo vuelve sola.' };
       }
       if (modo === 'apagada') {

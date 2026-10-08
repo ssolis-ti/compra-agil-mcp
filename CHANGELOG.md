@@ -7,6 +7,7 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 ## [Unreleased]
 
 ### Corregido
+* **Apagar la vigilancia la apaga en todos los procesos** (2.9.0, prueba real del 8-oct). Con varias sesiones de Claude abiertas, cada una con su servidor, `activar_vigilancia(apagar)` detenía solo el bucle del proceso que la recibía, y otra sesión siguió mandando avisos. Ahora cada bucle «con Claude» lee la preferencia guardada antes de cada ronda.
 * **La extensión de Claude Desktop ya arranca** (2.9.0, prueba real del 8-oct). Con el Node que trae Claude, el proceso moría apenas lo lanzaban, sin escribir ni una línea en el log, y Claude Desktop decía «No se puede conectar al servidor de la extensión». La causa era `pdf-parse`, que al importarse carga un módulo nativo (`@napi-rs/canvas`). Ahora el lector de PDF se carga recién al leer el primer PDF: el servidor arranca siempre, y si ese módulo no carga, solo falla la lectura de PDF, con un mensaje claro.
 * **La vigilancia encendida desde el chat ya no se queda sin tiempo** (2.9.0, prueba real del 8-oct). Al encenderla con `activar_vigilancia`, el bucle quedaba atado a los 45 s de esa herramienta. Vencidos, cada consulta de las rondas siguientes se cancelaba a los 5 s o ni se enviaba, y en una hora quedaron 11 lotes pendientes. Ahora el bucle corre fuera del presupuesto de la herramienta que lo enciende. No afectaba al daemon ni a la vigilancia que vuelve sola al abrir Claude.
 * **El daemon de vigilancia ya no pierde procesos sin decirlo** (2.9.0, fase 2). Hasta la 2.8.0 tenía tres fallas:
