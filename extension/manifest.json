@@ -1,0 +1,50 @@
+{
+  "manifest_version": "0.3",
+  "name": "mcp-compra-agil",
+  "display_name": "Compra Ágil — Mercado Público",
+  "version": "0.0.0",
+  "description": "Busca y vigila las compras ágiles de Mercado Público (Chile) y te avisa por Telegram de las que calzan con lo que vendes.",
+  "long_description": "Conversa con Claude para encontrar compras ágiles abiertas, analizar precios cotizados y auditar procesos desiertos.\n\n**Vigilancia con avisos:** dile a Claude «Ayúdame a empezar» y te guía: qué vendes, dónde, desde qué monto, conecta tu Telegram con un código y deja la vigilancia encendida. Los avisos llegan cada 15 minutos con lo nuevo que calza con tu rubro.\n\nNecesitas un ticket gratuito de Mercado Público (https://www.chilecompra.cl/api/, con Clave Única). El ticket y el token del bot se guardan en la bóveda segura del sistema: nunca se escriben en el chat.",
+  "author": { "name": "ssolis-ti", "url": "https://github.com/ssolis-ti" },
+  "repository": { "type": "git", "url": "https://github.com/ssolis-ti/compra-agil-mcp.git" },
+  "homepage": "https://github.com/ssolis-ti/compra-agil-mcp",
+  "documentation": "https://github.com/ssolis-ti/compra-agil-mcp/blob/main/docs/api/manual-de-uso.md",
+  "support": "https://github.com/ssolis-ti/compra-agil-mcp/issues",
+  "license": "MIT",
+  "keywords": ["mercado publico", "compra agil", "chile", "licitaciones", "telegram"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "COMPRA_AGIL_TICKET": "${user_config.ticket}",
+        "COMPRA_AGIL_TELEGRAM_TOKEN": "${user_config.telegram_token}",
+        "COMPRA_AGIL_EXTENSION": "1"
+      }
+    }
+  },
+  "tools_generated": true,
+  "prompts_generated": true,
+  "user_config": {
+    "ticket": {
+      "type": "string",
+      "title": "Ticket de Mercado Público",
+      "description": "Clave gratuita para consultar la API. Pídela en https://www.chilecompra.cl/api/ («Pide tu ticket», con Clave Única); llega por correo.",
+      "sensitive": true,
+      "required": true
+    },
+    "telegram_token": {
+      "type": "string",
+      "title": "Token del bot de Telegram (opcional)",
+      "description": "Para recibir avisos en Telegram. En Telegram, abre @BotFather, escribe /newbot y pega aquí el token que te da (123456789:AA…). Después dile a Claude «conecta mi Telegram».",
+      "sensitive": true,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32"],
+    "runtimes": { "node": ">=20.16.0" }
+  }
+}
