@@ -54,7 +54,11 @@ de configuración de Claude Desktop, o un formulario local en su navegador.
 
 RA1–RA9 implementados y probados:
 - **Extensión:** `scripts/qa/probar-extension.mjs` la arranca como Claude Desktop y verifica herramientas, prompts, documentos y la carpeta de datos.
-- **Prueba manual pendiente:** la extensión instalada en Claude Desktop y la vinculación con un bot real, con el dueño.
+- **Prueba real con el dueño (8-oct, instalación desde el repositorio):**
+  - **Recorrido desde el chat:** `probar_avisos` → `activar_vigilancia(con_claude)` → `configurar_criterios` (toda la región de Aysén) funcionó.
+  - **Avisos:** llegaron a Telegram 12 compras de Aysén, unos 30 minutos después de publicadas. La vigilancia venía con lotes atrasados.
+  - **Fallo encontrado y corregido:** el bucle encendido desde la herramienta heredaba su presupuesto de 45 s (`498c1c7`).
+- **Prueba manual pendiente:** la extensión `.mcpb` instalada en Claude Desktop y la vinculación con código (`conectar_telegram`) con un bot real.
 
 ## Seguridad
 
