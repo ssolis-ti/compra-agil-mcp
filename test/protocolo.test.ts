@@ -65,11 +65,12 @@ describe('servidor MCP por stdio', () => {
     expect((cliente.getInstructions() ?? '').length).toBeGreaterThan(100);
   });
 
-  it('registra las 16 herramientas y solo generar_informe escribe', async () => {
+  it('registra las 21 herramientas y solo escriben las que deben', async () => {
     const { tools } = await cliente.listTools();
-    expect(tools).toHaveLength(16);
+    expect(tools).toHaveLength(21);
     const escriben = tools.filter((t) => t.annotations?.readOnlyHint !== true).map((t) => t.name);
-    expect(escriben).toEqual(['generar_informe']);
+    // generar_informe escribe en disco; las de vigilancia (2.9.0) cambian el estado o envían avisos.
+    expect(escriben.sort()).toEqual(['configurar_criterios', 'confirmar_alertas', 'generar_informe', 'obtener_alertas_nuevas', 'probar_avisos']);
   });
 
   it('registra los recursos y los dos prompts', async () => {
@@ -92,7 +93,7 @@ describe('servidor MCP por stdio', () => {
     const r = await cliente.callTool({ name: 'buscar_compras_agiles', arguments: { tamano_pagina: 500 } });
     expect(r.isError).toBe(true);
     // Sigue vivo después del rechazo.
-    expect((await cliente.listTools()).tools.length).toBe(16);
+    expect((await cliente.listTools()).tools.length).toBe(21);
   });
 
   it('una región inexistente se rechaza en el servidor, no en la API', async () => {
@@ -147,7 +148,7 @@ describe('servidor MCP por stdio', () => {
   });
 
   it('el log de arranque cuenta lo que de verdad se registró', () => {
-    expect(stderr).toMatch(/16 herramientas registradas: buscar_compras_agiles,/);
+    expect(stderr).toMatch(/21 herramientas registradas: buscar_compras_agiles,/);
     expect(stderr).toMatch(/2 prompts registrados: buscar_oportunidades_proveedor, analizar_competencia/);
   });
 

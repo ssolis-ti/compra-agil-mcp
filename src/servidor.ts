@@ -34,6 +34,7 @@ import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
 import { registerGenerarInforme } from './tools/generar-informe.js';
 import { registerVerificarTicket } from './tools/verificar-ticket.js';
 import { registerVerificarHora } from './tools/verificar-hora.js';
+import { registerVigilanciaTools } from './tools/vigilancia.js';
 
 // Resources
 import { registerRegionesResource } from './resources/regiones.js';
@@ -96,6 +97,7 @@ export function crearServidor(client: CompraAgilClient, version: string): { serv
   registerGenerarInforme(server, client);
   registerVerificarTicket(server, client);
   registerVerificarHora(server);
+  registerVigilanciaTools(server, client); // 5 herramientas de vigilancia y avisos (2.9.0)
 
   // Recursos
   registerRegionesResource(server);

@@ -40,6 +40,21 @@ if (process.argv.includes('--telegram-chat-id')) {
   const { comandoTelegramChatId } = await import('./cli/avisos.js');
   process.exit(await comandoTelegramChatId(process.env, (linea) => console.log(linea)));
 }
+if (process.argv.includes('--check')) {
+  const { comandoCheck } = await import('./cli/check.js');
+  process.exit(await comandoCheck(process.env, (linea) => console.log(linea)));
+}
+if (process.argv.includes('--probar-avisos')) {
+  const { comandoProbarAvisos } = await import('./cli/check.js');
+  process.exit(await comandoProbarAvisos(process.env, (linea) => console.log(linea)));
+}
+if (process.argv.includes('--vigilar')) {
+  // El daemon de vigilancia arranca al importarse y sigue corriendo con sus
+  // temporizadores. La promesa que no se resuelve detiene el resto de este
+  // módulo: en este modo no se abre el servidor MCP por stdio.
+  await import('./services/monitor.js');
+  await new Promise<never>(() => undefined);
+}
 
 // Registrar el ticket como secreto ANTES de cualquier log o request: a partir de
 // aquí, `redact()` lo borra de todo texto que salga del proceso (logs, errores,

@@ -127,7 +127,7 @@ describe('servidor lanzado desde otra carpeta (como lo hace un cliente MCP)', ()
   });
 
   it('arranca y responde tools/list sin el ticket en el entorno', async () => {
-    expect((await cliente.listTools()).tools).toHaveLength(16);
+    expect((await cliente.listTools()).tools).toHaveLength(21);
   }, 30_000);
 
   it('usa el ticket del .env de la carpeta de datos y guarda la caché ahí, no en el cwd', async () => {

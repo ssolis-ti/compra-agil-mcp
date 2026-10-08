@@ -16,6 +16,14 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **5 herramientas nuevas y comandos de terminal** (2.9.0, fase 8). El servidor pasa de 16 a 21 herramientas.
+  * **`estado_vigilancia`:** qué ve y qué no ve la vigilancia.
+  * **`obtener_alertas_nuevas` y `confirmar_alertas`:** el modo gateway, para OpenClaw o Hermes, que avisan por su propio canal.
+  * **`probar_avisos`:** un mensaje de prueba por cada canal.
+  * **`configurar_criterios`:** todo cambio se avisa por los canales con el antes y el después.
+  * **Destinos:** ninguna herramienta acepta un destino de aviso.
+  * **Comandos:** `mcp-compra-agil --check` (diagnóstico con código de salida, para que un agente sepa si la instalación quedó lista), `--probar-avisos` y `--vigilar` (el daemon).
+  * **Escrituras concurrentes:** al guardar, el estado se mezcla con lo que otro proceso escribió entretanto, para que una ronda no borre una confirmación o un cambio de criterios.
 * **Salud de la vigilancia** (2.9.0, fase 7): el silencio deja de ser ambiguo.
   * **Ceguera:** si pasan 2 h sin una revisión completa (`COMPRA_AGIL_AVISOS_CEGUERA_MIN`), avisa una sola vez, y avisa de nuevo al recuperarse, con lo que quedó sin revisar.
   * **Resumen diario:** a las 08:00 de Chile (`COMPRA_AGIL_AVISOS_RESUMEN`); si no llega, la vigilancia está detenida.

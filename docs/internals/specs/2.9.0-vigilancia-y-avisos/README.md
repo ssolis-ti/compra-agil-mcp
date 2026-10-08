@@ -67,6 +67,6 @@ Además de la puerta propia de cada fase en `tareas.md`:
 | 5 | Canal webhook | ✅ 7-oct |
 | 6 | Canal correo | ✅ 7-oct (T6.3: prueba con cuenta real, la hace el dueño) |
 | 7 | Salud y cuota | ✅ 7-oct |
-| 8 | Superficie: herramientas MCP, CLI y daemon | 🔄 Siguiente |
-| 9 | Instalación y documentación | ⏸ |
+| 8 | Superficie: herramientas MCP, CLI y daemon | ✅ 7-oct |
+| 9 | Instalación y documentación | 🔄 Siguiente |
 | 10 | Validación y cierre | ⏸ |

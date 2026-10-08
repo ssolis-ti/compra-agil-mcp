@@ -117,3 +117,22 @@ describe('daemon de vigilancia', () => {
     await tg.cerrar();
   }, 90_000);
 });
+
+describe('mcp-compra-agil --vigilar', () => {
+  it('arranca el daemon de vigilancia y no el servidor MCP', async () => {
+    const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'vigilar-'));
+    let salida = '';
+    const p = spawn(process.execPath, [TSX, path.join(RAIZ, 'src', 'index.ts'), '--vigilar'], {
+      cwd: carpeta,
+      env: { ...process.env, COMPRA_AGIL_TICKET: 'TICKET-DE-PRUEBA-NO-REAL-0000', COMPRA_AGIL_BASE_URL: 'http://127.0.0.1:9', COMPRA_AGIL_DATA_DIR: carpeta, COMPRA_AGIL_NTP: 'off', COMPRA_AGIL_AVISOS: '' },
+    });
+    procesos.push(p);
+    p.stdout!.on('data', (d) => { salida += String(d); });
+    p.stderr!.on('data', (d) => { salida += String(d); });
+    const limite = Date.now() + 30_000;
+    while (!/Lotes leídos|Falló la ronda/.test(salida) && Date.now() < limite) await new Promise((r) => setTimeout(r, 200));
+    expect(salida).toMatch(/VIGILANCIA DE COMPRA ÁGIL/);
+    expect(salida).not.toMatch(/Servidor MCP Compra Ágil v2 listo/);
+    expect(p.exitCode).toBeNull(); // sigue corriendo
+  }, 60_000);
+});

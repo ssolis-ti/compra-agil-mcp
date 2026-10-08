@@ -14,6 +14,7 @@
 import { ejecutarCiclo, type AlertaVigilancia, type DependenciasCiclo, type LimitesCiclo, type ResultadoCiclo } from './ciclo.js';
 import { cargarEstado, guardarEstado } from './estado.js';
 import { tomarVigilante, vigilanteActivo } from './vigilante.js';
+import { criteriosEfectivos, podarGateway, registrarParaGateway } from './gateway.js';
 import { marcarNotificadas, notificacionesPendientes, registrarRonda, type ConfigSalud } from './salud.js';
 import { crearAlerta } from '../avisos/mensaje.js';
 import { encolar, enviarPendientes, podarBandeja, type ConfigBandeja, type ResultadoEnvios } from '../avisos/bandeja.js';
@@ -72,14 +73,18 @@ export async function rondaDeVigilancia(deps: DependenciasRonda, limites: Limite
     canales: canales.map((c) => c.nombre),
   };
 
-  const ciclo = await ejecutarCiclo(deps, estado, limites);
+  // Los criterios fijados con configurar_criterios mandan sobre los del entorno (R2.2).
+  const ciclo = await ejecutarCiclo({ ...deps, criterios: criteriosEfectivos(estado, deps.criterios) }, estado, limites);
   if (ciclo.alertas.length > 0) await deps.entregar(ciclo.alertas);
+  const alertasArmadas = ciclo.alertas.map((a) => crearAlerta(a.item, a.coincidencia, a.cuando));
+  // Cola del modo gateway (R9): siempre, para que un gateway pueda pedirlas.
+  registrarParaGateway(estado, alertasArmadas);
+  podarGateway(estado, deps.ahora());
   // Los avisos se encolan y se envían antes de guardar: lo que no se entregue
   // queda en la bandeja del estado y sale en la ronda siguiente (R3.5).
   let envios: ResultadoEnvios | undefined;
   if (canales.length > 0) {
-    const alertas = ciclo.alertas.map((a) => crearAlerta(a.item, a.coincidencia, a.cuando));
-    encolar(estado.bandeja, alertas, canales.map((c) => c.nombre), deps.ahora());
+    encolar(estado.bandeja, alertasArmadas, canales.map((c) => c.nombre), deps.ahora());
     envios = await enviarPendientes(estado.bandeja, canales, deps.ahora(), deps.avisos?.config);
   }
   podarBandeja(estado.bandeja, deps.ahora());

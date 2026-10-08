@@ -384,6 +384,11 @@ const resources = await client.listResources();
 | `generar_borrador_cotizacion` | Auto-completa propuestas JSON de cotización bajo el esquema oficial, calculando impuestos (19% IVA) y redactando la carta de presentación. Marca los campos a revisar: placeholders, el total frente al presupuesto (el precio por defecto cabe con IVA) y si el pedido completo puede estar en los adjuntos. |
 | `radar_oportunidades_calientes` | Califica y ordena convocatorias publicadas con un score ponderado (Hot Score, máx 115) de competencia, urgencia de cierre, presupuesto, simplicidad y **segundo llamado**. Cada resultado trae el desglose de factores y el campo `llamado`. Auto-pagina. |
 | `generar_informe` | Genera un **informe profesional imprimible** (HTML autocontenido, diseño A4/Carta/Oficio) y devuelve la ruta del archivo. Tipos: `radar`, `cotizacion`, `precio`, `auditoria` y `competencia`. Ver [Informes](#️-informes-imprimibles). |
+| `estado_vigilancia` | Qué ve y qué no ve la vigilancia de procesos nuevos: último lote revisado, lotes pendientes o incompletos, huecos sin revisar, **ceguera**, avisos por canal, alertas sin confirmar del modo gateway, cuota proyectada y si hay un vigilante activo. Úsala antes de afirmar «no hay procesos nuevos». No consulta la API. |
+| `obtener_alertas_nuevas` | **Modo gateway** (OpenClaw, Hermes): revisa los lotes de cambios nuevos, si nadie más está vigilando, y entrega las alertas sin confirmar con un `lote_id`. Lo que no se confirma vuelve a ofrecerse a los 30 min. Gasta unas pocas consultas por cada 5 min desde la última revisión. |
+| `confirmar_alertas` | Marca como entregado un lote de `obtener_alertas_nuevas`. Llamarla dos veces no cambia nada. |
+| `probar_avisos` | Envía un mensaje de prueba por cada canal configurado (Telegram, webhook, correo) y dice cuál llegó. No acepta un destino: los destinos se fijan solo en el `.env`. |
+| `configurar_criterios` | Cambia qué se alerta: palabras clave, exclusiones, regiones, presupuesto mínimo y «solo sin ofertas»; `restablecer=true` vuelve al `.env`. **Todo cambio se avisa por los canales** con el antes y el después. |
 
 ### Recursos Disponibles (Resources)
 

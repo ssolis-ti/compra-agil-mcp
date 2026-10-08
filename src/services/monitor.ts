@@ -18,10 +18,7 @@ import { ahora, iniciarRelojOficial } from '../utils/reloj.js';
 import { criteriosDesdeEntorno, lineaDeAlerta } from '../vigilancia/criterios.js';
 import { rondaDeVigilancia } from '../vigilancia/ronda.js';
 import { leerConfigAvisos } from '../avisos/config.js';
-import { CanalTelegram } from '../avisos/canales/telegram.js';
-import { CanalWebhook } from '../avisos/canales/webhook.js';
-import { CanalCorreo } from '../avisos/canales/correo.js';
-import type { Canal } from '../avisos/canal.js';
+import { crearCanales } from '../avisos/canales/crear.js';
 import { configSaludDesdeEntorno } from '../vigilancia/salud.js';
 
 loadEnvManual();
@@ -58,10 +55,7 @@ console.log(`Solo sin ofertas      : ${criterios.soloSinOfertas ? 'sí' : 'no'}`
 // Canales de aviso: solo desde el entorno (ADR 0023). Los secretos quedan
 // registrados para la redacción al leer la configuración.
 const configAvisos = leerConfigAvisos(process.env);
-const canales: Canal[] = [];
-if (configAvisos.telegram) canales.push(new CanalTelegram(configAvisos.telegram));
-if (configAvisos.webhook) canales.push(new CanalWebhook(configAvisos.webhook));
-if (configAvisos.correo) canales.push(new CanalCorreo(configAvisos.correo));
+const canales = crearCanales(configAvisos);
 
 console.log(`Alertas en            : ${ALERTAS}`);
 console.log(`Avisos por            : ${canales.map((c) => c.nombre).join(', ') || '(ningún canal: solo alerts.log)'}`);

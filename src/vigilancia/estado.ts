@@ -11,6 +11,18 @@ import fs from 'fs';
 import { conBloqueo } from '../utils/bloqueo.js';
 import { escribirAtomico, leerJsonSeguro } from '../utils/archivo-atomico.js';
 import type { Bandeja } from '../avisos/bandeja.js';
+import type { Alerta } from '../avisos/mensaje.js';
+import type { Criterios } from './criterios.js';
+
+export interface AlertaGateway {
+  alerta: Alerta;
+  /** Lote en que se ofreció por última vez, y cuándo (epoch ms). */
+  lote: string | null;
+  ofrecida: number | null;
+  confirmada: number | null;
+}
+
+export type CriteriosGuardados = Criterios & { cambiadoEn: string };
 
 export interface LotePendiente { lote: string; intentos: number; ultimoError?: string }
 export interface LoteIncompleto { lote: string; total: number; leidos: number; registrado: number }
@@ -51,8 +63,10 @@ export interface EstadoVigilancia {
     /** Día UTC del último aviso de cuota. */
     cuotaAvisada: string | null;
   };
-  /** Fase 8 (alertas para el gateway). Se conserva tal cual. */
-  alertas: Record<string, unknown>;
+  /** Cola del modo gateway (fase 8): alertas por ofrecer y confirmar (R9). */
+  alertas: Record<string, AlertaGateway>;
+  /** Criterios fijados por `configurar_criterios`; null: los del entorno (R2.2). */
+  criterios: CriteriosGuardados | null;
   /** Avisos por canal (fase 3, ADR 0022). */
   bandeja: Bandeja;
 }
@@ -75,7 +89,7 @@ export function estadoVacio(): EstadoVigilancia {
       cegueraAvisada: false, cegueraDesde: null, ultimoResumen: null, acumulado: acumuladoVacio(),
       fallosPorCanal: {}, canalesCaidosAvisados: [], factorIntervalo: 1, proximaRonda: null, ultimo429: null, cuotaAvisada: null,
     },
-    alertas: {}, bandeja: {},
+    alertas: {}, criterios: null, bandeja: {},
   };
 }
 
@@ -121,7 +135,13 @@ export function parsearEstado(crudo: unknown): EstadoVigilancia {
       e.salud.acumulado.fallidos = numeros(a.fallidos);
     }
   }
-  if (esObjeto(crudo.alertas)) e.alertas = crudo.alertas;
+  if (esObjeto(crudo.alertas)) {
+    e.alertas = Object.fromEntries(Object.entries(crudo.alertas).filter(([, a]) =>
+      esObjeto(a) && esObjeto(a.alerta) && typeof a.alerta.codigo === 'string' && esNumero(a.alerta.creada))) as Record<string, AlertaGateway>;
+  }
+  if (esObjeto(crudo.criterios) && Array.isArray(crudo.criterios.palabras) && esFecha(crudo.criterios.cambiadoEn)) {
+    e.criterios = crudo.criterios as unknown as CriteriosGuardados;
+  }
   if (esObjeto(crudo.bandeja)) {
     // Un aviso ilegible se descarta: reintentarlo enviaría basura.
     e.bandeja = Object.fromEntries(Object.entries(crudo.bandeja).filter(([, a]) =>
@@ -176,7 +196,42 @@ export function podarEstado(e: EstadoVigilancia, ahoraMs: number): void {
 }
 
 /** Poda y guarda, atómico y bajo candado. Devuelve false si el disco no dejó. */
+/**
+ * Lo que otro proceso escribió mientras esta ronda trabajaba: una herramienta
+ * del modo gateway pudo confirmar alertas o cambiar los criterios. Una ronda
+ * carga el estado, pasa segundos en la red y lo guarda entero; sin esto,
+ * borraría esos cambios.
+ */
+function mezclarConDisco(e: EstadoVigilancia, disco: EstadoVigilancia): void {
+  for (const [id, d] of Object.entries(disco.alertas)) {
+    const propia = e.alertas[id];
+    if (!propia) continue;
+    propia.confirmada ??= d.confirmada;
+    if ((d.ofrecida ?? 0) > (propia.ofrecida ?? 0)) { propia.ofrecida = d.ofrecida; propia.lote = d.lote; }
+  }
+  if (disco.criterios && (!e.criterios || disco.criterios.cambiadoEn > e.criterios.cambiadoEn)) e.criterios = disco.criterios;
+}
+
+/** Poda y guarda, atómico y bajo candado, mezclando lo que otro proceso cambió. */
 export function guardarEstado(ruta: string, e: EstadoVigilancia, ahoraMs: number): boolean {
   podarEstado(e, ahoraMs);
-  return conBloqueo(ruta, () => escribirAtomico(ruta, JSON.stringify(e, null, 2)));
+  return conBloqueo(ruta, () => {
+    const enDisco = leerJsonSeguro(ruta);
+    if (enDisco) mezclarConDisco(e, parsearEstado(enDisco));
+    return escribirAtomico(ruta, JSON.stringify(e, null, 2));
+  });
+}
+
+/**
+ * Leer, cambiar y guardar en una sola sección bajo candado: para las
+ * herramientas (confirmar, configurar), que cambian poco y no salen a la red.
+ */
+export function actualizarEstado<T>(ruta: string, rutaVieja: string, ahoraMs: number, fn: (e: EstadoVigilancia) => T): T {
+  return conBloqueo(ruta, () => {
+    const { estado } = cargarEstado(ruta, rutaVieja, ahoraMs);
+    const r = fn(estado);
+    podarEstado(estado, ahoraMs);
+    escribirAtomico(ruta, JSON.stringify(estado, null, 2));
+    return r;
+  });
 }

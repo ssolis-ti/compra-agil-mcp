@@ -38,6 +38,11 @@ Todo rechazo de una entrada llega como `Error de validación: <qué corregir>. N
 | `generar_borrador_cotizacion` | JSON de cotización con IVA 19 % y carta. Los placeholders van marcados. Si el total supera el presupuesto del comprador lo advierte, con el precio unitario máximo que cabe en neto y con IVA. Sin precio de mercado, el precio por defecto deja el total con IVA en el 90 % del presupuesto. Si el proceso tiene adjuntos, advierte que el pedido completo puede estar en ellos. La carta deja un espacio para que el proveedor detalle el cumplimiento. |
 | `radar_oportunidades_calientes` | Hot Score sobre procesos `publicada`, máximo 115. Incluye puntos por segundo llamado. Cada página pide 10 procesos: una de 50 cae en HTTP 504. Corta en `max_paginas` (default 3, hasta 30 procesos). |
 | `generar_informe` | HTML imprimible en `carta`, `oficio` o `a4`. Devuelve la ruta, no el HTML. Tipos: `radar`, `cotizacion`, `precio`, `auditoria` y `competencia`. El de competencia no nombra un adjudicado. Se guarda en `informes/` de la carpeta de datos (o `COMPRA_AGIL_INFORMES_DIR`); `ruta_salida` solo acepta subcarpetas de ella. |
+| `estado_vigilancia` | Qué ve y qué no la vigilancia: último lote revisado, pendientes, incompletos, huecos, ceguera, avisos por canal, cola del gateway, cuota y vigilante activo. No consulta la API. |
+| `obtener_alertas_nuevas` | Modo gateway: revisa los lotes nuevos (si nadie más vigila) y entrega las alertas sin confirmar con un `lote_id`. Lo no confirmado vuelve a los 30 min. |
+| `confirmar_alertas` | Marca entregado un lote de `obtener_alertas_nuevas`. Idempotente. |
+| `probar_avisos` | Mensaje de prueba por cada canal configurado (Telegram, webhook, correo). Sin destino como parámetro. |
+| `configurar_criterios` | Cambia palabras, exclusiones, regiones, mínimo y «solo sin ofertas»; `restablecer` vuelve al `.env`. Cada cambio se avisa por los canales con el antes y el después. |
 
 ## Recursos y prompts
 
