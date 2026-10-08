@@ -72,7 +72,11 @@ export async function ejecutarCiclo(deps: DependenciasCiclo, estado: EstadoVigil
     const total = primera.paginacion.total_resultados;
     const items = new Map(primera.items.map((i) => [i.codigo, i]));
     const paginas = Math.min(Math.ceil(total / TAMANO_PAGINA_SEGURO), MAX_PAGINAS);
-    for (let n = 2; n <= paginas; n++) for (const i of (await buscar({ ...base, numero_pagina: n })).items) items.set(i.codigo, i);
+    // Las páginas 2..n van en paralelo: medido el 8-oct, la API tarda ~10 s por
+    // página y un lote de la mañana trae hasta 8. El cliente limita la
+    // concurrencia y el ritmo por minuto; la comprobación final detecta corrimientos.
+    const resto = await Promise.all(Array.from({ length: Math.max(0, paginas - 1) }, (_, k) => buscar({ ...base, numero_pagina: k + 2 })));
+    for (const r of resto) for (const i of r.items) items.set(i.codigo, i);
     const final = await buscar({ ...base, numero_pagina: 1 });
     for (const i of final.items) items.set(i.codigo, i);
     return { items, consistente: lecturaConsistente(total, final.paginacion.total_resultados, items.size) };

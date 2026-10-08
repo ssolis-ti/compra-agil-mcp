@@ -61,6 +61,21 @@ después cuenta solo en su último lote. En la hora pico hay ≈ 35 por lote de
 
 - **El mínimo actual de $5.000.000 deja fuera el 84 % de los procesos.** No es «casi nada», como se dijo en la revisión del 7-oct, pero sí la mayoría. Para R2.3 se fija **0 por defecto** (sin filtro de monto): un filtro que el dueño no eligió no debe ocultar procesos. El monto lo pone el dueño.
 
+## Prueba con la API real (8-oct-2026, jueves en la mañana)
+
+El daemon compilado, contra la API real, en una carpeta temporal y sin canales:
+
+- **Volumen:** los lotes de las 09:55 a las 10:05 traían **46 a 75 publicadas** (5 a 8 páginas). El lunes se había estimado ~35 en la hora punta, pero esa medición era retroactiva y subestimaba.
+- **API lenta:** ~10 s por consulta, con timeouts y 504 frecuentes. En la primera prueba, de 60 consultas en 15 min solo 19 respondieron.
+- **Dos fallas de diseño:**
+  1. Las páginas de un lote se pedían una tras otra.
+  2. La ronda guardaba solo al final, y la primera ronda pasó 15 min sin guardar ni avisar nada.
+
+  Se corrigieron: páginas en paralelo y rondas de 4 min como máximo, que guardan y siguen enseguida si quedaron atrasadas.
+- **Con los arreglos:** 11 lotes y 592 procesos en ~9 min (82 consultas). El único lote con 504 quedó pendiente.
+
+**Cuota corregida:** con el volumen de hoy, unas 800 a 1.000 consultas al día, no 470. Sigue bajo el techo por defecto de 1.500.
+
 ## Cuota
 
 La documentación oficial dice que el límite diario depende del tipo de ticket, pero no da un número. Con lotes de 5 minutos, la vigilancia lee cada lote una vez sin importar el intervalo:

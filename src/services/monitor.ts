@@ -86,11 +86,18 @@ const client = new CompraAgilClient(TICKET, BASE_URL, { persistir: true });
 const api = { buscar: client.buscarFresco.bind(client) };
 iniciarRelojOficial();
 
-let enCurso = false;
+/**
+ * Rondas cortas (medido el 8-oct contra la API real: ~10 s por consulta, lotes
+ * de hasta 8 páginas y timeouts frecuentes en la mañana). Una ronda dura como
+ * máximo RONDA_MAX_MS: guarda y entrega lo leído, y si quedó atrasada la
+ * siguiente empieza enseguida, en vez de esperar el intervalo. Antes una
+ * primera ronda podía pasar 15 minutos sin guardar ni avisar nada.
+ */
+const RONDA_MAX_MS = 4 * 60_000;
+const PAUSA_SI_ATRASADA_MS = 5_000;
 
-async function ronda(): Promise<void> {
-  if (enCurso) return; // una ronda larga (recuperación) no se encima con la siguiente
-  enCurso = true;
+/** true si la ronda quedó atrasada (parcial) y conviene seguir enseguida. */
+async function ronda(): Promise<boolean> {
   const t = new Date(ahora()).toISOString();
   try {
     const r = await rondaDeVigilancia({
@@ -104,15 +111,15 @@ async function ronda(): Promise<void> {
       },
       avisos: { canales, config: configAvisos.bandeja },
       salud,
-    }, { recuperacionMs: recuperacionDesdeEntorno(process.env) });
+    }, { recuperacionMs: recuperacionDesdeEntorno(process.env), hastaMs: ahora() + RONDA_MAX_MS });
     for (const aviso of r.avisos) console.warn(`[${t}] [AVISO] ${aviso}`);
     if (!r.tomada) {
       console.warn(`[${t}] Otro proceso (PID ${r.otroVigilante ?? '?'}) está vigilando: esta ronda no lee nada.`);
-      return;
+      return false;
     }
     if (r.omitida) {
       console.warn(`[${t}] Ronda saltada: tras un 429 de la API, las rondas se espacian hasta que se normalice.`);
-      return;
+      return false;
     }
     for (const n of r.notificaciones ?? []) {
       const por = n.entregadaPor.length > 0 ? ` (avisado por ${n.entregadaPor.join(', ')})` : '';
@@ -131,13 +138,18 @@ async function ronda(): Promise<void> {
     if (c.hueco) console.warn(`[${t}] [AVISO] Más de 48 h sin vigilar: no se revisó desde ${c.hueco.desde} hasta ${c.hueco.hasta}.`);
     if (c.lotesFallidos > 0) console.warn(`[${t}] [AVISO] ${c.lotesFallidos} lote(s) fallaron: se reintentan en la próxima ronda.`);
     if (c.cuotaAgotada) console.warn(`[${t}] [AVISO] La API respondió 429: la ronda se detuvo para no seguir gastando cuota.`);
+    if (c.parcial) console.log(`[${t}] Ronda atrasada: guardado lo leído, la siguiente sigue enseguida.`);
+    return c.parcial && !c.cuotaAgotada;
   } catch (error) {
     console.error(`[${t}] [ERROR] Falló la ronda de vigilancia: ${safeError(error)}`);
-  } finally {
-    enCurso = false;
+    return false;
   }
 }
 
-// Primera ronda inmediata; `ronda` captura sus propios errores.
-void ronda();
-setInterval(() => void ronda(), INTERVALO_MIN * 60_000);
+// Rondas encadenadas: nunca se enciman, y si una queda atrasada la siguiente
+// no espera el intervalo. `ronda` captura sus propios errores.
+async function bucle(): Promise<void> {
+  const atrasada = await ronda();
+  setTimeout(() => void bucle(), atrasada ? PAUSA_SI_ATRASADA_MS : INTERVALO_MIN * 60_000);
+}
+void bucle();
