@@ -319,7 +319,7 @@ reinicios y fallos, con contenido limpio.
 
 ---
 
-## Fase 10 — Validación y cierre ⏸
+## Fase 10 — Validación y cierre 🔄 (T10.1 ✅ 7-oct; T10.2–T10.4 con el dueño)
 
 **Objetivo:** demostrar con evidencia que no se pierde nada, y publicar.
 **Cubre:** NF2 y la validación de todos los R.
@@ -327,16 +327,22 @@ reinicios y fallos, con contenido limpio.
 
 | Id | Tarea | Evidencia | Dónde queda |
 | :--- | :--- | :--- | :--- |
-| T10.1 | Simulación de 24 h acelerada: ráfagas de 504, horas con más de 100 cambios, reinicios, un canal caído, 429 de Telegram | 0 procesos perdidos, 0 avisos perdidos, repetidos solo con el mismo id; latencia ≤ intervalo + 2 min (NF2) | `docs/internals/qa/resultado-vigilancia-24h.md` |
-| T10.2 | Enjambre: un agente instala desde cero siguiendo solo la guía del gateway elegido | Dónde se trabó y qué se corrigió | `docs/internals/qa/resultado-instalacion-agente.md` |
-| T10.3 | Semana real en el equipo del dueño, con Telegram y el resumen diario por correo; cada mañana se contrasta un día contra el buscador | Tabla diaria: procesos esperados, avisados y faltantes con su causa | `docs/internals/qa/resultado-semana-real.md` |
-| T10.4 | Cerrar CHANGELOG `[2.9.0]`, publicar en npm, tag y release (el flujo ya reconoce la versión publicada a mano) | Versión en npm y release | — |
+| T10.1 ✅ | Simulación de 24 h acelerada: ráfagas de 504, horas con más de 100 cambios, reinicios, un canal caído, 429 de Telegram | 0 procesos perdidos, 0 avisos perdidos, repetidos solo con el mismo id; latencia ≤ intervalo + 2 min (NF2) | `docs/internals/qa/resultado-vigilancia-24h.md` |
+| T10.2 ⏳ | Enjambre: un agente instala desde cero siguiendo solo la guía del gateway elegido | Dónde se trabó y qué se corrigió | `docs/internals/qa/resultado-instalacion-agente.md` |
+| T10.3 ⏳ dueño | Semana real en el equipo del dueño, con Telegram y el resumen diario por correo; cada mañana se contrasta un día contra el buscador | Tabla diaria: procesos esperados, avisados y faltantes con su causa | `docs/internals/qa/resultado-semana-real.md` |
+| T10.4 ⏳ dueño | Cerrar CHANGELOG `[2.9.0]`, publicar en npm, tag y release (el flujo ya reconoce la versión publicada a mano) | Versión en npm y release | — |
 
 **Puerta (definición de cerrada de la 2.9.0):**
 1. Todas las puertas de fase cerradas.
 2. T10.1 sin pérdidas.
 3. T10.3 con 0 faltantes atribuibles al servidor. Los faltantes por caída de la API deben haberse informado como ceguera o hueco.
 4. Ningún secreto en ningún texto (T1.3 en verde).
+
+**Avance (7-oct):**
+- **T10.1:** [resultado-vigilancia-24h.md](../../qa/resultado-vigilancia-24h.md). Con 2.739 procesos y un día malo, 0 procesos sin alerta, 0 repetidas y 0 avisos perdidos; la latencia con la API sana fue de 12 min como máximo. Encontró que el aviso de canal caído se repetía cada ronda cuando no había otro canal; se corrigió.
+- **T10.2:** un agente que instale desde cero siguiendo solo la guía, en un equipo o carpeta limpios. Necesita que el dueño le dicte el ticket al `.env`, porque el agente no lo debe leer ni escribir.
+- **T10.3:** la semana real, con Telegram (T4.4) y el correo (T6.3) del dueño y el daemon instalado (T9.1).
+- **T10.4:** publicar la 2.9.0 cuando T10.3 termine sin faltantes atribuibles al servidor.
 
 ---
 

@@ -101,9 +101,11 @@ export async function rondaDeVigilancia(deps: DependenciasRonda, limites: Limite
     }
     notificaciones.push({ ...n, entregadaPor });
   }
-  // Sin canales, la notificación queda en el log de la entrada: se da por hecha
-  // para no repetirla en cada ronda. Con canales, solo si alguno la entregó.
-  marcarNotificadas(estado, notificaciones.filter((n) => canales.length === 0 || n.entregadaPor.length > 0).map((n) => n.clave), deps.ahora());
+  // Si ningún canal puede llevarla (no hay canales, o el único es el caído), la
+  // notificación queda solo en el log de la entrada: se da por hecha para no
+  // repetirla en cada ronda. Si hay quien la lleve, solo cuando alguno la entregó.
+  const sinQuienLaLleve = (n: Notificacion) => canales.every((c) => c.nombre === n.excluirCanal);
+  marcarNotificadas(estado, notificaciones.filter((n) => sinQuienLaLleve(n) || n.entregadaPor.length > 0).map((n) => n.clave), deps.ahora());
 
   if (!guardarEstado(deps.rutas.estado, estado, deps.ahora())) {
     avisos.push(`No se pudo guardar ${deps.rutas.estado}: la próxima ronda repetirá estos lotes.`);

@@ -69,4 +69,4 @@ Además de la puerta propia de cada fase en `tareas.md`:
 | 7 | Salud y cuota | ✅ 7-oct |
 | 8 | Superficie: herramientas MCP, CLI y daemon | ✅ 7-oct |
 | 9 | Instalación y documentación | ✅ 7-oct (T9.1: instalar la tarea, la hace el dueño) |
-| 10 | Validación y cierre | 🔄 Siguiente |
+| 10 | Validación y cierre | 🔄 T10.1 ✅ (24 h simuladas sin pérdidas); T10.2–T10.4 con el dueño |
