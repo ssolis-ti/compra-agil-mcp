@@ -9,7 +9,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { PDFParse } from 'pdf-parse';
+import { textoDePdf } from './pdf.js';
 
 interface Memorizado {
   mtimeMs: number;
@@ -27,8 +27,7 @@ export async function leerTextoLocal(ruta: string): Promise<string> {
 
   let texto: string;
   if (path.extname(ruta).toLowerCase() === '.pdf') {
-    const parser = new PDFParse({ data: fs.readFileSync(ruta) });
-    texto = (await parser.getText()).text || '';
+    texto = await textoDePdf(fs.readFileSync(ruta));
     extracciones++;
   } else {
     texto = fs.readFileSync(ruta, 'utf8');

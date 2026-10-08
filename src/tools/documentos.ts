@@ -3,7 +3,7 @@ import { esquemaCodigoCompra } from '../utils/validacion.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import fs from 'fs';
 import path from 'path';
-import { PDFParse } from 'pdf-parse';
+import { textoDePdf } from '../utils/pdf.js';
 import { leerTextoLocal } from '../utils/texto-local.js';
 import { resolveDocsDir, listSupportedDocs } from '../utils/docs-locator.js';
 import { agruparCatalogo, anteponerManualServidor, anteponerSanciones, buscarEnTexto, consultaSensible, consultaTecnica, deduplicarDocumentos, marcarSiEsGuiaOficial, recortarArchivos, recortarEnPalabra, relegarDocumentosTecnicos } from '../utils/doc-search.js';
@@ -171,9 +171,7 @@ export function registerDocumentosTools(server: McpServer): void {
         const buffer = Buffer.from(arrayBuffer);
         
         // Parsear PDF
-        const parser = new PDFParse({ data: buffer });
-        const pdfData = await parser.getText();
-        const text = pdfData.text || '';
+        const text = await textoDePdf(buffer);
         
         if (!text.trim()) {
           return {
