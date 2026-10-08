@@ -42,7 +42,23 @@ function powershell(script: string, args: string[]): Promise<{ codigo: number | 
   });
 }
 
-export function crearControlVigilancia(o: { client: CompraAgilClient; env: Record<string, string | undefined>; registrar: Registro }): ControlVigilancia {
+/**
+ * Claude Desktop de la Microsoft Store: el servidor corre con el Node interno
+ * de Claude (dentro de `WindowsApps`), que no se puede lanzar desde fuera, y
+ * Windows guarda los datos de la extensión dentro de la carpeta del paquete
+ * (`Packages\Claude_…\LocalCache`). Una tarea programada correría fuera de
+ * ese paquete: sin Node y sin ver criterios, Telegram ni `.env`. Medido en
+ * la prueba real del 8-oct.
+ */
+export function esClaudeDeLaTienda(execPath: string = process.execPath): boolean {
+  return /[\\/]WindowsApps[\\/]/i.test(execPath);
+}
+
+export const SIEMPRE_NO_DISPONIBLE_EN_TIENDA =
+  'En Claude Desktop de la Microsoft Store el modo «siempre» no está disponible: Windows aísla la extensión y una tarea programada no puede usar su Node ni ver sus datos. ' +
+  'Usa «con_claude» (vigila mientras Claude esté abierto). Para vigilar con Claude cerrado, instala el servidor desde npm o el repositorio y usa su tarea programada (ver la guía de vigilancia).';
+
+export function crearControlVigilancia(o: { client: CompraAgilClient; env: Record<string, string | undefined>; registrar: Registro; execPath?: string }): ControlVigilancia {
   const preferencias = () => rutaDeDatos('.preferencias.json');
   const bucle = crearBucleVigilancia({
     client: o.client, env: o.env, registrar: o.registrar,
@@ -73,6 +89,7 @@ export function crearControlVigilancia(o: { client: CompraAgilClient; env: Recor
       if (process.platform !== 'win32') {
         return { ok: false, detalle: 'En este sistema, deja la vigilancia como servicio con scripts/compra-agil-vigilancia.service (ver la guía).' };
       }
+      if (esClaudeDeLaTienda(o.execPath)) return { ok: false, detalle: SIEMPRE_NO_DISPONIBLE_EN_TIENDA };
       // La tarea corre sin el entorno de Claude: lo que necesita va al .env de la carpeta del usuario.
       const rutaEnv = path.join(carpetaDatos(), '.env');
       const anterior = fs.existsSync(rutaEnv) ? fs.readFileSync(rutaEnv, 'utf8') : '';

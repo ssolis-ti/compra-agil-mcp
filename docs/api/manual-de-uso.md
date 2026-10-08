@@ -40,9 +40,14 @@ ticket ni el token del bot en el chat: van en un campo seguro.
 3. En la ventana de configuración de la extensión:
    - pega tu **ticket**;
    - si ya creaste tu bot de Telegram, pega también su **token**. Si no, puedes hacerlo después: tu asistente te explica cómo.
-4. En una conversación nueva, escribe: **«Ayúdame a empezar»**.
+4. En **Configuración → Extensiones**, revisa que «Compra Ágil — Mercado Público» esté **habilitada** (el interruptor encendido). Al instalar una extensión desde un archivo, Claude Desktop puede dejarla apagada.
+5. Espera unos segundos a que Claude termine de arrancar y, en una **conversación nueva**, escribe: **«Ayúdame a empezar»**. Si tu asistente no ve las herramientas de Compra Ágil, abre el menú de herramientas del chat y actívala, o abre otra conversación nueva.
 
 No necesitas instalar nada más: Claude Desktop trae todo lo necesario.
+
+Al instalarla, Claude Desktop avisa que la extensión **no está firmada**. Significa que la instalas desde un archivo y no desde el directorio de Anthropic; es esperable con esta extensión.
+
+**Si antes la instalaste desde el repositorio o con npm**, quita esa entrada antes de usar la extensión, o tendrás dos servidores iguales. Cierra Claude Desktop **del todo** (clic derecho en su ícono junto al reloj → Salir) y recién entonces edita `claude_desktop_config.json`: si Claude está abierto, vuelve a escribir la configuración que tiene en memoria. En la versión de la Microsoft Store ese archivo está en `%LOCALAPPDATA%\Packages\Claude_…\LocalCache\Roaming\Claude\`.
 
 ### Camino 2 — Mi asistente puede usar la terminal (Claude Code, Cursor)
 
@@ -86,7 +91,7 @@ avisos](guia-vigilancia-y-avisos.md).
 1. **Revisa qué falta.**
 2. **Te pregunta qué vendes, dónde y desde qué monto.** Prueba las palabras contra compras reales («con "resma" hay 14 compras abiertas ahora; por ejemplo…») y guarda los criterios cuando le confirmas. Si le das tu región, te ofrece también la **alerta total de la región**: además de lo de tu rubro, toda compra ágil nueva de tu región, en una lista breve al final del mismo aviso.
 3. **Conecta tu Telegram.** Le escribes «hola» a tu bot, te llega un **código de 6 dígitos** por Telegram y se lo dictas a tu asistente. Así nadie más puede desviar tus avisos.
-4. **Enciende la vigilancia.** Puede ser «mientras Claude esté abierto», sin instalar nada, o «siempre, aunque cierres Claude». Para la segunda te pide un sí explícito, porque instala una tarea en Windows.
+4. **Enciende la vigilancia.** Puede ser «mientras Claude esté abierto», sin instalar nada, o «siempre, aunque cierres Claude». Para la segunda te pide un sí explícito, porque instala una tarea en Windows. Con la extensión en el Claude Desktop de la Microsoft Store, «siempre» no está disponible: Windows aísla la extensión y una tarea programada no puede usarla. Para vigilar con Claude cerrado, usa el camino 2 o 3.
 5. **Te manda un mensaje de prueba** y te resume cómo quedó.
 
 Para cambiar algo después, pídeselo: «agrega "tóner" a lo que vigilo», «avísame
