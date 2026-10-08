@@ -32,12 +32,27 @@ export interface Alerta {
   cierreUtc: string | null;
   /** La palabra clave del dueño que calzó (no es texto de terceros). */
   coincidencia: string;
+  /**
+   * «rubro»: calzó con las palabras del dueño. «region»: solo entró por la
+   * alerta total de la región, y se muestra aparte y más breve. Las alertas
+   * guardadas antes de existir este campo son del rubro.
+   */
+  nivel?: 'rubro' | 'region';
   ficha: string;
   /** Epoch ms en que se generó la alerta. */
   creada: number;
 }
 
 export const LARGO_MAXIMO_NOMBRE = 160;
+
+/** Coincidencia de un proceso que entró solo por la alerta total de la región. */
+export const EN_TU_REGION = '(en tu región)';
+
+export const esDeLaRegion = (a: Alerta) => a.nivel === 'region';
+
+/** Las del rubro primero; dentro de cada grupo, el orden de llegada. */
+export const rubroPrimero = <T extends { alerta: Alerta }>(xs: T[]): T[] =>
+  [...xs.filter((x) => !esDeLaRegion(x.alerta)), ...xs.filter((x) => esDeLaRegion(x.alerta))];
 
 const limpio = (texto: string | null | undefined, largo: number) => {
   const t = sinContactos((texto ?? '').replace(/\s+/g, ' ').trim());
@@ -57,6 +72,7 @@ export function crearAlerta(proceso: ProcesoParaAviso, coincidencia: string, cre
     cierreHoraChile: enHoraDeChile(proceso.fechas?.fecha_cierre ?? null),
     cierreUtc: cierre ? cierre.toISOString() : null,
     coincidencia,
+    nivel: coincidencia === EN_TU_REGION ? 'region' : 'rubro',
     ficha: `https://buscador.mercadopublico.cl/ficha?code=${encodeURIComponent(proceso.codigo)}`,
     creada,
   };

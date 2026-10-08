@@ -10,6 +10,7 @@
 import type { CompraAgilItem } from '../api/compra-agil-client.js';
 import { normalizar } from '../utils/doc-search.js';
 import { enHoraDeChile } from '../utils/fechas.js';
+import { EN_TU_REGION } from '../avisos/mensaje.js';
 
 export interface Criterios {
   /** Alguna debe estar en el nombre (sin tildes ni mayúsculas). Vacía: cualquier nombre. */
@@ -21,7 +22,15 @@ export interface Criterios {
   /** En CLP. 0: sin filtro de monto, y se aceptan procesos sin monto publicado. */
   presupuestoMinimo: number;
   soloSinOfertas: boolean;
+  /**
+   * Alerta total de la región: además de las del rubro, avisa todo proceso
+   * publicado en `regiones`, sin mirar palabras ni monto. Sin regiones no
+   * aplica (serían todas las del país, cientos al día).
+   */
+  todasEnRegion: boolean;
 }
+
+export { EN_TU_REGION };
 
 /**
  * El mínimo por defecto es 0: con los $5.000.000 de la 2.8.0 quedaba fuera el
@@ -34,6 +43,7 @@ export const CRITERIOS_POR_DEFECTO: Criterios = {
   regiones: [],
   presupuestoMinimo: 0,
   soloSinOfertas: true,
+  todasEnRegion: false,
 };
 
 const lista = (v: string | undefined) => (v ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -46,21 +56,27 @@ export function criteriosDesdeEntorno(env: Record<string, string | undefined>): 
     regiones: lista(env.MONITOR_REGIONES).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 16),
     presupuestoMinimo: Number.isFinite(minimo) && minimo > 0 ? minimo : 0,
     soloSinOfertas: (env.MONITOR_SOLO_SIN_OFERTAS ?? 'true').trim().toLowerCase() !== 'false',
+    todasEnRegion: (env.MONITOR_TODAS_EN_REGION ?? '').trim().toLowerCase() === 'true',
   };
 }
 
-/** La palabra que coincidió, `'(cualquier proceso)'` si no hay palabras, o `null` si no calza. */
+/**
+ * La palabra que coincidió, `'(cualquier proceso)'` si no hay palabras,
+ * `EN_TU_REGION` si solo entra por la alerta total de la región, o `null`.
+ * Las exclusiones y «solo sin ofertas» valen también para la alerta total.
+ */
 export function coincidencia(item: CompraAgilItem, c: Criterios): string | null {
   if (item.estado.codigo !== 'publicada') return null;
   if (c.soloSinOfertas && item.resumen.total_ofertas_recibidas !== 0) return null;
-  const presupuesto = item.montos.monto_disponible_clp;
-  if (c.presupuestoMinimo > 0 && (typeof presupuesto !== 'number' || presupuesto < c.presupuestoMinimo)) return null;
   const region = item.institucion.region;
   if (c.regiones.length > 0 && (typeof region !== 'number' || !c.regiones.includes(region))) return null;
   const nombre = normalizar(item.nombre);
   if (c.excluidas.some((x) => nombre.includes(normalizar(x)))) return null;
-  if (c.palabras.length === 0) return '(cualquier proceso)';
-  return c.palabras.find((kw) => nombre.includes(normalizar(kw))) ?? null;
+  const presupuesto = item.montos.monto_disponible_clp;
+  const montoOk = c.presupuestoMinimo <= 0 || (typeof presupuesto === 'number' && presupuesto >= c.presupuestoMinimo);
+  const palabra = c.palabras.length === 0 ? '(cualquier proceso)' : c.palabras.find((kw) => nombre.includes(normalizar(kw)));
+  if (palabra && montoOk) return palabra;
+  return c.todasEnRegion && c.regiones.length > 0 ? EN_TU_REGION : null;
 }
 
 export function lineaDeAlerta(item: CompraAgilItem, palabra: string, cuando: Date): string {

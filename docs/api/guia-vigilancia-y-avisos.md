@@ -34,6 +34,7 @@ COMPRA_AGIL_TICKET=...                 # lo escribe el dueño
 MONITOR_KEYWORDS=resmas, papel, toner  # alguna debe estar en el nombre del proceso
 MONITOR_REGIONES=13                    # vacío = todas
 MONITOR_MIN_BUDGET_CLP=0               # 0 = sin mínimo
+MONITOR_TODAS_EN_REGION=false          # true = además, toda compra nueva de MONITOR_REGIONES (alerta total)
 ```
 
 Comprueba la instalación:

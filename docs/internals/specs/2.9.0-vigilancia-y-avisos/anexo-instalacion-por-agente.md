@@ -43,10 +43,16 @@ de configuración de Claude Desktop, o un formulario local en su navegador.
 
   Pregunta el nivel solo si hace falta (si hay terminal o no).
 - **RA8** Manual y README por perfil: cada uno ve solo su camino.
+- **RA9** *(pedido del 8-oct)* **Alerta total de la región:** el canal es solo de aviso, así que el dueño elige qué le llega.
+  - **Qué llega:** además de lo de su rubro (palabras clave), toda compra ágil nueva publicada en sus regiones, sin mirar palabras ni monto.
+  - **Formato:** en el mismo aviso van primero las del rubro, completas, y después las de la región, en una línea cada una.
+  - **Configuración:** `todas_en_region` en `configurar_criterios`, o `MONITOR_TODAS_EN_REGION`.
+  - **Límites:** sin regiones no aplica. Exclusiones y «solo sin ofertas» siguen valiendo, y no cuesta consultas extra.
+  - **Integraciones:** el webhook y el gateway reciben `nivel`: `rubro` o `region`.
 
 ## Estado (8-oct-2026)
 
-RA1–RA8 implementados y probados (826 tests):
+RA1–RA9 implementados y probados:
 - **Extensión:** `scripts/qa/probar-extension.mjs` la arranca como Claude Desktop y verifica herramientas, prompts, documentos y la carpeta de datos.
 - **Prueba manual pendiente:** la extensión instalada en Claude Desktop y la vinculación con un bot real, con el dueño.
 

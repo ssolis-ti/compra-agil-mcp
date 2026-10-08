@@ -50,6 +50,7 @@ Responde con un **2xx** en menos de 10 segundos.
       "cierre_hora_chile": "2026-10-09 12:00",
       "cierre_utc": "2026-10-09T15:00:00.000Z",
       "coincidencia": "resma",
+      "nivel": "rubro",
       "ficha": "https://buscador.mercadopublico.cl/ficha?code=765973-8-COT26"
     }
   ]
@@ -64,7 +65,8 @@ Responde con un **2xx** en menos de 10 segundos.
 | `presupuesto_clp` | número o `null` | `null` si el comprador no publicó monto |
 | `cierre_hora_chile` | texto o `null` | Como lo publica Mercado Público. Confírmalo en la ficha |
 | `cierre_utc` | texto o `null` | El mismo cierre como instante ISO-8601 UTC |
-| `coincidencia` | texto | Tu palabra clave que calzó |
+| `coincidencia` | texto | Tu palabra clave que calzó, o `(en tu región)` si entró solo por la alerta total de la región |
+| `nivel` | texto | `rubro` (calzó con tus palabras) o `region` (alerta total de la región, `MONITOR_TODAS_EN_REGION`) |
 
 ### Avisos sobre la vigilancia misma (`compra_agil.estado`)
 

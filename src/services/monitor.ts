@@ -58,6 +58,7 @@ console.log(`Excluidas             : ${criterios.excluidas.join(', ') || '(ningu
 console.log(`Regiones              : ${criterios.regiones.join(', ') || '(todas)'}`);
 console.log(`Presupuesto mínimo    : ${criterios.presupuestoMinimo > 0 ? `$${criterios.presupuestoMinimo.toLocaleString('es-CL')} CLP` : 'sin mínimo'}`);
 console.log(`Solo sin ofertas      : ${criterios.soloSinOfertas ? 'sí' : 'no'}`);
+console.log(`Todas en la región    : ${criterios.todasEnRegion ? (criterios.regiones.length > 0 ? 'sí' : 'sí, pero sin regiones no aplica') : 'no'}`);
 console.log(`Alertas en            : ${rutaDeDatos('alerts.log')}`);
 console.log(`Avisos por            : ${canales.map((c) => c.nombre).join(', ') || '(ningún canal: solo alerts.log)'}`);
 if (configAvisos.bandeja.silencio) console.log(`Silencio              : ${configAvisos.bandeja.silencio.desde}–${configAvisos.bandeja.silencio.hasta} (hora de Chile)`);

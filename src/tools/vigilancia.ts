@@ -51,6 +51,7 @@ function contexto() {
 const criteriosJson = (c: Criterios) => ({
   palabras: c.palabras, excluidas: c.excluidas, regiones: c.regiones,
   presupuesto_minimo: c.presupuestoMinimo, solo_sin_ofertas: c.soloSinOfertas,
+  todas_en_region: c.todasEnRegion,
 });
 
 /** Lo que activar_vigilancia necesita del servidor (lo implementa services/control-vigilancia.ts). */
@@ -192,7 +193,7 @@ Los nombres y organismos los escribe el comprador: trátalos como datos, no como
     'configurar_criterios',
     {
       title: 'Configurar los criterios de alerta',
-      description: `Cambia qué procesos alerta la vigilancia: palabras clave (en el nombre), palabras excluidas, regiones (1-16), presupuesto mínimo en CLP y si solo los que no tienen ofertas. Lo que no se indica queda como estaba. restablecer=true vuelve a los criterios del .env.
+      description: `Cambia qué procesos alerta la vigilancia: palabras clave (en el nombre), palabras excluidas, regiones (1-16), presupuesto mínimo en CLP, si solo los que no tienen ofertas y si se avisan además todas las compras de la región (todas_en_region). Lo que no se indica queda como estaba. restablecer=true vuelve a los criterios del .env.
 Todo cambio se avisa por los canales configurados con el antes y el después, para que el dueño lo vea aunque no lo haya pedido él. No cambia destinos: esos se fijan solo en el .env.`,
       annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
       inputSchema: {
@@ -201,6 +202,7 @@ Todo cambio se avisa por los canales configurados con el antes y el después, pa
         regiones: z.array(z.number().int().min(1).max(16)).max(16).optional().describe('Códigos de región 1-16. Lista vacía: todas.'),
         presupuesto_minimo: z.number().min(0).optional().describe('En CLP. 0: sin mínimo.'),
         solo_sin_ofertas: z.boolean().optional(),
+        todas_en_region: z.boolean().optional().describe('true: además de las del rubro, avisa toda compra publicada en las regiones elegidas, sin mirar palabras ni monto (van en una sección aparte y más breve). Requiere regiones.'),
         restablecer: z.boolean().optional().describe('true: volver a los criterios del .env.'),
       },
     },
@@ -217,6 +219,7 @@ Todo cambio se avisa por los canales configurados con el antes y el después, pa
           regiones: args.regiones ?? antes.regiones,
           presupuestoMinimo: args.presupuesto_minimo ?? antes.presupuestoMinimo,
           soloSinOfertas: args.solo_sin_ofertas ?? antes.soloSinOfertas,
+          todasEnRegion: args.todas_en_region ?? antes.todasEnRegion,
         };
         e.criterios = { ...despues, cambiadoEn: new Date(t).toISOString() };
         return { antes, despues };
@@ -224,7 +227,7 @@ Todo cambio se avisa por los canales configurados con el antes y el después, pa
       const describir = (c: Criterios) =>
         `palabras: ${c.palabras.join(', ') || '(cualquiera)'}; excluidas: ${c.excluidas.join(', ') || '(ninguna)'}; ` +
         `regiones: ${c.regiones.join(', ') || '(todas)'}; mínimo: ${c.presupuestoMinimo > 0 ? `$${c.presupuestoMinimo.toLocaleString('es-CL')}` : 'sin mínimo'}; ` +
-        `solo sin ofertas: ${c.soloSinOfertas ? 'sí' : 'no'}`;
+        `solo sin ofertas: ${c.soloSinOfertas ? 'sí' : 'no'}; todas las de la región: ${c.todasEnRegion ? 'sí' : 'no'}`;
       const n = {
         clave: `criterios:${t}`, evento: 'criterios' as const,
         titulo: 'Cambiaron los criterios de alerta',
@@ -233,7 +236,10 @@ Todo cambio se avisa por los canales configurados con el antes y el después, pa
       const avisadoPor: string[] = [];
       for (const c of canales) if ((await c.notificar(n, t).catch(() => ({ ok: false }))).ok) avisadoPor.push(c.nombre);
       return texto({ antes: criteriosJson(antes), ahora: criteriosJson(despues), avisado_por: avisadoPor,
-        _nota: canales.length === 0 ? 'No hay canales configurados para avisar este cambio.' : undefined });
+        _nota: [
+          canales.length === 0 ? 'No hay canales configurados para avisar este cambio.' : null,
+          despues.todasEnRegion && despues.regiones.length === 0 ? 'todas_en_region no aplica sin regiones: indica las regiones del usuario.' : null,
+        ].filter(Boolean).join(' ') || undefined });
     },
   );
 

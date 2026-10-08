@@ -84,13 +84,13 @@ avisos](guia-vigilancia-y-avisos.md).
 ## Lo que hace tu asistente cuando le dices «Ayúdame a empezar»
 
 1. **Revisa qué falta.**
-2. **Te pregunta qué vendes, dónde y desde qué monto.** Prueba las palabras contra compras reales («con "resma" hay 14 compras abiertas ahora; por ejemplo…») y guarda los criterios cuando le confirmas.
+2. **Te pregunta qué vendes, dónde y desde qué monto.** Prueba las palabras contra compras reales («con "resma" hay 14 compras abiertas ahora; por ejemplo…») y guarda los criterios cuando le confirmas. Si le das tu región, te ofrece también la **alerta total de la región**: además de lo de tu rubro, toda compra ágil nueva de tu región, en una lista breve al final del mismo aviso.
 3. **Conecta tu Telegram.** Le escribes «hola» a tu bot, te llega un **código de 6 dígitos** por Telegram y se lo dictas a tu asistente. Así nadie más puede desviar tus avisos.
 4. **Enciende la vigilancia.** Puede ser «mientras Claude esté abierto», sin instalar nada, o «siempre, aunque cierres Claude». Para la segunda te pide un sí explícito, porque instala una tarea en Windows.
 5. **Te manda un mensaje de prueba** y te resume cómo quedó.
 
 Para cambiar algo después, pídeselo: «agrega "tóner" a lo que vigilo», «avísame
-solo desde $300.000», «apaga la vigilancia». Cada cambio de criterios te llega
+solo desde $300.000», «avísame también todo lo de la Araucanía», «apaga la vigilancia». Cada cambio de criterios te llega
 también a Telegram, para que sepas si alguien los tocó.
 
 ## Los mensajes que vas a recibir
@@ -98,6 +98,7 @@ también a Telegram, para que sepas si alguien los tocó.
 | Mensaje | Qué significa | Qué hacer |
 | :--- | :--- | :--- |
 | **N procesos nuevos calzan con tus criterios** | Hay compras abiertas de lo tuyo | Abre la ficha, revisa plazo y requisitos, y cotiza |
+| **N de tu rubro y M compras más en tu región** | Con la alerta total de la región: arriba (🎯) lo de tu rubro, completo; abajo (📍) todo lo demás de tu región, una línea cada una | Lo de arriba, igual; lo de abajo, una mirada rápida por si algo te sirve |
 | **Procesos publicados durante el horario de silencio** | Lo que apareció de noche, junto | Igual que arriba |
 | **La vigilancia no está viendo los procesos nuevos** | Mercado Público no responde hace 2 h, o no hay internet | Nada: cuando vuelva, revisa lo que se perdió y te avisa |
 | **La vigilancia volvió a la normalidad** | Se recuperó y revisó lo pendiente | Nada |

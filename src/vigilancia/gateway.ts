@@ -57,6 +57,7 @@ export function podarGateway(e: EstadoVigilancia, ahoraMs: number): void {
 /** Los criterios fijados por herramienta mandan sobre los del entorno. */
 export const criteriosEfectivos = (e: EstadoVigilancia, entorno: Criterios): Criterios => {
   if (!e.criterios) return entorno;
-  const { palabras, excluidas, regiones, presupuestoMinimo, soloSinOfertas } = e.criterios;
-  return { palabras, excluidas, regiones, presupuestoMinimo, soloSinOfertas };
+  const { palabras, excluidas, regiones, presupuestoMinimo, soloSinOfertas, todasEnRegion } = e.criterios;
+  // Criterios guardados antes de existir la alerta total no la traen.
+  return { palabras, excluidas, regiones, presupuestoMinimo, soloSinOfertas, todasEnRegion: todasEnRegion ?? false };
 };

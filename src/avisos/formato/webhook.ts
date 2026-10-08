@@ -18,6 +18,7 @@ export const alertaJson = (a: Alerta) => ({
   cierre_hora_chile: a.cierreHoraChile,
   cierre_utc: a.cierreUtc,
   coincidencia: a.coincidencia,
+  nivel: a.nivel ?? 'rubro',
   ficha: a.ficha,
 });
 

@@ -18,11 +18,11 @@ export const DONDE_VAN_LOS_SECRETOS =
 /** Pasos 1–6: de qué vende el usuario a criterios guardados. */
 export function pasosDeCriterios(rubro?: string): string {
   return `1. **Qué vendo:** ${rubro?.trim() ? 'confirma mi rubro y pregúntame qué productos o servicios concretos ofrezco' : 'pregúntame mi rubro y qué productos o servicios concretos ofrezco'}, y qué NO me interesa aunque se parezca.
-2. **Dónde:** en qué regiones puedo entregar (o si da lo mismo).
+2. **Dónde:** en qué regiones puedo entregar (o si da lo mismo). Si me das regiones, pregúntame si además quiero la **alerta total de la región**: toda compra ágil nueva de esas regiones, sea o no de mi rubro, en una sección aparte y más breve del mismo aviso (todas_en_region). Adviérteme que en una región grande pueden ser decenas al día.
 3. **Desde qué monto:** el presupuesto mínimo que me conviene. Cuéntame que la mitad de las compras ágiles es de menos de $800.000, para que no deje fuera la mayoría sin querer.
 4. **Propón palabras clave** (las que aparecerían en el nombre de una compra, sin tildes ni mayúsculas, en singular cuando sirva para ambos: "resma" encuentra "resmas") y palabras a excluir.
 5. **Compruébalas contra compras reales** con "buscar_compras_agiles" (estado "publicada", una palabra en q, y si te di regiones, region): muéstrame cuántas hay abiertas con cada palabra y 3 ejemplos de nombres. Si una palabra trae cosas de otro rubro, propón una exclusión; si no trae nada, propón otra forma de decirlo. No gastes más de 8 búsquedas.
-6. **Muéstrame el resumen** (palabras, exclusiones, regiones, monto) y **pregúntame si lo guardas**. Solo con mi sí, llama a "configurar_criterios".`;
+6. **Muéstrame el resumen** (palabras, exclusiones, regiones, monto, alerta total de la región) y **pregúntame si lo guardas**. Solo con mi sí, llama a "configurar_criterios".`;
 }
 
 export function textoPromptConfigurarVigilancia(rubro?: string): string {
