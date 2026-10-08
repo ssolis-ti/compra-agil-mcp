@@ -20,7 +20,8 @@ import type { Alerta } from '../src/avisos/mensaje.js';
  * documentación y el código se separan, falla.
  */
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DOC = fs.readFileSync(path.join(RAIZ, 'docs', 'api', 'webhook-alertas.md'), 'utf8');
+// En CI (Windows) git entrega el .md con CRLF: sin normalizar, los bloques no se encuentran.
+const DOC = fs.readFileSync(path.join(RAIZ, 'docs', 'api', 'webhook-alertas.md'), 'utf8').replace(/\r\n/g, '\n');
 const bloque = (lenguaje: string) => DOC.match(new RegExp('```' + lenguaje + '\\n([\\s\\S]*?)```'))![1];
 const SECRETO = 'secreto-webhook-de-prueba-no-real-de-32+caracteres';
 const AHORA = Date.parse('2026-10-07T22:00:00Z');

@@ -44,5 +44,6 @@ describe('tarea programada de Windows', () => {
     const archivos = ['instalar-tarea-windows.ps1', 'quitar-tarea-windows.ps1'].map((f) => path.join(RAIZ, 'scripts', f));
     const r = spawnSync('powershell', ['-NoProfile', '-Command', `& { ${comando} }`, ...archivos], { encoding: 'utf8' });
     expect(r.stdout.trim().split(/\s+/)).toEqual(['0', '0']);
-  });
+    // Arrancar PowerShell en los runners de CI pasa a veces de los 5 s por defecto.
+  }, 30_000);
 });
