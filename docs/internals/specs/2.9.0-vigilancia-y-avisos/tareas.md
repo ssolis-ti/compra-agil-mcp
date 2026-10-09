@@ -338,7 +338,7 @@ reinicios y fallos, con contenido limpio.
 3. T10.3 con 0 faltantes atribuibles al servidor. Los faltantes por caída de la API deben haberse informado como ceguera o hueco.
 4. Ningún secreto en ningún texto (T1.3 en verde).
 
-**Prueba real con el dueño (8-oct).** La prueba se hizo por los dos caminos de instalación, el del repositorio y la extensión `.mcpb`. Encontró ocho fallos que los tests no cubrían. Cada uno se corrigió con un test que falla sin la corrección:
+**Prueba real con el dueño (8-oct).** La prueba se hizo por los dos caminos de instalación, el del repositorio y la extensión `.mcpb`. Encontró siete fallos que los tests no cubrían. Cada uno se corrigió con un test que falla sin la corrección:
 
 | Fallo | Corrección |
 | :--- | :--- |
