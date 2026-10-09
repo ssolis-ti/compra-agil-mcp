@@ -59,6 +59,7 @@ describe('--configurar', () => {
       TOKEN,                  // token
       '',                     // Enter tras escribirle al bot
       '',                     // silencio por defecto
+      'n',                    // correo
       's',                    // dejar encendida
     ]);
     expect(await comandoConfigurar(p.deps)).toBe(0);
@@ -90,7 +91,7 @@ describe('--configurar', () => {
       `COMPRA_AGIL_TICKET=${TICKET}`, 'LOG_LEVEL=info', 'MONITOR_KEYWORDS=resmas', 'MONITOR_MIN_BUDGET_CLP=0',
       `COMPRA_AGIL_TELEGRAM_TOKEN=${TOKEN}`, 'COMPRA_AGIL_TELEGRAM_CHAT_ID=-100777', 'COMPRA_AGIL_AVISOS=telegram', '',
     ].join('\n');
-    const p = preparar(['', '', 's', '', '', '', '', '', '', 'n'], {
+    const p = preparar(['', '', 's', '', '', '', '', '', '', '', 'n'], {
       env: { COMPRA_AGIL_TICKET: TICKET, MONITOR_KEYWORDS: 'resmas', MONITOR_MIN_BUDGET_CLP: '0', COMPRA_AGIL_TELEGRAM_TOKEN: TOKEN, COMPRA_AGIL_TELEGRAM_CHAT_ID: '-100777', COMPRA_AGIL_AVISOS: 'telegram' },
     }, inicial);
     expect(await comandoConfigurar(p.deps)).toBe(0);
@@ -112,9 +113,23 @@ describe('--configurar', () => {
   });
 
   it('una palabra sin resultados lo dice, y deja corregirla', async () => {
-    const p = preparar([TICKET, 'xyzinexistente', 'n', 'resmas', 's', '', '', '', 'n', 'n']);
+    const p = preparar([TICKET, 'xyzinexistente', 'n', 'resmas', 's', '', '', '', 'n', 'n', 'n']);
     expect(await comandoConfigurar(p.deps)).toBe(0);
     expect(p.salida.join('\n')).toMatch(/«xyzinexistente»: 0 compras abiertas ahora \(prueba otra forma de decirlo\)/);
     expect(fs.readFileSync(p.rutaEnv, 'utf8')).toContain('MONITOR_KEYWORDS=resmas');
+  });
+
+  it('correo con dos datos: Telegram y correo quedan activos; la contraseña no se muestra', async () => {
+    const p = preparar([TICKET, 'resmas', 's', '', '', '', 's', TOKEN, '', '', 's', 'ana@gmail.com', 'abcd efgh ijkl mnop', 'n'], {
+      correo: { verificar: async () => undefined },
+    });
+    expect(await comandoConfigurar(p.deps)).toBe(0);
+    const env = fs.readFileSync(p.rutaEnv, 'utf8');
+    expect(env).toContain('COMPRA_AGIL_AVISOS=telegram,correo');
+    expect(env).toContain('COMPRA_AGIL_CORREO=ana@gmail.com');
+    expect(env).toContain('COMPRA_AGIL_CORREO_CLAVE=abcdefghijklmnop');
+    const texto = p.salida.join('\n') + p.preguntas.join('\n');
+    expect(texto).toMatch(/El correo \(Gmail\) entró bien/);
+    expect(texto).not.toMatch(/abcd/);
   });
 });

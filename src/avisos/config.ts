@@ -14,6 +14,7 @@
 import { registrarSecreto } from '../utils/redact.js';
 import type { ConfigBandeja } from './bandeja.js';
 import type { NombreCanal } from './canal.js';
+import { esNoSoportado, limpiarClaveDeAplicacion, proveedorPorDominio } from './proveedores-correo.js';
 
 export interface ConfigAvisos {
   /** Canales listados y completos. Uno con variables faltantes no se activa. */
@@ -49,13 +50,16 @@ function urlAceptable(texto: string): boolean {
  */
 export function leerConfigAvisos(env: Record<string, string | undefined>, guardado: { telegramChatId?: string } = {}): ConfigAvisos {
   const c: ConfigAvisos = { canales: [], bandeja: {}, resumen: '08:00', errores: [] };
-  const valor = (k: string) => env[k]?.trim() || undefined;
+  // Un campo opcional vacío de la extensión puede llegar como «${user_config.x}» sin reemplazar.
+  const valor = (k: string) => { const v = env[k]?.trim(); return v && !v.startsWith('${user_config.') ? v : undefined; };
 
   const pedidos = (valor('COMPRA_AGIL_AVISOS') ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   // Sin COMPRA_AGIL_AVISOS, Telegram se activa solo si ya tiene token y chat:
   // así la extensión funciona sin que el usuario sepa de variables.
   const chatTelegram = valor('COMPRA_AGIL_TELEGRAM_CHAT_ID') ?? guardado.telegramChatId;
   if (!valor('COMPRA_AGIL_AVISOS') && valor('COMPRA_AGIL_TELEGRAM_TOKEN') && chatTelegram) pedidos.push('telegram');
+  // Igual el correo: con la dirección y la contraseña de aplicación basta.
+  if (!valor('COMPRA_AGIL_AVISOS') && (valor('COMPRA_AGIL_CORREO') ?? valor('COMPRA_AGIL_SMTP_USUARIO')) && (valor('COMPRA_AGIL_CORREO_CLAVE') ?? valor('COMPRA_AGIL_SMTP_CLAVE'))) pedidos.push('correo');
   for (const p of pedidos) {
     if (!CANALES.includes(p as NombreCanal)) c.errores.push(`COMPRA_AGIL_AVISOS: canal desconocido «${p}» (válidos: ${CANALES.join(', ')}).`);
   }
@@ -66,6 +70,9 @@ export function leerConfigAvisos(env: Record<string, string | undefined>, guarda
   registrarSecreto(valor('COMPRA_AGIL_WEBHOOK_URL'));
   registrarSecreto(valor('COMPRA_AGIL_WEBHOOK_SECRETO'));
   registrarSecreto(valor('COMPRA_AGIL_SMTP_CLAVE'));
+  registrarSecreto(valor('COMPRA_AGIL_CORREO_CLAVE'));
+  const claveCorreo = valor('COMPRA_AGIL_CORREO_CLAVE');
+  if (claveCorreo) registrarSecreto(limpiarClaveDeAplicacion(claveCorreo));
 
   if (pedidos.includes('telegram')) {
     const token = valor('COMPRA_AGIL_TELEGRAM_TOKEN');
@@ -96,18 +103,30 @@ export function leerConfigAvisos(env: Record<string, string | undefined>, guarda
   }
 
   if (pedidos.includes('correo')) {
-    const host = valor('COMPRA_AGIL_SMTP_HOST');
-    const usuario = valor('COMPRA_AGIL_SMTP_USUARIO');
-    const clave = valor('COMPRA_AGIL_SMTP_CLAVE');
-    const puerto = Number(valor('COMPRA_AGIL_SMTP_PUERTO') ?? 587);
-    const para = (valor('COMPRA_AGIL_CORREO_PARA') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    // Lo simple: COMPRA_AGIL_CORREO y COMPRA_AGIL_CORREO_CLAVE, con el servidor
+    // deducido del dominio y los avisos a la misma dirección. Las variables
+    // SMTP_* siguen valiendo y mandan sobre lo deducido.
+    const usuario = valor('COMPRA_AGIL_SMTP_USUARIO') ?? valor('COMPRA_AGIL_CORREO');
+    const proveedor = usuario ? proveedorPorDominio(usuario) : null;
+    const conocido = proveedor && !esNoSoportado(proveedor) ? proveedor : null;
+    const host = valor('COMPRA_AGIL_SMTP_HOST') ?? conocido?.host;
+    const claveSimple = valor('COMPRA_AGIL_CORREO_CLAVE');
+    const clave = valor('COMPRA_AGIL_SMTP_CLAVE') ?? (claveSimple && limpiarClaveDeAplicacion(claveSimple));
+    const puerto = Number(valor('COMPRA_AGIL_SMTP_PUERTO') ?? (valor('COMPRA_AGIL_SMTP_HOST') ? 587 : conocido?.puerto ?? 587));
+    const para = (valor('COMPRA_AGIL_CORREO_PARA') ?? usuario ?? '').split(',').map((s) => s.trim()).filter(Boolean);
     const de = valor('COMPRA_AGIL_SMTP_DE') ?? usuario;
     const problemas: string[] = [];
-    for (const [k, v] of [['COMPRA_AGIL_SMTP_HOST', host], ['COMPRA_AGIL_SMTP_USUARIO', usuario], ['COMPRA_AGIL_SMTP_CLAVE', clave]] as const) {
-      if (!v) problemas.push(`falta ${k}`);
+    // Con SMTP_* (configuración avanzada) el usuario puede no ser una dirección.
+    const avanzado = Boolean(valor('COMPRA_AGIL_SMTP_USUARIO'));
+    if (!usuario) problemas.push('falta COMPRA_AGIL_CORREO (tu dirección de correo)');
+    else if (!avanzado && !CORREO.test(usuario)) problemas.push('COMPRA_AGIL_CORREO no es una dirección de correo');
+    if (!clave) {
+      problemas.push(avanzado ? 'falta COMPRA_AGIL_SMTP_CLAVE'
+        : `falta COMPRA_AGIL_CORREO_CLAVE (una contraseña de aplicación${conocido ? `; ${conocido.ayudaClave}` : ''})`);
     }
+    if (proveedor && esNoSoportado(proveedor) && !valor('COMPRA_AGIL_SMTP_HOST')) problemas.push(proveedor.noSoportado);
+    else if (!host && usuario) problemas.push(`no conozco el servidor de correo de «${usuario.split('@')[1]}»: agrega su servidor: en la extensión, el campo «Servidor de correo» (smtp.gmail.com si tu empresa usa Google, smtp.office365.com si usa Microsoft 365); en el .env, COMPRA_AGIL_SMTP_HOST, o corre --configurar, que lo busca solo`);
     if (!Number.isInteger(puerto) || puerto < 1 || puerto > 65535) problemas.push('COMPRA_AGIL_SMTP_PUERTO no es un puerto válido');
-    if (para.length === 0) problemas.push('falta COMPRA_AGIL_CORREO_PARA (destinatarios separados por coma)');
     const malos = para.filter((p) => !CORREO.test(p));
     if (malos.length > 0) problemas.push(`COMPRA_AGIL_CORREO_PARA tiene direcciones inválidas: ${malos.join(', ')}`);
     if (de && !CORREO.test(de)) problemas.push('COMPRA_AGIL_SMTP_DE no es una dirección de correo');

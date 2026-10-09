@@ -24,6 +24,13 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 * **El presupuesto mínimo por defecto de la vigilancia pasa de $5.000.000 a 0.** El anterior dejaba fuera el 84 % de los procesos publicados. El intervalo por defecto pasa de 60 a 15 min: con lotes, el intervalo solo cambia cuánto tarda el aviso, no la cuota.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -155,6 +162,13 @@ Cuatro agentes usaron la 2.8.0 contra la API real (62 llamadas, 0 fugas del tick
 * **Menores:** las métricas cuentan los rechazos del esquema; fragmentos de documentos sin repetición a una línea de distancia; el rechazo de `ruta_salida` en el formato de validación; el detalle trae el enlace a la ficha y aclara `total_ofertas`, `multa_sancion` y `total_demandas`.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -255,6 +269,13 @@ Sprint 0 de la auditoría QA de octubre 2026: lo que impedía llevar la 2.6.1 a 
   * ⚠ **Cambio de comportamiento:** quien pasaba una ruta absoluta fuera de `informes/` debe configurar `COMPRA_AGIL_INFORMES_DIR`.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -293,6 +314,13 @@ Respuestas que dejan de contradecir lo ya medido. No hubo llamada nueva a la API
 Informes para el resto del flujo, y respuestas que dejan de tirar lo que la API ya manda. `generar_informe` con `tipo=radar` sigue igual.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -333,6 +361,13 @@ Es el mismo defecto que la búsqueda documental de la 2.2.0: convertir un fallo 
 * `auditar_compras_desiertas` informa cuántas consultas fallaron junto a su comparativo.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -420,6 +455,13 @@ Resuelve un problema **distinto y anterior** al de la interpretación de fechas:
 ## [2.4.0] - 2026-09-07
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -453,6 +495,13 @@ Tres herramientas prometían cosas que la API no puede cumplir. Ninguna se elimi
 * **`obtener_detalle_orden_compra` advierte de dónde sacar el código.** Su descripción prometía el detalle de una OC sin decir que el código hay que traerlo de otra fuente: consulta la API legada de Órdenes de Compra, y la de Compra Ágil no entrega códigos de OC (`id_orden_compra` viene null en el 100% de los procesos). Sirve cuando ya tienes el código —la OC que te emitieron, un correo de Mercado Público, la ficha pública—, no para descubrirlo.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -467,6 +516,13 @@ Tres herramientas prometían cosas que la API no puede cumplir. Ninguna se elimi
 Auditoría de las 15 herramientas contra la API de producción, desde la óptica de un proveedor PyME buscando venderle al Estado. Cuatro estaban rotas en la práctica y una limitación de diseño dejaba el servidor inutilizable por horas.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -518,6 +574,13 @@ Se investigó abriendo la ficha pública en un navegador real, y el hallazgo exp
 Cotejo de la Guía oficial v3.0 (mayo 2026) contra la implementación, con re-verificación en vivo de los hallazgos de v2.0.0.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -566,6 +629,13 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 * **`verificar_orden_compra` es honesto:** un resultado "sin OC" ya no implica que la OC no exista, sino que la API no la publica.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -590,6 +660,13 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 * **El cliente HTTP se auto-protege:** `CompraAgilClient` registra el ticket como secreto en su constructor, cubriendo a cualquier consumidor (servidor MCP, daemon, scripts, tests) sin que tenga que acordarse.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -606,6 +683,13 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 ## [1.2.0] - 2026-07-15
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -645,6 +729,13 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 * **Manejo defensivo de `TotalLnea`/`TotalLinea`:** `obtener_detalle_orden_compra` tolera ambas variantes del campo de total de línea de la API legada.
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -681,6 +772,13 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 > Nota: esta entrada estaba erróneamente etiquetada como `1.1.0` y fechada fuera de orden. Se renumeró a `1.0.1` para respetar el orden cronológico y SemVer (precede a `1.0.3`).
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.
@@ -706,6 +804,13 @@ La documentación oficial (Guía API Compra Ágil v2, v3.0) resultó incorrecta 
 ## [1.0.0] - 2026-06-03
 
 ### Añadido
+* **Correo con dos datos** (2.9.0, pedido del 8-oct): basta la dirección y una contraseña de aplicación (`COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`).
+  * **Proveedores:** el servidor se deduce del dominio (Gmail, Yahoo, iCloud, Zoho, GMX). Para un correo de empresa con Google Workspace o Microsoft 365, `--configurar` lo busca en el DNS (MX).
+  * **Destino y activación:** los avisos llegan a la misma dirección y el canal se activa solo.
+  * **Contraseña:** se le quitan los espacios con que se muestran las contraseñas de aplicación, y el formulario web y `--configurar` la prueban contra el servidor real antes de guardarla.
+  * **Extensión:** suma los campos «Tu correo», «Contraseña de aplicación» y «Servidor de correo».
+  * **Outlook personal:** Outlook.com, Hotmail y Live se rechazan con el porqué (Microsoft exige OAuth) y qué usar en su lugar.
+  * **Configuración anterior:** las variables `SMTP_*` siguen valiendo y mandan.
 * **Solo compras nuevas** (2.9.0, prueba real del 8-oct). La API informa lo que *cambió* en cada lote, y de 22 avisos de Aysén 6 eran procesos de días atrás que se modificaron.
   * **Qué se avisa ahora** (por defecto): lo publicado en las 24 h previas, y lo reabierto en segundo llamado sin ofertas, marcado con 🔁.
   * **Cómo desactivarlo:** `solo_nuevas=false` en `configurar_criterios`, o `MONITOR_SOLO_NUEVAS=false`.

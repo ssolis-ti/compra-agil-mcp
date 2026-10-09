@@ -18,6 +18,10 @@ async function formulario() {
   const f = await iniciarFormulario({
     rutaEnv,
     abrir: () => undefined,
+    correo: {
+      resolverMx: async () => [{ exchange: 'aspmx.l.google.com' }],
+      verificar: async (_p, _u, clave) => { if (clave !== 'abcdefghijklmnop') throw new Error('535 Invalid login: Username and Password not accepted'); },
+    },
     crearApi: (t) => ({ buscarFresco: async () => { if (t !== TICKET) throw new CompraAgilApiError(401, [], 'GET'); return { items: [], paginacion: { total_resultados: 1, total_paginas: 1, numero_pagina: 1, tamano_pagina: 10 } } as never; } }),
   });
   const u = new URL(f.url);
@@ -86,5 +90,47 @@ describe('--configurar-web', () => {
     const f = await iniciarFormulario({ rutaEnv, abrir: () => undefined, vigenciaMs: 50 });
     expect(await f.listo).toBe(false);
     expect(fs.existsSync(rutaEnv)).toBe(false);
+  });
+});
+
+describe('--configurar-web: correo con dos datos', () => {
+  it('Gmail con contraseña de aplicación (con espacios): queda en el .env, sin espacios, y la página no la repite', async () => {
+    const { f, enviar, rutaEnv } = await formulario();
+    const r = await enviar({ ticket: TICKET, correo: 'ana@gmail.com', correo_clave: 'abcd efgh ijkl mnop' });
+    expect(r.status).toBe(200);
+    const html = await r.text();
+    expect(html).toMatch(/correo \(Gmail\) entró bien/);
+    expect(html).not.toMatch(/abcd/);
+    const env = fs.readFileSync(rutaEnv, 'utf8');
+    expect(env).toMatch(/^COMPRA_AGIL_CORREO=ana@gmail\.com$/m);
+    expect(env).toMatch(/^COMPRA_AGIL_CORREO_CLAVE=abcdefghijklmnop$/m);
+    expect(env).not.toMatch(/SMTP_HOST/);
+    f.cerrar();
+  });
+
+  it('la contraseña de siempre (rechazada) no guarda nada y explica qué crear', async () => {
+    const { f, enviar, rutaEnv } = await formulario();
+    const r = await enviar({ ticket: TICKET, correo: 'ana@gmail.com', correo_clave: 'MiClaveDeSiempre' });
+    expect(r.status).toBe(400);
+    const html = await r.text();
+    expect(html).toMatch(/contraseña de aplicación/);
+    expect(html).not.toContain('MiClaveDeSiempre');
+    expect(fs.readFileSync(rutaEnv, 'utf8')).toBe('LOG_LEVEL=info\n');
+    f.cerrar();
+  });
+
+  it('dominio propio con Google Workspace: escribe el servidor encontrado por MX', async () => {
+    const { f, enviar, rutaEnv } = await formulario();
+    expect((await enviar({ ticket: TICKET, correo: 'ventas@empresa.cl', correo_clave: 'abcdefghijklmnop' })).status).toBe(200);
+    expect(fs.readFileSync(rutaEnv, 'utf8')).toMatch(/^COMPRA_AGIL_SMTP_HOST=smtp\.gmail\.com$/m);
+    f.cerrar();
+  });
+
+  it('Hotmail: lo rechaza explicando por qué', async () => {
+    const { f, enviar } = await formulario();
+    const r = await enviar({ ticket: TICKET, correo: 'ana@hotmail.com', correo_clave: 'x' });
+    expect(r.status).toBe(400);
+    expect(await r.text()).toMatch(/OAuth/);
+    f.cerrar();
   });
 });

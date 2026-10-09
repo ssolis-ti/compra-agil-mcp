@@ -25,6 +25,7 @@ import type { AddressInfo } from 'net';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
 import { registrarSecreto, safeError } from '../utils/redact.js';
 import { actualizarEnv } from './archivo-env.js';
+import { prepararCorreo, type DependenciasCorreo } from './correo-simple.js';
 
 export interface OpcionesFormulario {
   rutaEnv: string;
@@ -33,6 +34,8 @@ export interface OpcionesFormulario {
   vigenciaMs?: number;
   /** Abre el navegador; en las pruebas no se abre. */
   abrir?: (url: string) => void;
+  /** Para las pruebas: DNS y verificación SMTP simulados. */
+  correo?: DependenciasCorreo;
 }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -58,6 +61,12 @@ ${ok ? '<p>Ya puedes cerrar esta pestaña y volver a la conversación con tu asi
 <label for="telegram">Token del bot de Telegram (opcional)</label>
 <input id="telegram" name="telegram" type="password" autocomplete="off">
 <small>En Telegram abre @BotFather, escribe /newbot y pega aquí el token que te da.</small>
+<label for="correo">Tu correo para recibir avisos (opcional)</label>
+<input id="correo" name="correo" type="email" autocomplete="email">
+<small>Gmail, Yahoo, iCloud o el correo de tu empresa si usa Google o Microsoft 365. Outlook y Hotmail personales no sirven para enviar.</small>
+<label for="correo_clave">Contraseña de aplicación del correo</label>
+<input id="correo_clave" name="correo_clave" type="password" autocomplete="off">
+<small>No es tu contraseña de siempre. En Gmail: activa la verificación en dos pasos y crea una en <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>; pega los 16 caracteres.</small>
 <button type="submit">Guardar</button>
 </form>`}
 </body></html>`;
@@ -99,7 +108,9 @@ export async function iniciarFormulario(o: OpcionesFormulario): Promise<{ url: s
         const datos = new URLSearchParams(cuerpo);
         const ticket = datos.get('ticket')?.trim() ?? '';
         const telegram = datos.get('telegram')?.trim() ?? '';
-        registrarSecreto(ticket); registrarSecreto(telegram);
+        const correo = datos.get('correo')?.trim() ?? '';
+        const correoClave = datos.get('correo_clave') ?? '';
+        registrarSecreto(ticket); registrarSecreto(telegram); registrarSecreto(correoClave.trim());
         if (!ticket) return responder(400, PAGINA(token, 'Falta el ticket.'));
         if (telegram && !/^\d+:[\w-]{20,}$/.test(telegram)) return responder(400, PAGINA(token, 'El token del bot no tiene la forma que da @BotFather (números, dos puntos y letras).'));
         try {
@@ -107,12 +118,21 @@ export async function iniciarFormulario(o: OpcionesFormulario): Promise<{ url: s
         } catch (e) {
           return responder(400, PAGINA(token, `El ticket no funcionó: ${safeError(e).slice(0, 160)}`));
         }
+        let deCorreo: Record<string, string> = {};
+        let notaCorreo = '';
+        if (correo || correoClave.trim()) {
+          const r = await prepararCorreo(correo, correoClave, o.correo);
+          if (!r.ok) return responder(400, PAGINA(token, `Correo: ${r.mensaje}`));
+          deCorreo = r.cambios;
+          notaCorreo = `, el correo (${r.proveedor}) entró bien${r.advertencia ? ` (${r.advertencia})` : ''}`;
+        }
         const anterior = fs.existsSync(o.rutaEnv) ? fs.readFileSync(o.rutaEnv, 'utf8') : '';
         if (anterior) fs.writeFileSync(`${o.rutaEnv}.respaldo`, anterior, 'utf8');
         const cambios: Record<string, string> = { COMPRA_AGIL_TICKET: ticket };
         if (telegram) cambios.COMPRA_AGIL_TELEGRAM_TOKEN = telegram;
+        Object.assign(cambios, deCorreo);
         fs.writeFileSync(o.rutaEnv, actualizarEnv(anterior, cambios), { encoding: 'utf8', mode: 0o600 });
-        responder(200, PAGINA(token, `Guardado. El ticket funciona${telegram ? ' y el token del bot quedó registrado' : ''}.`, true));
+        responder(200, PAGINA(token, `Guardado. El ticket funciona${telegram ? ', el token del bot quedó registrado' : ''}${notaCorreo}.`, true));
         setTimeout(() => { servidor.close(); terminar(true); }, 300);
       })();
     });

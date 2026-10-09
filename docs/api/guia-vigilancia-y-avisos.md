@@ -88,7 +88,7 @@ aquí: ninguna herramienta puede cambiarlos.
   1. Crea un bot con @BotFather y pega su token en `COMPRA_AGIL_TELEGRAM_TOKEN`.
   2. Escríbele algo al bot desde el chat donde quieres los avisos.
   3. Corre `node dist/index.js --telegram-chat-id` y copia la línea que te da al `.env`.
-- **Correo:** las variables `COMPRA_AGIL_SMTP_*` y `COMPRA_AGIL_CORREO_PARA`. Con Gmail, usa una «contraseña de aplicación».
+- **Correo:** `COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`, una contraseña de aplicación. El servidor se deduce del dominio: Gmail, Yahoo, iCloud, Zoho, o Google Workspace y Microsoft 365 por sus MX al configurar. Outlook y Hotmail personales no sirven, porque exigen OAuth. Para otro servidor, `COMPRA_AGIL_SMTP_HOST`/`_PUERTO`; las `SMTP_*` anteriores siguen valiendo. Con correo y clave, el canal se activa solo si `COMPRA_AGIL_AVISOS` no está.
 - **Webhook:** `COMPRA_AGIL_WEBHOOK_URL` y `COMPRA_AGIL_WEBHOOK_SECRETO`. El contrato está en [webhook-alertas.md](webhook-alertas.md).
 
 Después, pon `COMPRA_AGIL_AVISOS=telegram` (o `telegram,correo`, etc.) y prueba:

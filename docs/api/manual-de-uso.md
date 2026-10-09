@@ -98,6 +98,23 @@ Para cambiar algo después, pídeselo: «agrega "tóner" a lo que vigilo», «av
 solo desde $300.000», «avísame también todo lo de la Araucanía», «apaga la vigilancia». Cada cambio de criterios te llega
 también a Telegram, para que sepas si alguien los tocó.
 
+## Recibir los avisos también por correo
+
+Bastan dos datos: **tu correo** y una **contraseña de aplicación**.
+
+1. **Crea la contraseña de aplicación.** No es tu contraseña de siempre: es una clave especial que tu proveedor te da para un programa.
+   - **Gmail:** activa la verificación en dos pasos y crea la contraseña en [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords). Copia los 16 caracteres; los espacios dan lo mismo.
+   - **Yahoo e iCloud:** tienen su propia opción de «contraseña de aplicación» en la seguridad de la cuenta.
+   - **Correo de empresa** que usa Google o Microsoft 365: también funciona. Con Microsoft 365, el administrador debe tener habilitado el envío por SMTP.
+   - **Outlook, Hotmail y Live personales:** no sirven, porque Microsoft ya no deja enviar con contraseña. Usa una cuenta de Gmail para enviar; los avisos pueden llegarte igual a tu Outlook.
+2. **Escribe los dos datos según cómo instalaste:**
+   - **Extensión:** en Configuración → Extensiones → Compra Ágil, campos «Tu correo» y «Contraseña de aplicación». Después reinicia Claude.
+   - **Camino 2:** en el formulario de `--configurar-web`.
+   - **Camino 3:** `--configurar` te lo pregunta y prueba la contraseña en el momento.
+3. **Pídele a tu asistente «prueba los avisos».** Te tiene que llegar un correo de prueba.
+
+Los avisos llegan a la misma dirección. Si quieres que lleguen a otras personas, agrega `COMPRA_AGIL_CORREO_PARA` en el `.env` (ver la [guía](guia-vigilancia-y-avisos.md)).
+
 ## Los mensajes que vas a recibir
 
 | Mensaje | Qué significa | Qué hacer |

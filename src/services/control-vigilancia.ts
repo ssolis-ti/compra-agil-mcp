@@ -29,7 +29,10 @@ export interface ControlVigilancia {
   retomar(): void;
 }
 
-const VARIABLES_PARA_TAREA = ['COMPRA_AGIL_TICKET', 'COMPRA_AGIL_TELEGRAM_TOKEN', 'MONITOR_KEYWORDS', 'MONITOR_EXCLUIR', 'MONITOR_REGIONES', 'MONITOR_MIN_BUDGET_CLP'];
+const VARIABLES_PARA_TAREA = [
+  'COMPRA_AGIL_TICKET', 'COMPRA_AGIL_TELEGRAM_TOKEN', 'COMPRA_AGIL_CORREO', 'COMPRA_AGIL_CORREO_CLAVE', 'COMPRA_AGIL_SMTP_HOST',
+  'MONITOR_KEYWORDS', 'MONITOR_EXCLUIR', 'MONITOR_REGIONES', 'MONITOR_MIN_BUDGET_CLP',
+];
 
 function powershell(script: string, args: string[]): Promise<{ codigo: number | null; salida: string }> {
   return new Promise((resolve) => {

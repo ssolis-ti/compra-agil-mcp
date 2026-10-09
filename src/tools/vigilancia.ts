@@ -88,7 +88,9 @@ export function registerVigilanciaTools(server: McpServer, client: CompraAgilCli
         lotes_pendientes: estado.pendientes.map((p) => ({ lote: horaChile(p.lote), intentos: p.intentos, error: p.ultimoError ?? null })),
         lotes_incompletos: estado.incompletos.map((i) => ({ lote: horaChile(i.lote), total: i.total, leidos: i.leidos })),
         huecos_sin_revisar: estado.huecos.map((h) => ({ desde: horaChile(h.desde), hasta: horaChile(h.hasta) })),
-        criterios: { ...criteriosJson(criteriosEfectivos(estado, entorno)), origen: estado.criterios ? `configurar_criterios, ${horaChile(estado.criterios.cambiadoEn)}` : '.env' },
+        criterios: { ...criteriosJson(criteriosEfectivos(estado, entorno)), origen: estado.criterios ? `configurar_criterios, ${horaChile(estado.criterios.cambiadoEn)}`
+          : Object.keys(process.env).some((k) => k.startsWith('MONITOR_') && k !== 'MONITOR_INTERVAL_MINUTES') ? '.env'
+          : 'valores de ejemplo: todavía no se configuraron (configurar_criterios o el prompt «empezar»)' },
         canales_activos: canales.map((c) => c.nombre),
         telegram_conectado_a: leerPreferencias(rutaDeDatos('.preferencias.json')).telegramChatNombre ?? (process.env.COMPRA_AGIL_TELEGRAM_CHAT_ID ? '(chat fijado en la configuración)' : null),
         modo_vigilancia: control?.modo() ?? null,
@@ -102,7 +104,7 @@ export function registerVigilanciaTools(server: McpServer, client: CompraAgilCli
           presupuesto_del_dia: salud.presupuestoConsultasDia,
           rondas_espaciadas_por_429: estado.salud.factorIntervalo > 1 ? `×${estado.salud.factorIntervalo}` : null,
         },
-        _nota: 'Si vigilante_activo es null y no usas un gateway, nadie está vigilando: enciéndela con activar_vigilancia (o node dist/index.js --vigilar).',
+        _nota: 'Si vigilante_activo es null y no usas un gateway, nadie está vigilando: enciéndela con activar_vigilancia.',
       });
     },
   );

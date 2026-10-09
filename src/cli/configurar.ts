@@ -19,6 +19,7 @@ import { pista, registrarSecreto, safeError } from '../utils/redact.js';
 import { REGIONES } from '../resources/regiones.js';
 import { ultimoChat, CanalTelegram } from '../avisos/canales/telegram.js';
 import { actualizarEnv } from './archivo-env.js';
+import { prepararCorreo, type DependenciasCorreo } from './correo-simple.js';
 
 export interface Consola {
   preguntar(texto: string, opciones?: { oculta?: boolean }): Promise<string>;
@@ -33,6 +34,8 @@ export interface DependenciasConfigurar {
   /** Inyectables en los tests. */
   crearApi?: (ticket: string) => Pick<CompraAgilClient, 'buscarFresco'>;
   telegram?: { ultimoChat: typeof ultimoChat; probar: (token: string, chatId: string) => Promise<boolean> };
+  /** DNS y verificación SMTP simulados en los tests. */
+  correo?: DependenciasCorreo;
   /** Instala la vigilancia para que arranque sola; null si no aplica en este sistema. */
   instalarArranque?: (() => Promise<boolean>) | null;
 }
@@ -163,6 +166,31 @@ export async function comandoConfigurar(d: DependenciasConfigurar): Promise<numb
     }
     const silencio = await c.preguntar('   ¿Pausar los avisos de noche, de 22:00 a 07:00, y recibirlos juntos en la mañana? (s/n) [s]: ');
     cambios.COMPRA_AGIL_AVISOS_SILENCIO = silencio.trim() === '' || si(silencio) ? '22:00-07:00' : '';
+  }
+
+  // ── 4b. Correo (opcional) ──────────────────────────────────────────
+  c.escribir('');
+  c.escribir('   Avisos por correo (opcional): basta tu dirección y una contraseña de aplicación.');
+  const correoActual = env.COMPRA_AGIL_CORREO?.trim();
+  if (si(await c.preguntar(`   ¿Quieres recibir los avisos también por correo? (s/n)${correoActual ? ` [ya configurado: ${correoActual}]` : ''}: `))) {
+    c.escribir('   Sirve Gmail, Yahoo, iCloud o el correo de tu empresa si usa Google o Microsoft 365.');
+    c.escribir('   En Gmail: activa la verificación en dos pasos y crea una contraseña en https://myaccount.google.com/apppasswords');
+    for (let intento = 0; intento < 3; intento++) {
+      const dir = (await c.preguntar(`   Tu correo${correoActual ? ` [${correoActual}]` : ''}: `)).trim() || correoActual || '';
+      const clave = await c.preguntar('   Contraseña de aplicación (no se verá mientras escribes): ', { oculta: true });
+      const r = await prepararCorreo(dir, clave, d.correo);
+      if (r.ok) {
+        Object.assign(cambios, r.cambios);
+        const canales = new Set((cambios.COMPRA_AGIL_AVISOS ?? env.COMPRA_AGIL_AVISOS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
+        canales.add('correo');
+        cambios.COMPRA_AGIL_AVISOS = [...canales].join(',');
+        c.escribir(`   ✔ El correo (${r.proveedor}) entró bien. Los avisos llegarán a ${dir}.`);
+        if (r.advertencia) c.escribir(`   Ojo: ${r.advertencia}`);
+        break;
+      }
+      c.escribir(`   ✘ ${r.mensaje}`);
+      if (!si(await c.preguntar('   ¿Intentar de nuevo? (s/n): '))) break;
+    }
   }
 
   // ── Guardar ────────────────────────────────────────────────────────
