@@ -63,10 +63,10 @@ Además de la puerta propia de cada fase en `tareas.md`:
 | 1 | Cimientos compartidos | ✅ 7-oct |
 | 2 | Vigilancia sin huecos | ✅ 7-oct |
 | 3 | Bandeja de salida y formato | ✅ 7-oct |
-| 4 | Canal Telegram | ✅ 7-oct (T4.4: prueba con bot real, la hace el dueño) |
+| 4 | Canal Telegram | ✅ 7-oct; T4.4 ✅ 8-oct (bot real del dueño, más de 200 avisos) |
 | 5 | Canal webhook | ✅ 7-oct |
-| 6 | Canal correo | ✅ 7-oct (T6.3: prueba con cuenta real, la hace el dueño) |
+| 6 | Canal correo | ✅ 7-oct; correo con dos datos el 9-oct. T6.3 (cuenta real) ⏳ seguimiento |
 | 7 | Salud y cuota | ✅ 7-oct |
 | 8 | Superficie: herramientas MCP, CLI y daemon | ✅ 7-oct |
-| 9 | Instalación y documentación | ✅ 7-oct (T9.1: instalar la tarea, la hace el dueño) |
-| 10 | Validación y cierre | 🔄 T10.1 ✅ (24 h simuladas sin pérdidas); T10.2–T10.4 con el dueño |
+| 9 | Instalación y documentación | ✅ 7-oct; extensión `.mcpb` e instalación por el agente (anexo) el 8-oct. T9.1 (tarea en el equipo del dueño) ⏳ seguimiento |
+| 10 | Validación y cierre | ✅ 9-oct, por decisión del dueño: T10.1 ✅; prueba real de 2 días con Telegram (8–9 oct, 7 fallos hallados y corregidos); revisión de código (10 hallazgos corregidos, `3a0b1e0`); T10.4 publicación. Quedan como seguimiento T10.2 (agente desde cero), T10.3 (semana completa), T6.3 y T9.1 |

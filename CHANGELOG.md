@@ -6,6 +6,12 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+---
+
+## [2.9.0] - 2026-10-09
+
+Vigilancia confiable de compras nuevas, con avisos por Telegram, correo y webhook firmado. Se instala y configura conversando con el asistente, también como extensión de Claude Desktop. Especificación: [docs/internals/specs/2.9.0-vigilancia-y-avisos/](docs/internals/specs/2.9.0-vigilancia-y-avisos/README.md).
+
 ### Corregido
 * **Revisión de código de la 2.9.0 (9-oct)**:
   * **Modo «siempre» con Claude Desktop normal:** como extensión, la tarea usaba `Claude.exe` como si fuera Node, en cualquier instalación (no solo la de la Store), y abría la app en vez de vigilar. Ahora usa el Node del PATH, y si no hay, lo dice. La tarea recibe también los criterios y canales de entorno que faltaban (`MONITOR_SOLO_NUEVAS`, `MONITOR_TODAS_EN_REGION`, intervalo, destinatarios).
