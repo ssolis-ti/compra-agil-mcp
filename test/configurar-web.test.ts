@@ -134,3 +134,17 @@ describe('--configurar-web: correo con dos datos', () => {
     f.cerrar();
   });
 });
+
+describe('--configurar-web: correo en un .env que ya fija los canales', () => {
+  it('COMPRA_AGIL_AVISOS=telegram pasa a telegram,correo; sin la línea, no se agrega', async () => {
+    const { f, enviar, rutaEnv } = await formulario();
+    fs.writeFileSync(rutaEnv, 'COMPRA_AGIL_AVISOS=telegram\n');
+    expect((await enviar({ ticket: TICKET, correo: 'ana@gmail.com', correo_clave: 'abcdefghijklmnop' })).status).toBe(200);
+    expect(fs.readFileSync(rutaEnv, 'utf8')).toMatch(/^COMPRA_AGIL_AVISOS=telegram,correo$/m);
+    f.cerrar();
+    const otro = await formulario();
+    expect((await otro.enviar({ ticket: TICKET, correo: 'ana@gmail.com', correo_clave: 'abcdefghijklmnop' })).status).toBe(200);
+    expect(fs.readFileSync(otro.rutaEnv, 'utf8')).not.toMatch(/COMPRA_AGIL_AVISOS/);
+    otro.f.cerrar();
+  });
+});

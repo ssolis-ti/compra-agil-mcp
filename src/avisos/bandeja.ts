@@ -37,7 +37,7 @@ export function encolar(b: Bandeja, alertas: Alerta[], canales: NombreCanal[], a
   let nuevos = 0;
   for (const alerta of alertas) {
     for (const canal of canales) {
-      const id = idDeAviso(canal, alerta.codigo, alerta.creada);
+      const id = idDeAviso(canal, alerta.segundoLlamado ? `${alerta.codigo}#2` : alerta.codigo, alerta.creada);
       if (b[id]) continue;
       b[id] = { id, canal, alerta, estado: 'pendiente', intentos: 0, proximoIntento: ahoraMs, creado: ahoraMs };
       nuevos++;

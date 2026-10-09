@@ -48,6 +48,18 @@ describe('ceguera y recuperación (R8.1, R8.2)', () => {
     expect(eventos(e, T0 + 200 * MIN)).toEqual([]);
   });
 
+  it('atrasada sin fallos (rondas parciales): se avisa como ciega y no «vuelve» hasta una revisión completa', () => {
+    const e = conBueno(T0);
+    e.salud.fallosSeguidos = 0; // ninguna ronda falla: solo no alcanzan
+    const [ceguera] = notificacionesPendientes(e, T0 + 121 * MIN, cfg);
+    expect(ceguera.evento).toBe('ceguera');
+    marcarNotificadas(e, [ceguera.clave], T0 + 121 * MIN);
+    // Sigue atrasada: sin fallos, pero tampoco una revisión completa nueva.
+    expect(eventos(e, T0 + 150 * MIN)).toEqual([]);
+    e.salud.ultimoCicloBueno = new Date(T0 + 200 * MIN).toISOString();
+    expect(eventos(e, T0 + 200 * MIN)).toEqual(['recuperacion']);
+  });
+
   it('si ningún canal la entregó, la ceguera se vuelve a intentar en la ronda siguiente', () => {
     const e = conBueno(T0);
     e.salud.fallosSeguidos = 9;

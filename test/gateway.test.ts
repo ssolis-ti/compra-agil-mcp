@@ -77,3 +77,32 @@ describe('guardar mezclando con lo que otro proceso escribió', () => {
     expect(final.marca).toBe(new Date(T).toISOString());
   });
 });
+
+describe('la cola solo se llena con un gateway en uso', () => {
+  it('sin gateway, la ronda no la llena; con paraGateway sí, y desde entonces también el daemon por 7 días', async () => {
+    const { rondaDeVigilancia } = await import('../src/vigilancia/ronda.js');
+    const { aFormatoApi } = await import('../src/utils/fechas.js');
+    const { nuevoCatalogo, clienteFalso } = await import('./ayudas/api-cambios.js');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gw-'));
+    const rutas = { estado: path.join(dir, '.vigilancia.json'), estadoViejo: path.join(dir, '.m.json'), vigilante: path.join(dir, '.lock') };
+    const pared = (utc: number) => Date.parse(aFormatoApi(new Date(utc)));
+    const c = nuevoCatalogo();
+    const criterios = { palabras: [], excluidas: [], regiones: [], presupuestoMinimo: 0, soloSinOfertas: false, todasEnRegion: false, soloNuevas: true };
+    const ronda = (ahora: number, paraGateway?: boolean) => rondaDeVigilancia({
+      api: clienteFalso(c), ahora: () => ahora, criterios, rutas, pid: process.pid, intervaloMs: 15 * 60_000, entregar: () => undefined, paraGateway,
+    });
+    c.agregar(pared(T - 10 * 60_000), 2);
+    await ronda(T);
+    expect(Object.keys(cargarEstado(rutas.estado, rutas.estadoViejo, T).estado.alertas)).toEqual([]);
+    // Un gateway pide alertas: su ronda llena la cola y queda anotado.
+    c.agregar(pared(T + 5 * 60_000), 1);
+    await ronda(T + 7 * 60_000, true);
+    actualizarEstado(rutas.estado, rutas.estadoViejo, T + 7 * 60_000, (e) => ofrecerLote(e, 20, T + 7 * 60_000));
+    // Desde entonces, la ronda del daemon también la llena.
+    c.agregar(pared(T + 10 * 60_000), 1);
+    await ronda(T + 12 * 60_000);
+    const { estado } = cargarEstado(rutas.estado, rutas.estadoViejo, T + 12 * 60_000);
+    expect(Object.keys(estado.alertas)).toHaveLength(2);
+    expect(estado.gatewayUsado).not.toBeNull();
+  });
+});

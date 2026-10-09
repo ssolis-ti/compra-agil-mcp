@@ -7,6 +7,14 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 ## [Unreleased]
 
 ### Corregido
+* **Revisión de código de la 2.9.0 (9-oct)**:
+  * **Modo «siempre» con Claude Desktop normal:** como extensión, la tarea usaba `Claude.exe` como si fuera Node, en cualquier instalación (no solo la de la Store), y abría la app en vez de vigilar. Ahora usa el Node del PATH, y si no hay, lo dice. La tarea recibe también los criterios y canales de entorno que faltaban (`MONITOR_SOLO_NUEVAS`, `MONITOR_TODAS_EN_REGION`, intervalo, destinatarios).
+  * **Correo desde `--configurar-web`:** se activaba solo si el `.env` no fijaba `COMPRA_AGIL_AVISOS`. Ahora se suma a la lista.
+  * **Vigilancia atrasada:** una que se atrasaba cada vez más sin que fallara ninguna ronda nunca se avisaba como ciega. Una ronda parcial ya no cuenta como revisión completa, y la recuperación exige una revisión completa posterior.
+  * **Reapertura en segundo llamado:** un proceso avisado al publicarse no se volvía a avisar al reabrirse en segundo llamado. Ahora sí, con 🔁.
+  * **Código de vinculación de Telegram:** pasa a guardarse con scrypt y sal. Con el hash rápido anterior, quien leyera el archivo recuperaba el código en menos de un segundo.
+  * **Cola del gateway:** solo se llena si un gateway la pidió en los últimos 7 días. Antes duplicaba la bandeja y mostraba «sin confirmar» a quien no usa gateway.
+  * **Instrucciones al modelo:** ya no dicen que ninguna herramienta cambia destinos, porque `conectar_telegram` lo hace con código.
 * **Un cambio de criterios a mitad de ronda ya no avisa lo que no corresponde** (2.9.0, prueba real del 8-oct). Una ronda empezó con los criterios a medio configurar (sin región) y, aunque a los segundos ya decían «solo Aysén», mandó 169 avisos de 16 regiones. Ahora la ronda relee los criterios guardados antes de cada lote y vuelve a filtrar justo antes de avisar. Lo descartado no queda marcado como avisado.
 * **El modo «siempre» lo dice claro en la versión de la Microsoft Store** (2.9.0, prueba real del 8-oct). Ahí la extensión corre con el Node interno de Claude, que no se puede lanzar desde una tarea programada, y Windows guarda sus datos dentro del paquete (`LocalCache`), donde la tarea no los vería. `activar_vigilancia(siempre)` ahora responde qué usar en lugar de instalar una tarea que no funcionaría. El manual suma tres pasos que salieron de la prueba:
   * revisar que la extensión quedó habilitada;

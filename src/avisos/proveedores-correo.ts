@@ -17,6 +17,9 @@
 
 import { promises as dns } from 'dns';
 
+/** Una dirección de correo, sin espacios ni comas (las comas separan destinatarios). */
+export const CORREO_VALIDO = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
+
 export interface ProveedorCorreo {
   nombre: string;
   host: string;

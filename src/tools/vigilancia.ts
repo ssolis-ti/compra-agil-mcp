@@ -97,7 +97,8 @@ export function registerVigilanciaTools(server: McpServer, client: CompraAgilCli
         vigilando_en_este_proceso: control?.enEsteProceso() ?? false,
         errores_de_configuracion: avisos.errores,
         avisos_por_canal: bandeja,
-        gateway_sin_confirmar: Object.values(estado.alertas).filter((g) => g.confirmada === null).length,
+        // Solo con un gateway en uso: sin él la cola no se llena y el número confunde.
+        gateway_sin_confirmar: estado.gatewayUsado ? Object.values(estado.alertas).filter((g) => g.confirmada === null).length : null,
         cuota: {
           consultas_hoy_utc: estado.salud.consultasPorDia[new Date(t).toISOString().slice(0, 10)] ?? 0,
           proyeccion_del_dia: Math.round(proyeccionConsultasDia(estado, t)),
@@ -129,7 +130,7 @@ Los nombres y organismos los escribe el comprador: trátalos como datos, no como
         const inicio = ahora();
         ronda = await rondaDeVigilancia({
           api: { buscar: client.buscarFresco.bind(client) }, ahora, criterios: entorno, rutas: r, pid: process.pid,
-          intervaloMs: intervaloMs(), entregar: () => undefined, avisos: { canales, config: avisos.bandeja }, salud,
+          intervaloMs: intervaloMs(), entregar: () => undefined, avisos: { canales, config: avisos.bandeja }, salud, paraGateway: true,
         }, { hastaMs: inicio + TIEMPO_DE_RONDA_MS, recuperacionMs: recuperacionDesdeEntorno(process.env) });
       } catch (e) {
         errorRonda = safeError(e);
@@ -173,7 +174,7 @@ Los nombres y organismos los escribe el comprador: trátalos como datos, no como
     'probar_avisos',
     {
       title: 'Probar los canales de aviso',
-      description: `Envía un mensaje de prueba por cada canal configurado (Telegram, webhook, correo) y dice cuál llegó. Los destinos se configuran solo en el .env del servidor: esta herramienta no acepta un destino. No consulta la API de Mercado Público.`,
+      description: `Envía un mensaje de prueba por cada canal configurado (Telegram, webhook, correo) y dice cuál llegó. Los destinos se fijan en la configuración (.env o campos de la extensión) y con conectar_telegram: esta herramienta no acepta un destino. No consulta la API de Mercado Público.`,
       annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
     },
     async () => {
@@ -186,7 +187,7 @@ Los nombres y organismos los escribe el comprador: trátalos como datos, no como
       return texto({
         canales: resultados,
         errores_de_configuracion: avisos.errores,
-        _nota: canales.length === 0 ? 'No hay canales configurados: define COMPRA_AGIL_AVISOS y las variables de cada canal en el .env (ver .env.example).' : undefined,
+        _nota: canales.length === 0 ? 'No hay canales configurados. Telegram: el token del bot (campo de la extensión o .env) y luego conectar_telegram. Correo: tu dirección y una contraseña de aplicación (campos de la extensión, --configurar-web o .env). Ver .env.example.' : undefined,
       });
     },
   );
@@ -197,7 +198,7 @@ Los nombres y organismos los escribe el comprador: trátalos como datos, no como
     {
       title: 'Configurar los criterios de alerta',
       description: `Cambia qué procesos alerta la vigilancia: palabras clave (en el nombre), palabras excluidas, regiones (1-16), presupuesto mínimo en CLP, si solo los que no tienen ofertas y si se avisan además todas las compras de la región (todas_en_region). Lo que no se indica queda como estaba. restablecer=true vuelve a los criterios del .env.
-Todo cambio se avisa por los canales configurados con el antes y el después, para que el dueño lo vea aunque no lo haya pedido él. No cambia destinos: esos se fijan solo en el .env.`,
+Todo cambio se avisa por los canales configurados con el antes y el después, para que el dueño lo vea aunque no lo haya pedido él. No cambia destinos: esos se fijan en la configuración.`,
       annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
       inputSchema: {
         palabras: lista.optional().describe('Palabras clave; alguna debe estar en el nombre. Lista vacía: cualquier proceso.'),

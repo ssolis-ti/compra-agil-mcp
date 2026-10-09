@@ -13,9 +13,9 @@
 
 import { ejecutarCiclo, type AlertaVigilancia, type DependenciasCiclo, type LimitesCiclo, type ResultadoCiclo } from './ciclo.js';
 import { cargarEstado, guardarEstado, leerCriteriosGuardados, type EstadoVigilancia } from './estado.js';
-import { coincidencia } from './criterios.js';
+import { claveDeAlertado, coincidencia } from './criterios.js';
 import { tomarVigilante, vigilanteActivo } from './vigilante.js';
-import { criteriosEfectivos, podarGateway, registrarParaGateway } from './gateway.js';
+import { criteriosEfectivos, hayGateway, podarGateway, registrarParaGateway } from './gateway.js';
 import { marcarNotificadas, notificacionesPendientes, registrarRonda, type ConfigSalud } from './salud.js';
 import { crearAlerta } from '../avisos/mensaje.js';
 import { encolar, enviarPendientes, podarBandeja, type ConfigBandeja, type ResultadoEnvios } from '../avisos/bandeja.js';
@@ -31,6 +31,8 @@ export interface RutasVigilancia {
 
 export interface DependenciasRonda extends DependenciasCiclo {
   rutas: RutasVigilancia;
+  /** La pide obtener_alertas_nuevas: llena la cola del gateway aunque sea su primera vez. */
+  paraGateway?: boolean;
   pid: number;
   intervaloMs: number;
   entregar: (alertas: AlertaVigilancia[]) => void | Promise<void>;
@@ -88,13 +90,13 @@ export async function rondaDeVigilancia(deps: DependenciasRonda, limites: Limite
   ciclo.alertas = ciclo.alertas.flatMap((a) => {
     const palabra = coincidencia(a.item, alFinal);
     if (palabra) return [{ ...a, coincidencia: palabra }];
-    delete estado.alertados[a.codigo];
+    delete estado.alertados[claveDeAlertado(a.item)];
     return [];
   });
   if (ciclo.alertas.length > 0) await deps.entregar(ciclo.alertas);
   const alertasArmadas = ciclo.alertas.map((a) => crearAlerta(a.item, a.coincidencia, a.cuando));
-  // Cola del modo gateway (R9): siempre, para que un gateway pueda pedirlas.
-  registrarParaGateway(estado, alertasArmadas);
+  // Cola del modo gateway (R9): solo si hay un gateway que la pida.
+  if (deps.paraGateway || hayGateway(estado, deps.ahora())) registrarParaGateway(estado, alertasArmadas);
   podarGateway(estado, deps.ahora());
   // Los avisos se encolan y se envían antes de guardar: lo que no se entregue
   // queda en la bandeja del estado y sale en la ronda siguiente (R3.5).

@@ -108,3 +108,30 @@ describe('el ciclo aplica soloNuevas (catálogo de lotes)', () => {
     expect(await correr(false)).toEqual([nueva, vieja].sort());
   });
 });
+
+describe('segundo llamado de un proceso ya avisado', () => {
+  it('se avisa de nuevo al reabrirse (con 🔁), y no se repite después', async () => {
+    const { ejecutarCiclo } = await import('../src/vigilancia/ciclo.js');
+    const { estadoVacio } = await import('../src/vigilancia/estado.js');
+    const { aFormatoApi } = await import('../src/utils/fechas.js');
+    const { nuevoCatalogo, clienteFalso } = await import('./ayudas/api-cambios.js');
+    const T0 = Date.parse('2026-10-08T15:00:00Z');
+    const pared = (utc: number) => Date.parse(aFormatoApi(new Date(utc)));
+    const c = nuevoCatalogo();
+    const [codigo] = c.agregar(pared(T0), 1);
+    const criterios = { ...criteriosDesdeEntorno({ MONITOR_KEYWORDS: '' }), soloSinOfertas: false };
+    const estado = { ...estadoVacio(), marca: new Date(T0 - 5 * 60_000).toISOString() };
+    const correr = (ahora: number) => ejecutarCiclo({ api: clienteFalso(c), ahora: () => ahora, criterios }, estado);
+    expect((await correr(T0 + 2 * 60_000)).alertas.map((a) => a.codigo)).toEqual([codigo]);
+    // Dos días después pasa a segundo llamado, sin ofertas.
+    const p = c.procesos().find((x) => x.codigo === codigo) as unknown as { convocatoria: { estado_convocatoria: number } };
+    p.convocatoria.estado_convocatoria = 2;
+    const T2 = T0 + 2 * 24 * 3600_000;
+    c.mover(codigo, pared(T2));
+    estado.marca = new Date(T2 - 5 * 60_000).toISOString();
+    expect((await correr(T2 + 2 * 60_000)).alertas.map((a) => a.codigo)).toEqual([codigo]);
+    // Otro cambio en el mismo segundo llamado: ya avisado.
+    c.mover(codigo, pared(T2 + 5 * 60_000));
+    expect((await correr(T2 + 7 * 60_000)).alertas).toEqual([]);
+  });
+});

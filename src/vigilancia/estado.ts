@@ -80,6 +80,12 @@ export interface EstadoVigilancia {
   };
   /** Cola del modo gateway (fase 8): alertas por ofrecer y confirmar (R9). */
   alertas: Record<string, AlertaGateway>;
+  /**
+   * Última vez que un gateway pidió alertas (obtener_alertas_nuevas). Sin un
+   * gateway en los últimos 7 días la cola no se llena: duplicaría la bandeja y
+   * haría crecer el estado, que se lee entero varias veces por ronda.
+   */
+  gatewayUsado: string | null;
   /** Criterios fijados por `configurar_criterios`; null: los del entorno (R2.2). */
   criterios: CriteriosGuardados | null;
   /** Avisos por canal (fase 3, ADR 0022). */
@@ -104,7 +110,7 @@ export function estadoVacio(): EstadoVigilancia {
       cegueraAvisada: false, cegueraDesde: null, ultimoResumen: null, acumulado: acumuladoVacio(),
       fallosPorCanal: {}, canalesCaidosAvisados: [], factorIntervalo: 1, proximaRonda: null, ultimo429: null, cuotaAvisada: null,
     },
-    alertas: {}, criterios: null, bandeja: {},
+    alertas: {}, gatewayUsado: null, criterios: null, bandeja: {},
   };
 }
 
@@ -150,6 +156,7 @@ export function parsearEstado(crudo: unknown): EstadoVigilancia {
       e.salud.acumulado.fallidos = numeros(a.fallidos);
     }
   }
+  if (esFecha(crudo.gatewayUsado)) e.gatewayUsado = crudo.gatewayUsado as string;
   if (esObjeto(crudo.alertas)) {
     e.alertas = Object.fromEntries(Object.entries(crudo.alertas).filter(([, a]) =>
       esObjeto(a) && esObjeto(a.alerta) && typeof a.alerta.codigo === 'string' && esNumero(a.alerta.creada))) as Record<string, AlertaGateway>;
@@ -210,7 +217,6 @@ export function podarEstado(e: EstadoVigilancia, ahoraMs: number): void {
   e.incompletos = e.incompletos.filter((i) => i.registrado >= ahoraMs - 7 * DIA);
 }
 
-/** Poda y guarda, atómico y bajo candado. Devuelve false si el disco no dejó. */
 /**
  * Lo que otro proceso escribió mientras esta ronda trabajaba: una herramienta
  * del modo gateway pudo confirmar alertas o cambiar los criterios. Una ronda
@@ -225,6 +231,7 @@ function mezclarConDisco(e: EstadoVigilancia, disco: EstadoVigilancia): void {
     if ((d.ofrecida ?? 0) > (propia.ofrecida ?? 0)) { propia.ofrecida = d.ofrecida; propia.lote = d.lote; }
   }
   if (disco.criterios && (!e.criterios || disco.criterios.cambiadoEn > e.criterios.cambiadoEn)) e.criterios = disco.criterios;
+  if (disco.gatewayUsado && (!e.gatewayUsado || disco.gatewayUsado > e.gatewayUsado)) e.gatewayUsado = disco.gatewayUsado;
 }
 
 /** Poda y guarda, atómico y bajo candado, mezclando lo que otro proceso cambió. */

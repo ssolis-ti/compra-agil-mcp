@@ -131,6 +131,12 @@ export async function iniciarFormulario(o: OpcionesFormulario): Promise<{ url: s
         const cambios: Record<string, string> = { COMPRA_AGIL_TICKET: ticket };
         if (telegram) cambios.COMPRA_AGIL_TELEGRAM_TOKEN = telegram;
         Object.assign(cambios, deCorreo);
+        // Si el .env ya fija la lista de canales (lo deja así --configurar), el
+        // correo hay que sumarlo: solo se activa solo cuando la lista no existe.
+        const avisos = anterior.match(/^\s*COMPRA_AGIL_AVISOS\s*=(.*)$/m)?.[1]?.trim();
+        if (deCorreo.COMPRA_AGIL_CORREO && avisos && !avisos.split(',').map((s) => s.trim()).includes('correo')) {
+          cambios.COMPRA_AGIL_AVISOS = `${avisos},correo`;
+        }
         fs.writeFileSync(o.rutaEnv, actualizarEnv(anterior, cambios), { encoding: 'utf8', mode: 0o600 });
         responder(200, PAGINA(token, `Guardado. El ticket funciona${telegram ? ', el token del bot quedó registrado' : ''}${notaCorreo}.`, true));
         setTimeout(() => { servidor.close(); terminar(true); }, 300);

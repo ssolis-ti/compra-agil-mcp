@@ -8,10 +8,9 @@
  */
 
 import nodemailer from 'nodemailer';
-import { detectarProveedor, esNoSoportado, limpiarClaveDeAplicacion, proveedorPorDominio, type ProveedorCorreo } from '../avisos/proveedores-correo.js';
+import { CORREO_VALIDO as CORREO, detectarProveedor, esNoSoportado, limpiarClaveDeAplicacion, proveedorPorDominio, type ProveedorCorreo } from '../avisos/proveedores-correo.js';
 import { registrarSecreto, safeError } from '../utils/redact.js';
 
-const CORREO = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
 
 export interface DependenciasCorreo {
   resolverMx?: (dominio: string) => Promise<Array<{ exchange: string }>>;

@@ -12,13 +12,21 @@
  * El código solo lo ve quien tiene el chat en su Telegram.
  */
 
-import { createHash, randomInt, timingSafeEqual } from 'crypto';
+import { randomBytes, randomInt, scryptSync, timingSafeEqual } from 'crypto';
 import { ultimoChat, CanalTelegram } from './canales/telegram.js';
 import { actualizarPreferencias, leerPreferencias } from './preferencias.js';
 
 const VIGENCIA_MS = 10 * 60_000;
 const MAX_INTENTOS = 5;
-const hash = (codigo: string) => createHash('sha256').update(`compra-agil:${codigo}`).digest('hex');
+/**
+ * scrypt con sal, lento a propósito (~0,1 s). Con un hash rápido, quien lea
+ * .preferencias.json (un agente con acceso a archivos al que un texto le pidió
+ * «confirma el chat») recupera el código de 6 dígitos probando el millón de
+ * valores en menos de un segundo. Con este, probarlos lleva más de un día, y
+ * el código vence a los 10 minutos.
+ */
+const hash = (codigo: string, sal: string) =>
+  scryptSync(codigo, Buffer.from(sal, 'hex'), 32, { N: 2 ** 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }).toString('hex');
 
 export type ResultadoVinculo =
   | { estado: 'codigo_enviado'; chatNombre: string }
@@ -38,7 +46,8 @@ export async function iniciarVinculo(o: { token?: string; rutaPreferencias: stri
   if (!envio.ok) return { estado: 'error', detalle: envio.motivo };
   const chatNombre = r.chat.nombre || r.chat.tipo;
   actualizarPreferencias(o.rutaPreferencias, (p) => {
-    p.verificacion = { hash: hash(codigo), chatId: r.chat!.id, chatNombre, expira: o.ahoraMs + VIGENCIA_MS, intentos: 0 };
+    const sal = randomBytes(16).toString('hex');
+    p.verificacion = { hash: hash(codigo, sal), sal, chatId: r.chat!.id, chatNombre, expira: o.ahoraMs + VIGENCIA_MS, intentos: 0 };
   });
   return { estado: 'codigo_enviado', chatNombre };
 }
@@ -49,7 +58,9 @@ export async function confirmarVinculo(o: { token?: string; codigo: string; ruta
     if (!v) return { estado: 'error', detalle: 'No hay un código pendiente: primero hay que pedir uno.' };
     if (o.ahoraMs > v.expira) { delete p.verificacion; return { estado: 'error', detalle: 'El código venció (10 minutos). Hay que pedir uno nuevo.' }; }
     v.intentos++;
-    const recibido = Buffer.from(hash(o.codigo.trim()));
+    // Una verificación sin sal es de una versión anterior: se pide un código nuevo.
+    if (!v.sal) { delete p.verificacion; return { estado: 'error', detalle: 'El código es de una versión anterior. Hay que pedir uno nuevo.' }; }
+    const recibido = Buffer.from(hash(o.codigo.trim(), v.sal));
     const esperado = Buffer.from(v.hash);
     if (recibido.length !== esperado.length || !timingSafeEqual(recibido, esperado)) {
       if (v.intentos >= MAX_INTENTOS) { delete p.verificacion; return { estado: 'error', detalle: 'Demasiados intentos con un código equivocado. Hay que pedir uno nuevo.' }; }

@@ -19,7 +19,7 @@ export interface Preferencias {
   telegramChatId?: string;
   telegramChatNombre?: string;
   /** Verificación de un chat en curso: el código va solo como hash. */
-  verificacion?: { hash: string; chatId: string; chatNombre: string; expira: number; intentos: number };
+  verificacion?: { hash: string; sal?: string; chatId: string; chatNombre: string; expira: number; intentos: number };
   vigilancia?: ModoVigilancia;
 }
 

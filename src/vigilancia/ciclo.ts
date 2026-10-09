@@ -19,7 +19,7 @@ import type { BuscarParams, BuscarResponse, CompraAgilItem } from '../api/compra
 import { CompraAgilApiError } from '../utils/error-handler.js';
 import { safeError } from '../utils/redact.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
-import { coincidencia, esNueva, type Criterios } from './criterios.js';
+import { claveDeAlertado, coincidencia, esNueva, type Criterios } from './criterios.js';
 import type { EstadoVigilancia } from './estado.js';
 import { PERIODO_LOTE_MS, lecturaConsistente, planificarLotes, ventanaDeLote, RECUPERACION_MS } from './lotes.js';
 
@@ -178,11 +178,11 @@ export async function ejecutarCiclo(deps: DependenciasCiclo, estado: EstadoVigil
     for (const item of lectura.items.values()) {
       r.revisados++;
       const palabra = coincidencia(item, criterios);
-      if (!palabra || item.codigo in estado.alertados) continue;
+      if (!palabra || claveDeAlertado(item) in estado.alertados) continue;
       // Criterios guardados antes de existir soloNuevas no lo traen: vale sí.
       if (criterios.soloNuevas !== false && !esNueva(item, lote)) continue;
       const cuando = deps.ahora();
-      estado.alertados[item.codigo] = cuando;
+      estado.alertados[claveDeAlertado(item)] = cuando;
       r.alertas.push({ codigo: item.codigo, coincidencia: palabra, item, cuando });
     }
   }
@@ -192,7 +192,10 @@ export async function ejecutarCiclo(deps: DependenciasCiclo, estado: EstadoVigil
   const dia = iso(ahoraInicio).slice(0, 10);
   estado.salud.consultasPorDia[dia] = (estado.salud.consultasPorDia[dia] ?? 0) + r.consultas;
   if (r.lotesFallidos === 0 && !r.cuotaAgotada) {
-    estado.salud.ultimoCicloBueno = iso(deps.ahora());
+    // Una ronda que quedó atrasada (parcial) no es una revisión completa: si
+    // contara, una vigilancia que se atrasa más en cada ronda nunca se
+    // avisaría como ciega.
+    if (!r.parcial) estado.salud.ultimoCicloBueno = iso(deps.ahora());
     estado.salud.fallosSeguidos = 0;
   } else {
     estado.salud.fallosSeguidos++;

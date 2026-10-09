@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createHash } from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -35,6 +36,10 @@ describe('vincular Telegram con código', () => {
     const codigo = codigoEnviado();
     expect(String(tg.recibidos.at(-1)!.chat_id)).toBe('-100555');
     expect(fs.readFileSync(ruta, 'utf8')).not.toContain(codigo);
+    // Ni un hash rápido sin sal: con el archivo a mano, el millón de códigos se probaría en menos de un segundo.
+    const v = leerPreferencias(ruta).verificacion!;
+    expect(v.sal).toMatch(/^[0-9a-f]{32}$/);
+    expect(v.hash).not.toBe(createHash('sha256').update(`compra-agil:${codigo}`).digest('hex'));
     const ok = await confirmarVinculo({ token: tg.token, codigo, rutaPreferencias: ruta, ahoraMs: T + 60_000, apiBase: tg.url });
     expect(ok).toEqual({ estado: 'conectado', chatNombre: 'Compras Oficina' });
     expect(leerPreferencias(ruta).telegramChatId).toBe('-100555');

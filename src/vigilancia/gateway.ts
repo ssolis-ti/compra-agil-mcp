@@ -19,7 +19,7 @@ export const MAX_EN_COLA = 5000;
 
 export function registrarParaGateway(e: EstadoVigilancia, alertas: Alerta[]): void {
   for (const a of alertas) {
-    const id = `${a.codigo}@${new Date(a.creada).toISOString().slice(0, 10)}`;
+    const id = `${a.codigo}${a.segundoLlamado ? '#2' : ''}@${new Date(a.creada).toISOString().slice(0, 10)}`;
     e.alertas[id] ??= { alerta: a, lote: null, ofrecida: null, confirmada: null };
   }
   const ids = Object.keys(e.alertas);
@@ -34,12 +34,18 @@ export function ofrecerLote(e: EstadoVigilancia, max: number, ahoraMs: number): 
   const listas = Object.entries(e.alertas)
     .filter(([, g]) => g.confirmada === null && (g.ofrecida === null || ahoraMs - g.ofrecida >= REOFERTA_MS))
     .sort(([, x], [, y]) => x.alerta.creada - y.alerta.creada || x.alerta.codigo.localeCompare(y.alerta.codigo));
+  // Desde ahora, y por 7 días, las rondas llenan la cola (ver hayGateway).
+  e.gatewayUsado = new Date(ahoraMs).toISOString();
   const elegidas = listas.slice(0, max);
   if (elegidas.length === 0) return { loteId: null, alertas: [], quedan: 0 };
   const loteId = createHash('sha256').update(`${elegidas.map(([id]) => id).join(',')}@${ahoraMs}`).digest('hex').slice(0, 16);
   for (const [, g] of elegidas) { g.lote = loteId; g.ofrecida = ahoraMs; }
   return { loteId, alertas: elegidas.map(([, g]) => g.alerta), quedan: listas.length - elegidas.length };
 }
+
+/** Hay un gateway: pidió alertas en los últimos 7 días. */
+export const hayGateway = (e: EstadoVigilancia, ahoraMs: number) =>
+  e.gatewayUsado !== null && ahoraMs - Date.parse(e.gatewayUsado) < RETENCION_MS;
 
 /** Idempotente: confirmar dos veces el mismo lote no cambia nada. */
 export function confirmarLote(e: EstadoVigilancia, loteId: string, ahoraMs: number): number {

@@ -61,6 +61,12 @@ con unos 35 s por llamada, no alcanza a leer la API en hora punta (medido el
 8-oct-2026). Con el daemon activo, `obtener_alertas_nuevas` no lee: solo
 entrega lo que el daemon dejó en la cola.
 
+La cola se llena desde la primera vez que el gateway llama a
+`obtener_alertas_nuevas`, y deja de llenarse si pasa 7 días sin llamarla. Sin
+gateway no se guarda nada en la cola, para no duplicar la bandeja de avisos. Lo
+que el daemon leyó antes de esa primera llamada no entra a la cola: haz esa
+llamada al instalar.
+
 **Crea una tarea programada en el gateway, cada 15 minutos**, con el
 mecanismo de tareas de tu gateway (consulta su documentación). La tarea le
 pide al agente esto:

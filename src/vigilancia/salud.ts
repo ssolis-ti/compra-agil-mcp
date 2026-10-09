@@ -112,8 +112,10 @@ export function notificacionesPendientes(e: EstadoVigilancia, ahoraMs: number, c
       ],
     });
   }
-  if (s.cegueraAvisada && s.fallosSeguidos === 0 && s.ultimoCicloBueno) {
-    const desde = s.cegueraDesde ? Date.parse(s.cegueraDesde) : 0;
+  // Recuperada: una revisión completa posterior al aviso. Que no haya fallos no
+  // basta: una vigilancia atrasada no falla, pero tampoco ve lo nuevo.
+  const desde = s.cegueraDesde ? Date.parse(s.cegueraDesde) : 0;
+  if (s.cegueraAvisada && s.fallosSeguidos === 0 && s.ultimoCicloBueno && Date.parse(s.ultimoCicloBueno) > desde) {
     const huecos = e.huecos.filter((h) => h.registrado >= desde);
     n.push({
       clave: 'recuperacion', evento: 'recuperacion',

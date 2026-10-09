@@ -168,8 +168,12 @@ describe('ejecutarCiclo', () => {
     expect(r.parcial).toBe(true);
     expect(r.lotesLeidos).toBe(2);
     expect(estado.marca).toBe(new Date(lotes[1]).toISOString());
+    // Atrasada no es «revisión completa»: si no, la ceguera no se avisaría nunca.
+    expect(estado.salud.ultimoCicloBueno).toBeNull();
+    expect(estado.salud.fallosSeguidos).toBe(0);
     const sigue = await ejecutarCiclo({ api: clienteFalso(c), ahora: reloj.ahora, criterios }, estado);
     expect(sigue.parcial).toBe(false);
+    expect(estado.salud.ultimoCicloBueno).not.toBeNull();
     expect(estado.marca).toBe(new Date(lotes.at(-1)!).toISOString());
   });
 

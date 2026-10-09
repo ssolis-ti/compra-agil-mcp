@@ -13,7 +13,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import type { CompraAgilClient } from '../api/compra-agil-client.js';
 import { carpetaDatos, raizPaquete, rutaDeDatos } from '../utils/rutas.js';
 import { actualizarPreferencias, leerPreferencias, type ModoVigilancia } from '../avisos/preferencias.js';
@@ -31,7 +31,9 @@ export interface ControlVigilancia {
 
 const VARIABLES_PARA_TAREA = [
   'COMPRA_AGIL_TICKET', 'COMPRA_AGIL_TELEGRAM_TOKEN', 'COMPRA_AGIL_CORREO', 'COMPRA_AGIL_CORREO_CLAVE', 'COMPRA_AGIL_SMTP_HOST',
-  'MONITOR_KEYWORDS', 'MONITOR_EXCLUIR', 'MONITOR_REGIONES', 'MONITOR_MIN_BUDGET_CLP',
+  'COMPRA_AGIL_SMTP_PUERTO', 'COMPRA_AGIL_CORREO_PARA', 'COMPRA_AGIL_AVISOS', 'COMPRA_AGIL_AVISOS_SILENCIO',
+  'MONITOR_KEYWORDS', 'MONITOR_EXCLUIR', 'MONITOR_REGIONES', 'MONITOR_MIN_BUDGET_CLP', 'MONITOR_SOLO_SIN_OFERTAS',
+  'MONITOR_TODAS_EN_REGION', 'MONITOR_SOLO_NUEVAS', 'MONITOR_INTERVAL_MINUTES',
 ];
 
 function powershell(script: string, args: string[]): Promise<{ codigo: number | null; salida: string }> {
@@ -61,7 +63,38 @@ export const SIEMPRE_NO_DISPONIBLE_EN_TIENDA =
   'En Claude Desktop de la Microsoft Store el modo «siempre» no está disponible: Windows aísla la extensión y una tarea programada no puede usar su Node ni ver sus datos. ' +
   'Usa «con_claude» (vigila mientras Claude esté abierto). Para vigilar con Claude cerrado, instala el servidor desde npm o el repositorio y usa su tarea programada (ver la guía de vigilancia).';
 
-export function crearControlVigilancia(o: { client: CompraAgilClient; env: Record<string, string | undefined>; registrar: Registro; execPath?: string }): ControlVigilancia {
+export const SIEMPRE_SIN_NODE =
+  'El modo «siempre» necesita Node.js instalado en el computador: la extensión corre con el Node interno de Claude Desktop, que una tarea de Windows no puede usar. ' +
+  'Instala Node.js LTS desde https://nodejs.org y vuelve a pedirlo, o usa «con_claude» (vigila mientras Claude esté abierto).';
+
+/** El primer `node` del PATH, o null. */
+function nodeDelPath(): string | null {
+  const r = spawnSync('where', ['node'], { encoding: 'utf8', windowsHide: true });
+  const ruta = r.status === 0 ? r.stdout.split(/\r?\n/).find((l) => l.trim().toLowerCase().endsWith('node.exe')) : undefined;
+  return ruta?.trim() || null;
+}
+
+/**
+ * El Node que debe correr la tarea programada. Dentro de una extensión,
+ * `process.execPath` es Claude.exe (Electron): lanzado sin
+ * ELECTRON_RUN_AS_NODE abre la aplicación en vez de correr el servidor, en
+ * cualquier instalación de Claude Desktop, no solo en la de la Store. Ahí se
+ * usa el Node del PATH; si no hay, null.
+ */
+export function nodeParaTarea(d: { execPath?: string; electron?: string; buscarEnPath?: () => string | null } = {}): string | null {
+  const electron = 'electron' in d ? d.electron : process.versions.electron;
+  if (!electron) return d.execPath ?? process.execPath;
+  return (d.buscarEnPath ?? nodeDelPath)();
+}
+
+/** Un campo opcional vacío de la extensión llega como «${user_config.x}»: no se copia. */
+const valorReal = (v: string | undefined) => (v?.trim() && !v.trim().startsWith('${user_config.') ? v.trim() : undefined);
+
+export function crearControlVigilancia(o: {
+  client: CompraAgilClient; env: Record<string, string | undefined>; registrar: Registro; execPath?: string;
+  /** En los tests: el Node para la tarea, sin mirar el proceso ni el PATH. */
+  nodeParaTarea?: () => string | null;
+}): ControlVigilancia {
   const preferencias = () => rutaDeDatos('.preferencias.json');
   const bucle = crearBucleVigilancia({
     client: o.client, env: o.env, registrar: o.registrar,
@@ -93,13 +126,15 @@ export function crearControlVigilancia(o: { client: CompraAgilClient; env: Recor
         return { ok: false, detalle: 'En este sistema, deja la vigilancia como servicio con scripts/compra-agil-vigilancia.service (ver la guía).' };
       }
       if (esClaudeDeLaTienda(o.execPath)) return { ok: false, detalle: SIEMPRE_NO_DISPONIBLE_EN_TIENDA };
+      const node = (o.nodeParaTarea ?? (() => nodeParaTarea({ execPath: o.execPath })))();
+      if (!node) return { ok: false, detalle: SIEMPRE_SIN_NODE };
       // La tarea corre sin el entorno de Claude: lo que necesita va al .env de la carpeta del usuario.
       const rutaEnv = path.join(carpetaDatos(), '.env');
       const anterior = fs.existsSync(rutaEnv) ? fs.readFileSync(rutaEnv, 'utf8') : '';
-      const cambios = Object.fromEntries(VARIABLES_PARA_TAREA.filter((k) => o.env[k]?.trim()).map((k) => [k, o.env[k]!.trim()]));
+      const cambios = Object.fromEntries(VARIABLES_PARA_TAREA.flatMap((k) => { const v = valorReal(o.env[k]); return v ? [[k, v]] : []; }));
       fs.mkdirSync(path.dirname(rutaEnv), { recursive: true });
       fs.writeFileSync(rutaEnv, actualizarEnv(anterior, cambios), { encoding: 'utf8', mode: 0o600 });
-      const r = await powershell(path.join(scripts, 'instalar-tarea-windows.ps1'), ['-Node', process.execPath, '-Entrada', path.join(raizPaquete(), 'dist', 'index.js')]);
+      const r = await powershell(path.join(scripts, 'instalar-tarea-windows.ps1'), ['-Node', node, '-Entrada', path.join(raizPaquete(), 'dist', 'index.js')]);
       if (r.codigo !== 0) return { ok: false, detalle: `No se pudo instalar la tarea: ${r.salida.split(/\r?\n/).filter((l) => /✘|Error/.test(l)).slice(0, 3).join(' ') || 'error desconocido'}` };
       bucle.detener();
       guardar('siempre');

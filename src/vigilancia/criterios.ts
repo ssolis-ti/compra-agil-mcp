@@ -75,6 +75,13 @@ export function criteriosDesdeEntorno(env: Record<string, string | undefined>): 
 export const esSegundoLlamado = (item: CompraAgilItem) => item.convocatoria.estado_convocatoria === 2;
 
 /**
+ * Clave de deduplicación: el código, y aparte su segundo llamado. Si no, un
+ * proceso avisado al publicarse no se volvería a avisar al reabrirse, que es
+ * justo la oportunidad que el 🔁 quiere mostrar.
+ */
+export const claveDeAlertado = (item: CompraAgilItem) => (esSegundoLlamado(item) ? `${item.codigo}#2` : item.codigo);
+
+/**
  * Publicada en las 24 h previas al lote, o reabierta en segundo llamado y aún
  * sin ofertas. Sin fecha de publicación no se puede saber: se avisa, porque
  * perder una compra nueva es peor que avisar una de más.

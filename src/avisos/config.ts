@@ -14,7 +14,7 @@
 import { registrarSecreto } from '../utils/redact.js';
 import type { ConfigBandeja } from './bandeja.js';
 import type { NombreCanal } from './canal.js';
-import { esNoSoportado, limpiarClaveDeAplicacion, proveedorPorDominio } from './proveedores-correo.js';
+import { CORREO_VALIDO as CORREO, esNoSoportado, limpiarClaveDeAplicacion, proveedorPorDominio } from './proveedores-correo.js';
 
 export interface ConfigAvisos {
   /** Canales listados y completos. Uno con variables faltantes no se activa. */
@@ -32,7 +32,6 @@ export interface ConfigAvisos {
 const CANALES: NombreCanal[] = ['telegram', 'webhook', 'correo'];
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const LARGO_MINIMO_SECRETO = 32;
-const CORREO = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
 
 /** https, o http solo hacia la propia máquina (R6.3). */
 function urlAceptable(texto: string): boolean {
