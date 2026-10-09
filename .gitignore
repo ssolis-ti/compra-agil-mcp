@@ -61,3 +61,6 @@ coverage/
 # Extensión de Claude Desktop (scripts/empaquetar-extension.mjs)
 extension/armado/
 extension/*.mcpb
+
+# Configuración local de Claude Code (skills y hooks personales)
+.claude/
