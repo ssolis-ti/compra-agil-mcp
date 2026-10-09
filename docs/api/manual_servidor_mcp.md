@@ -57,7 +57,9 @@ Prompts: `buscar_oportunidades_proveedor`, `analizar_competencia`, `empezar` (de
 `mcp-compra-agil --vigilar` (o `npm run monitor`) corre aparte del servidor MCP.
 - **Lectura:** cada 15 minutos (`MONITOR_INTERVAL_MINUTES`) lee la API lote por lote: la API registra los cambios cada 5 minutos con una sola marca. Empieza en el último lote revisado y pagina cada lote con comprobación (total y códigos); si un lote no cuadra, lo relee o lo lee por región. Un lote que falla se reintenta antes de avanzar, y más de 48 h sin leer se informa como hueco.
 - **Criterios:** `MONITOR_KEYWORDS`, `MONITOR_EXCLUIR`, `MONITOR_REGIONES`, `MONITOR_MIN_BUDGET_CLP` (default 0), `MONITOR_SOLO_SIN_OFERTAS`, `MONITOR_TODAS_EN_REGION` (alerta total de la región) y `MONITOR_SOLO_NUEVAS` (por defecto sí: publicadas en 24 h o en segundo llamado); o los que fije `configurar_criterios`.
-- **Avisos:** por Telegram, correo o webhook firmado, según `COMPRA_AGIL_AVISOS`, y además en `alerts.log`. También avisa de ceguera (2 h sin revisión completa), recuperación, resumen diario y canal caído.
+- **Avisos:** por Telegram, correo o webhook firmado, según `COMPRA_AGIL_AVISOS`, y además en `alerts.log`.
+  - **Telegram:** se activa solo con el token y el chat, que se puede fijar con `conectar_telegram` y un código de 6 dígitos.
+  - **Correo:** se activa solo con `COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE` (contraseña de aplicación). El servidor se deduce del dominio; si no, va en `COMPRA_AGIL_SMTP_HOST`. También avisa de ceguera (2 h sin revisión completa), recuperación, resumen diario y canal caído.
 - **Modo gateway:** en vez del daemon, un gateway llama `obtener_alertas_nuevas` y `confirmar_alertas`.
 
 `--configurar` es un asistente en la terminal que escribe el `.env` (ticket, criterios, Telegram) y deja la vigilancia encendida; `--check` diagnostica la instalación con código de salida. Manual para usuarios no técnicos: `docs/api/manual-de-uso.md`. Instalación y canales: `docs/api/guia-vigilancia-y-avisos.md`; contrato del webhook: `docs/api/webhook-alertas.md`.

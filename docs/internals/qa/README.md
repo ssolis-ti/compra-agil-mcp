@@ -1,8 +1,8 @@
 # QA y plan de trabajo — punto de retome
 
-Estado del proyecto después de la auditoría QA de la 2.6.1, su Sprint 0 y la
-versión 2.7.0 (octubre 2026). Empieza aquí para retomar el trabajo en una
-sesión local.
+Estado del proyecto hasta la versión 2.9.0, publicada el 9-oct-2026 (npm
+`latest`, tag `v2.9.0` y release con la extensión `.mcpb`). Empieza aquí para
+retomar el trabajo en una sesión local.
 
 ## Dónde quedamos
 
@@ -35,15 +35,18 @@ git checkout main
 git pull
 npm ci
 npm run build
-npm test            # todos deben pasar (616 en la 2.8.0)
+npm test            # todos deben pasar (884 en la 2.9.0)
 ```
 
 Después, en este orden:
 
-1. **Plan 2.8.0** → [roadmap.md](roadmap.md#plan-280--versión-cerrada), bloque por bloque (A a H). Empieza por el bloque A, la hora de Chile: afecta a todas las herramientas con fechas.
-2. La 2.8.0 se publica solo cuando cumple su «Definición de cerrada».
-3. **Etapa 2 de la validación real** (uso desde un cliente MCP) → [validacion-api-real.md](validacion-api-real.md).
-4. Cada versión nueva se publica según la sección 6 de `CONTRIBUTING.md`.
+1. **Seguimiento de la 2.9.0**, anotado en su [especificación](../specs/2.9.0-vigilancia-y-avisos/README.md):
+   - semana real completa (T10.3);
+   - correo con una cuenta real (T6.3);
+   - tarea de Windows en el equipo del dueño (T9.1);
+   - instalación por un agente desde cero (T10.2).
+2. **Pendiente de la 2.8.0:** repetir en Claude Desktop el detalle y el informe de precios de la etapa 2 → [validacion-api-real.md](validacion-api-real.md).
+3. **Una versión nueva** empieza por su especificación en `docs/internals/specs/` (como la 2.9.0) y se publica según la sección 6 de `CONTRIBUTING.md`. `npm publish` lo corre el dueño, porque su cuenta tiene verificación en dos pasos. El tag se empuja **después**: el flujo crea la release cuando la versión ya aparece en el registro, lo que tarda unos minutos.
 
 ## Banco de pruebas sin ticket
 

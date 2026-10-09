@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > ### 👋 Empieza aquí
-> **¿Vendes al Estado y quieres que te avisen por Telegram de las compras ágiles de lo tuyo?** No necesitas programar. Elige tu camino; todos terminan diciéndole a tu asistente **«Ayúdame a empezar»** (prompt `empezar`), y él te guía con el resto:
+> **¿Vendes al Estado y quieres que te avisen por Telegram o por correo de las compras ágiles de lo tuyo?** No necesitas programar. Elige tu camino; todos terminan diciéndole a tu asistente **«Ayúdame a empezar»** (prompt `empezar`), y él te guía con el resto:
 >
 > | Si usas… | Instalas así | Tus claves van en |
 > | :--- | :--- | :--- |
@@ -21,6 +21,10 @@ Servidor [MCP (Model Context Protocol)](https://modelcontextprotocol.io) desarro
 El proyecto está diseñado bajo una arquitectura modular y cuenta con tres modos de operación:
 1. **Servidor Interactivo MCP:** Comunicación bidireccional vía Stdio para integrarse directamente con el chat y herramientas de tu IDE o cliente (Cursor, Claude Desktop, Windsurf, etc.).
 2. **Vigilancia con avisos (2.9.0):** lee los procesos nuevos lote por lote, sin huecos, y avisa por **Telegram, correo o webhook firmado**, o los entrega a un gateway siempre encendido (OpenClaw, Hermes). Avisa también cuando la vigilancia está ciega y manda un resumen diario. Ver la [guía](docs/api/guia-vigilancia-y-avisos.md).
+   - **Solo compras nuevas:** las publicadas en las últimas 24 h y las reabiertas en segundo llamado (🔁). No avisa procesos antiguos que solo cambiaron.
+   - **Por rubro y por región:** lo que calza con tus palabras va completo; con la *alerta total de la región*, el resto de tus regiones va al final, en dos líneas cada uno.
+   - **Mensajes claros:** numerados, ordenados por cierre y con una etiqueta por dato (código, organismo, presupuesto, publicación, cierre con día y horas restantes, ficha).
+   - **Se configura conversando:** criterios, Telegram (con un código de 6 dígitos) y encendido, sin que el ticket ni los tokens pasen por el chat. El correo se configura con solo dos datos: tu dirección y una contraseña de aplicación.
 3. **Generador de Informes:** Produce documentos imprimibles autocontenidos en formatos **Carta, Oficio y A4**.
 
 > 📌 **Antes de usarlo en decisiones de negocio**, lee [Limitaciones conocidas de la API](#️-limitaciones-conocidas-de-la-api). La documentación oficial de ChileCompra difiere del comportamiento real en puntos importantes — este servidor implementa lo que la API **hace**, no lo que promete.
@@ -199,8 +203,15 @@ MONITOR_INTERVAL_MINUTES=15
 MONITOR_MIN_BUDGET_CLP=0
 # Palabras clave en el nombre, separadas por coma (también MONITOR_EXCLUIR y MONITOR_REGIONES)
 MONITOR_KEYWORDS=software, desarrollo, licencias, plataforma, sistema, soporte, cloud
+# Solo compras nuevas: publicadas en 24 h o en segundo llamado (por defecto true)
+# MONITOR_SOLO_NUEVAS=true
+# Además de lo del rubro, toda compra nueva de MONITOR_REGIONES (alerta total)
+# MONITOR_TODAS_EN_REGION=true
 # Avisos: telegram, webhook, correo (cada uno con sus variables; ver .env.example)
 # COMPRA_AGIL_AVISOS=telegram
+# Correo: tu dirección y una contraseña de aplicación bastan (Gmail, Yahoo, iCloud…)
+# COMPRA_AGIL_CORREO=tu.nombre@gmail.com
+# COMPRA_AGIL_CORREO_CLAVE=
 ```
 
 ### 🔐 Manejo seguro del ticket
@@ -238,9 +249,13 @@ node dist/index.js --check          # ¿quedó bien instalado? (código 0 = sí)
 node dist/index.js --probar-avisos  # un mensaje de prueba por cada canal
 node dist/index.js --vigilar        # la vigilancia (también: npm run monitor)
 ```
-Para dejarla encendida sola: `scripts\instalar-tarea-windows.ps1` (Windows) o `scripts/compra-agil-vigilancia.service` (Linux, systemd). Con un gateway siempre encendido (OpenClaw, Hermes), el gateway llama `obtener_alertas_nuevas` y `confirmar_alertas` y avisa por su canal. Todo, paso a paso, en la [guía de vigilancia y avisos](docs/api/guia-vigilancia-y-avisos.md).
+Desde un chat también se enciende con `activar_vigilancia`. Hay dos modos:
+- **«con Claude»:** vigila mientras Claude esté abierto y no instala nada.
+- **«siempre»:** instala una tarea de Windows. Necesita Node.js instalado, y no está disponible en la extensión del Claude Desktop de la Microsoft Store.
 
-**Instalación por un agente:** el agente clona, corre `npm install` y `npm run build`, y pide al dueño que escriba en el `.env` el ticket y los tokens de los canales (el agente no los lee ni los escribe). Después corre `node dist/index.js --check`: el código de salida 0 confirma que quedó listo.
+Para dejarla encendida sola desde la terminal: `scripts\instalar-tarea-windows.ps1` (Windows) o `scripts/compra-agil-vigilancia.service` (Linux, systemd). Con un gateway siempre encendido (OpenClaw, Hermes), el gateway llama `obtener_alertas_nuevas` y `confirmar_alertas` y avisa por su canal. Todo, paso a paso, en la [guía de vigilancia y avisos](docs/api/guia-vigilancia-y-avisos.md).
+
+**Instalación por un agente:** el agente clona, corre `npm install` y `npm run build`, y abre `node dist/index.js --configurar-web`: un formulario solo en el computador del dueño, donde él escribe el ticket, el token del bot y, si quiere, su correo y su contraseña de aplicación. El agente no lee ni escribe esos datos. Después corre `node dist/index.js --check`: el código de salida 0 confirma que quedó listo.
 
 ### Testing con MCP Inspector
 Para probar las herramientas, recursos y prompts en una interfaz gráfica local:

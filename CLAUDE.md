@@ -12,7 +12,7 @@ herramientas de ingeniería, no hacen falta para usarlo.
 
 El estado del proyecto, lo hecho y lo pendiente está en
 [`docs/internals/qa/README.md`](docs/internals/qa/README.md). Léelo antes de
-proponer cambios: la 2.8.0 está publicada en npm (7-oct); lo que queda está en «Definición de cerrada» de [`docs/internals/qa/roadmap.md`](docs/internals/qa/roadmap.md). La 2.9.0 (vigilancia y avisos) se trabaja guiada por su especificación, [`docs/internals/specs/2.9.0-vigilancia-y-avisos/`](docs/internals/specs/2.9.0-vigilancia-y-avisos/README.md): no se codifica una fase sin su puerta anterior cerrada, y la fase 0 no lleva código. Las decisiones de arquitectura y su porqué están en [`docs/internals/adr/`](docs/internals/adr/README.md).
+proponer cambios: la 2.9.0 (vigilancia y avisos) está publicada en npm desde el 9-oct, con la extensión `.mcpb` en la release. Su especificación, [`docs/internals/specs/2.9.0-vigilancia-y-avisos/`](docs/internals/specs/2.9.0-vigilancia-y-avisos/README.md), anota lo que queda como seguimiento. Una versión nueva se trabaja igual: especificación primero, y no se codifica una fase sin su puerta anterior cerrada. Las decisiones de arquitectura y su porqué están en [`docs/internals/adr/`](docs/internals/adr/README.md).
 
 ## Comandos
 

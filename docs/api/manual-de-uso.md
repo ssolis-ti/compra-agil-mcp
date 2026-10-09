@@ -8,8 +8,19 @@ programar.
 
 Cada 15 minutos revisa las compras ágiles nuevas de Mercado Público. Cuando
 aparece una que calza con lo que vendes (por ejemplo «resmas» en la Región
-Metropolitana, desde $200.000), te llega un mensaje a Telegram con el nombre,
-quién compra, el presupuesto, cuándo cierra y el enlace para cotizar.
+Metropolitana, desde $200.000), te llega un mensaje a Telegram, a tu correo o
+a los dos.
+
+Cada compra va numerada, con el código, quién compra, la región, el
+presupuesto, cuándo se publicó, cuándo cierra (con el día y cuántas horas
+faltan) y el enlace para cotizar. Van ordenadas de la que cierra antes a la
+que cierra después.
+
+Solo te avisa de **compras nuevas**: las publicadas en las últimas 24 horas y
+las que se vuelven a abrir en **segundo llamado** (marcadas con 🔁). No te
+avisa de compras antiguas que solo cambiaron. Si quieres, además de lo de tu
+rubro te avisa de **todas** las compras nuevas de tu región, en una lista
+breve al final del mismo mensaje.
 
 También te cuenta cuando algo anda mal: si Mercado Público no responde por
 más de 2 horas te avisa que no está viendo, y cada mañana te manda un
