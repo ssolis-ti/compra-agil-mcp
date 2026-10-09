@@ -148,7 +148,7 @@ reinicios y fallos, con contenido limpio.
 | T4.1 ✅ | Configuración: leer y validar token y chat id, registrar el token como secreto | `config-avisos.test.ts`: faltante → error claro; el token no aparece en el error | `avisos/config.ts` |
 | T4.2 ✅ | Canal: `sendMessage`, ritmo de 1 por segundo, `retry_after`, clasificación | `canal-telegram.test.ts` contra una Bot API simulada (200, 429 con `retry_after`, 403, 400 de entidades) | `avisos/canales/telegram.ts`, `scripts/qa/mock-telegram.mjs` |
 | T4.3 ✅ | `--telegram-chat-id`: `getUpdates` y mostrar el último chat | `cli-telegram.test.ts` contra la simulación | `cli/avisos.ts` |
-| T4.4 ⏳ dueño | Prueba manual con un bot real del dueño | Captura del mensaje recibido, sin token visible | Nota en `docs/internals/qa/` |
+| T4.4 ✅ 8-oct | Prueba manual con un bot real del dueño (más de 200 avisos reales de Aysén entregados, 0 fallidos; vinculación con código desde la extensión) | Captura del mensaje recibido, sin token visible | Nota en `docs/internals/qa/` |
 
 **Sale:** el daemon avisa por Telegram.
 
@@ -337,6 +337,20 @@ reinicios y fallos, con contenido limpio.
 2. T10.1 sin pérdidas.
 3. T10.3 con 0 faltantes atribuibles al servidor. Los faltantes por caída de la API deben haberse informado como ceguera o hueco.
 4. Ningún secreto en ningún texto (T1.3 en verde).
+
+**Prueba real con el dueño (8-oct).** La prueba se hizo por los dos caminos de instalación, el del repositorio y la extensión `.mcpb`. Encontró ocho fallos que los tests no cubrían. Cada uno se corrigió con un test que falla sin la corrección:
+
+| Fallo | Corrección |
+| :--- | :--- |
+| La vigilancia encendida desde el chat heredaba los 45 s de la herramienta | `498c1c7` |
+| Se avisaban procesos de días atrás que solo cambiaron | `91dcd3f`, «solo nuevas» |
+| La extensión no arrancaba con el Node de Claude: un módulo nativo de `pdf-parse` | `8aa511a` |
+| Apagar en un proceso no detenía el bucle de otro | `f94f8e0` |
+| El modo «siempre» es imposible en Claude de la Microsoft Store | `0b4a49f` |
+| Criterios cambiados a mitad de ronda: 169 avisos de 16 regiones | `91af127` |
+| CI en Windows: CRLF y tiempo de PowerShell | `20fcfa8` |
+
+Además se sumaron dos pedidos del dueño: la alerta total de la región y el formato con etiquetas.
 
 **Avance (7-oct):**
 - **T10.1:** [resultado-vigilancia-24h.md](../../qa/resultado-vigilancia-24h.md). Con 2.739 procesos y un día malo, 0 procesos sin alerta, 0 repetidas y 0 avisos perdidos; la latencia con la API sana fue de 12 min como máximo. Encontró que el aviso de canal caído se repetía cada ronda cuando no había otro canal; se corrigió.
