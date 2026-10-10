@@ -194,11 +194,16 @@ describe('servidor en proceso — herramientas locales', () => {
     // La primera consulta extrae los 7 PDF: más lento con la cobertura instrumentada.
   }, 60_000);
 
-  it('enlace y lectura de un adjunto numérico, sin descargas condenadas', async () => {
-    expect((await llamar('obtener_enlace_documento', { id_documento: '1855508', codigo_compra: '1-1-COT26' })).t).toMatch(/ficha\?code=1-1-COT26/);
-    const { r, t } = await llamar('descargar_y_leer_documento', { id_documento: '1855508', codigo_compra: '1-1-COT26' });
-    expect(r.isError).toBeFalsy();
-    expect(t).toMatch(/ficha/);
+  it('adjuntos con la lectura apagada: la ficha, sin salir a la red (los casos con red, en adjuntos.test.ts)', async () => {
+    vi.stubEnv('COMPRA_AGIL_ADJUNTOS', 'off');
+    try {
+      expect((await llamar('obtener_enlace_documento', { id_documento: '1855508', codigo_compra: '1-1-COT26' })).t).toMatch(/ficha\?code=1-1-COT26/);
+      const { r, t } = await llamar('descargar_y_leer_documento', { id_documento: '1855508', codigo_compra: '1-1-COT26' });
+      expect(r.isError).toBeFalsy();
+      expect(t).toMatch(/ficha/);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 

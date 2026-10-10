@@ -8,6 +8,13 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [2.9.2] - 2026-10-10
+
+### Corregido
+* **Los adjuntos de Compra Ágil se pueden leer** (BUG-002). `descargar_y_leer_documento` afirmaba que era imposible y ahora lee las bases y los términos de referencia de una compra. Basta el código de la compra; `nombre_adjunto` elige entre varios archivos, y la respuesta nombra los demás. `obtener_enlace_documento` entrega la ficha y la lista de adjuntos.
+  * **Errores claros:** si algo falla, dice qué falló (proceso no encontrado, archivo vacío, rechazo del portal, tiempo agotado) y entrega la ficha.
+  * **Interruptor:** `COMPRA_AGIL_ADJUNTOS=off` apaga la lectura de adjuntos.
+
 ## [2.9.1] - 2026-10-10
 
 ### Corregido

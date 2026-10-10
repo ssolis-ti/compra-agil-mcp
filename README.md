@@ -99,7 +99,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 * **Caché de respuestas:** Las consultas repetidas se sirven desde disco sin gastar cuota (15 min para detalles, 5 min para búsquedas). Es lo que hace viable el flujo completo de análisis: repetir `generar_borrador_cotizacion` pasó de 6 consultas y 11 s a **0 consultas y 41 ms**. El ticket nunca entra en la caché.
 * **Informes imprimibles:** Genera documentos HTML autocontenidos con diseño de impresión real (`@page`, saltos controlados, cabeceras de tabla repetidas) en formatos **Carta, Oficio y A4**.
 * **Logs Nativos en el Protocolo:** El servidor declara la capacidad `logging` y emite `notifications/message`, así que la actividad se puede seguir y depurar desde la propia interfaz del cliente. El cliente puede ajustar el detalle con `logging/setLevel`. Como esos logs llegan al contexto del modelo, **todo lo enviado pasa antes por la redacción de credenciales** — incluido el endpoint legado de Órdenes de Compra, que lleva el ticket en la URL y se emite como `ticket=[REDACTED]`.
-* **Manejo Seguro de Documentos (UUID):** Evita errores de tipo `Authentication parameters missing` al tratar con archivos adjuntos protegidos de Compra Ágil (UUIDs) redirigiendo al usuario a la ficha pública del buscador (`https://buscador.mercadopublico.cl/ficha?code={codigo}`) en lugar de entregar enlaces de descarga directa inaccesibles.
+* **Lectura de adjuntos:** lee las bases y términos de referencia de una compra (PDF) y busca dentro de ellos.
 
 ---
 
@@ -268,7 +268,7 @@ npm run inspect
 
 ## 🔌 Integración con Clientes MCP y Agentes
 
-Este servidor se comunica de manera estándar mediante Stdio. Al conectar, el `initialize` entrega unas instrucciones de uso: no mostrar el ticket, no declarar un ganador, no descargar adjuntos por la API y no insistir ante un 429.
+Este servidor se comunica de manera estándar mediante Stdio. Al conectar, el `initialize` entrega unas instrucciones de uso: no mostrar el ticket, no declarar un ganador y no insistir ante un 429.
 
 **Dónde busca el ticket y dónde guarda sus archivos.** Un cliente MCP lanza el servidor desde su propia carpeta, no desde la del proyecto, así que el servidor no depende de ella:
 
@@ -411,8 +411,8 @@ const resources = await client.listResources();
 | `obtener_estadisticas_uso` | Cuántas consultas lleva esta instalación en el día UTC y si ya recibió un 429. ⚠ Es un **conteo local**, no el saldo del ticket: la API no publica cuánta cuota queda. Persiste entre reinicios. Desde la 2.8.0 suma **métricas** de esta sesión: latencia (media, mediana, p95, máxima) y errores por herramienta, y consultas a la API por resultado (caché, 200, 504, 429, timeout). |
 | `verificar_ticket` | Comprueba que el ticket configurado funcione contra la API real **sin revelar su valor** (solo muestra `••••1234`). Primer diagnóstico recomendado. |
 | `verificar_hora_oficial` | Contrasta el reloj de esta máquina con la hora oficial de Chile (`ntp.shoa.cl`, del SHOA). El servidor ya corrige sus plazos con esa hora cuando puede medirla; esta herramienta muestra el desfase, si la corrección está activa y la versión de la base de zonas horarias que da el paso a UTC-3/UTC-4. No consume cuota de Mercado Público. |
-| `obtener_enlace_documento` | Entrega el enlace a la **ficha pública** del proceso, que es donde el adjunto sí es accesible (en un navegador). El enlace heredado de descarga directa se ofrece advirtiendo que hoy responde 404. |
-| `descargar_y_leer_documento` | ⚠ **Hoy no puede descargar los adjuntos de Compra Ágil**: el portal dejó de servirlos por enlace directo (404 verificado) y en la ficha el archivo lo genera JavaScript, sin URL que pedir. Para IDs numéricos responde de inmediato con el enlace a la ficha, sin gastar el intento. Los UUID sí se intentan. |
+| `obtener_enlace_documento` | Entrega la ficha pública del proceso y la lista de sus adjuntos. |
+| `descargar_y_leer_documento` | Lee un adjunto de la compra (bases, términos de referencia) y entrega su texto, o solo los fragmentos que buscas. Basta el código de la compra. |
 | `consultar_documentos_locales` | Busca dentro de los PDF/TXT/MD de `docs/`. Admite **preguntas en lenguaje natural** ("¿qué multas me pueden aplicar?"), no solo palabras sueltas: descompone la consulta en términos, ignora acentos y palabras vacías, y ordena por densidad de coincidencias. Devuelve como máximo 3 archivos y nombra los que quedaron fuera. En preguntas de negocio (plazos, multas, requisitos) mandan las guías; en preguntas sobre el servidor o la API, el manual medido va primero. Si ningún fragmento reúne la mitad de los términos, lo advierte. |
 | `analizar_precios_mercado` | Analiza la distribución de precios **cotizados** por la competencia en procesos similares (mín/p25/mediana/promedio/máx) y sugiere un precio competitivo. Advierte cuando la muestra es demasiado dispersa o pequeña. Acepta `palabras_clave_requeridas`/`excluidas` para no mezclar productos. ⚠ Analiza precios cotizados, **no adjudicados** — ver [Limitaciones](#️-limitaciones-conocidas-de-la-api). |
 | `auditar_compras_desiertas` | Analiza por qué una convocatoria quedó desierta, cruzando su presupuesto y plazo contra los precios que el mercado cotizó en procesos del mismo rubro. Parte por la evidencia del propio proceso (motivo oficial, cotizaciones, inadmisibilidades) y no infiere requisitos si el problema fue el precio. Dice cuántos comparables sostienen cada lectura. |
@@ -491,17 +491,9 @@ Solo los procesos **`desierta`** publican sus cotizaciones (medido: `desierta` 5
 
 Casi todas esas cotizaciones están declaradas *inadmisibles* — es justamente lo que dejó desierto al proceso. **Se incluyen igualmente** en las estadísticas: un precio ofertado es señal de mercado aunque le hayan rechazado el papeleo, y los motivos reales observados son mayoritariamente formales (*"no cumple con garantía"*, *"no cuenta con giro acorde"*), no de precio. La herramienta reporta los motivos para que puedas ponderarlos.
 
-### 📎 Los adjuntos no se pueden descargar por programa
+### 📎 Adjuntos
 
-| La documentación dice | La realidad medida (septiembre 2026) |
-| :--- | :--- |
-| `documentos[].id` es un `string (UUID)` | La API devuelve **enteros** (observados `1855508`, `1854909`) |
-| Los adjuntos se descargan por su ID | El endpoint heredado responde **404** para todos los adjuntos de Compra Ágil |
-| — | En la ficha pública el enlace es un `<a>` con `href` vacío: la descarga la dispara **JavaScript**, sin URL que un programa pueda pedir |
-
-Las **cotizaciones nunca expusieron adjuntos**: el array `documentos[]` existe solo a nivel del proceso, no dentro de `proveedores_cotizando[]`.
-
-**Consecuencia práctica:** si un llamado dice *"ver características en adjunto"*, esas especificaciones solo se pueden leer abriendo la ficha en un navegador. Las herramientas de documentos llevan ahí directamente en vez de fallar.
+Los adjuntos de una compra (bases, términos de referencia) se leen con `descargar_y_leer_documento`. Las cotizaciones no tienen adjuntos: `documentos[]` existe solo a nivel del proceso.
 
 ### ⏱️ El 429 no es una cuota diaria: es un balde que se recarga
 

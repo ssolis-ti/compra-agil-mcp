@@ -349,13 +349,13 @@ export async function construirBorradorCotizacion(
   //   solo producto («Toallas de papel» × 100) y el pedido real —jabón,
   //   lavaloza, desinfectante, papel higiénico— estaba en la descripción y en
   //   un adjunto .docx. El borrador cotizaba solo lo que la API lista, sin
-  //   avisarlo. Los adjuntos no se pueden leer por la API (ver README).
+  //   avisarlo. Los adjuntos se leen con descargar_y_leer_documento.
   const adjuntos = targetDetail.documentos ?? [];
   if (adjuntos.length > 0) {
     const nombres = adjuntos.slice(0, 3).map((d) => `«${d.nombre}»`).join(', ') + (adjuntos.length > 3 ? '…' : '');
     advertencias.push(
       `El proceso tiene ${adjuntos.length} adjunto(s) (${nombres}). Este borrador cotiza solo los ${productosCotizados.length} producto(s) que lista la API; ` +
-      `las especificaciones, y a veces productos adicionales, suelen estar en los adjuntos. Revísalos en la ficha antes de enviar: https://buscador.mercadopublico.cl/ficha?code=${encodeURIComponent(targetDetail.codigo)}`,
+      `las especificaciones, y a veces productos adicionales, suelen estar en los adjuntos. Léelos con descargar_y_leer_documento antes de enviar, o en la ficha: https://buscador.mercadopublico.cl/ficha?code=${encodeURIComponent(targetDetail.codigo)}`,
     );
   }
 

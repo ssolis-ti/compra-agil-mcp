@@ -103,82 +103,11 @@ describe('verificar_orden_compra con una OC en el detalle (camino que la API rea
   });
 });
 
-describe('descargar_y_leer_documento con un id UUID', () => {
-  const UUID = '0f8fad5b-d9cb-469f-a165-70867728950e';
-
-  it('un 404 del portal orienta a la ficha, sin tratarlo como fallo inesperado', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('no', { status: 404 }));
-    const { t } = await llamar('descargar_y_leer_documento', { id_documento: UUID, codigo_compra: '1-1-COT26' });
-    expect(t).toMatch(/HTTP 404/);
-    expect(t).toMatch(/ficha\?code=1-1-COT26/);
-    fetchSpy.mockRestore();
-  });
-
-  it('un 403 se explica como bloqueo, con el camino alternativo', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('no', { status: 403 }));
-    const { t } = await llamar('descargar_y_leer_documento', { id_documento: UUID });
-    expect(t).toMatch(/HTTP 403/);
-    expect(t).toMatch(/buscador\.mercadopublico\.cl/);
-    fetchSpy.mockRestore();
-  });
-
-  it('un PDF real se descarga y se lee', async () => {
-    const pdf = fs.readFileSync(path.join(RAIZ, 'docs', 'guias', 'multas-sanciones-procedimientos.pdf'));
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(pdf, { status: 200, headers: { 'content-type': 'application/pdf', 'content-length': String(pdf.length) } }),
-    );
-    const { r, t } = await llamar('descargar_y_leer_documento', { id_documento: UUID, max_caracteres: 600 });
-    expect(r.isError, t).toBeFalsy();
-    expect(t.toLowerCase()).toMatch(/multa/);
-    fetchSpy.mockRestore();
-  }, 60_000);
-
-  it('busca dentro del adjunto descargado, y dice cuando no hay coincidencias', async () => {
-    const pdf = fs.readFileSync(path.join(RAIZ, 'docs', 'guias', 'multas-sanciones-procedimientos.pdf'));
-    const respuesta = () => new Response(pdf, { status: 200, headers: { 'content-type': 'application/pdf' } });
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(respuesta()).mockResolvedValueOnce(respuesta());
-    expect((await llamar('descargar_y_leer_documento', { id_documento: UUID, query: 'multa' })).t.toLowerCase()).toMatch(/multa/);
-    const sin = await llamar('descargar_y_leer_documento', { id_documento: UUID, query: 'zzzpalabrainexistente' });
-    expect(sin.t).toMatch(/zzzpalabrainexistente/);
-    fetchSpy.mockRestore();
-  }, 60_000);
-
-  it('un PDF corrupto se informa como error de lectura', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('esto no es un pdf', { status: 200 }));
-    const { r } = await llamar('descargar_y_leer_documento', { id_documento: UUID });
-    expect(r.isError).toBe(true);
-    fetchSpy.mockRestore();
-  }, 30_000);
-
-  it('si el portal no responde a tiempo, cancela y orienta a la ficha', async () => {
-    const corte = Object.assign(new Error('timeout'), { name: 'TimeoutError' });
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(corte);
-    const { r, t } = await llamar('descargar_y_leer_documento', { id_documento: UUID, codigo_compra: '1-1-COT26' });
-    expect(r.isError).toBe(true);
-    expect(t).toMatch(/se canceló/);
-    expect(t).toMatch(/ficha\?code=1-1-COT26/);
-    fetchSpy.mockRestore();
-  });
-
-  it('obtener_enlace_documento con un UUID entrega el enlace de adjuntos', async () => {
-    const { r, t } = await llamar('obtener_enlace_documento', { id_documento: UUID, codigo_compra: '1-1-COT26' });
-    expect(r.isError).toBeFalsy();
-    expect(t).toContain(UUID);
-  });
-
+// Los adjuntos de Compra Ágil se prueban en test/adjuntos.test.ts (2.9.2).
+describe('documentos locales', () => {
   it('una consulta sin coincidencias en los documentos locales dice qué términos buscó', async () => {
     const { t } = await llamar('consultar_documentos_locales', { query: 'zzzpalabrainexistente qqqotra' });
     expect(t).toMatch(/No se encontraron coincidencias/);
     expect(t).toMatch(/zzzpalabrainexistente/);
   }, 60_000);
-
-  it('un adjunto demasiado grande no se procesa', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('x', { status: 200, headers: { 'content-length': String(500 * 1024 * 1024) } }),
-    );
-    const { r, t } = await llamar('descargar_y_leer_documento', { id_documento: UUID });
-    expect(r.isError).toBe(true);
-    expect(t).toMatch(/MB/);
-    fetchSpy.mockRestore();
-  });
 });

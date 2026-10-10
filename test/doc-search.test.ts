@@ -275,10 +275,10 @@ describe('multas, guía prometida, recorte y catálogo', () => {
     expect(grupos[0].archivos).toHaveLength(2);
   });
 
-  it('el enlace de adjunto no invita a abrir la descarga heredada', () => {
+  it('el enlace de adjunto lleva a la ficha, sin afirmar que la descarga es imposible (2.9.2)', () => {
     const texto = textoEnlaceAdjunto('123', '1-2-COT26');
     expect(texto).toContain('ficha?code=1-2-COT26');
-    expect(texto).toContain('404');
+    expect(texto).not.toMatch(/404|No la abras/);
     expect(texto).not.toContain('probablemente');
     expect(texto).not.toContain('RetornaDocumento');
   });
