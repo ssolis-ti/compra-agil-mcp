@@ -86,11 +86,12 @@ describe('resumen diario (R8.3)', () => {
     expect(eventos(e, antes).filter((x) => x === 'resumen')).toEqual([]);
     const ocho = Date.parse('2026-10-08T11:05:00Z'); // 08:05 de Chile
     const resumen = notificacionesPendientes(e, ocho, cfg).find((n) => n.evento === 'resumen')!;
-    expect(resumen.lineas.join('\n')).toMatch(/50 procesos revisados/);
-    expect(resumen.lineas.join('\n')).toMatch(/2 alertas/);
-    expect(resumen.lineas.join('\n')).toMatch(/1 lote.* fall/);
-    expect(resumen.lineas.join('\n')).toMatch(/16 consultas/);
-    expect(resumen.lineas.join('\n')).toMatch(/telegram: 2 entregados/);
+    // En palabras del dueño (2.9.1): sin lotes, consultas ni jerga.
+    expect(resumen.titulo).toBe('Resumen del día');
+    expect(resumen.lineas.join('\n')).toMatch(/Revisó 50 compras y te avisó de 2\./);
+    expect(resumen.lineas.join('\n')).not.toMatch(/lote|consulta|API/);
+    expect(resumen.lineas.join('\n')).not.toMatch(/no llegaron/); // todo se entregó
+    expect(resumen.lineas.join('\n')).toMatch(/la vigilancia está apagada/);
     marcarNotificadas(e, [resumen.clave], ocho);
     expect(eventos(e, Date.parse('2026-10-08T20:00:00Z')).filter((x) => x === 'resumen')).toEqual([]);
     expect(e.salud.acumulado.revisados).toBe(0);

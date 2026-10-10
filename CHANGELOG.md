@@ -6,8 +6,23 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+---
+
+## [2.9.1] - 2026-10-10
+
 ### Corregido
+* **Telegram en grupos y canales** (un usuario no pudo conectar el bot a un canal):
+  * **Canales:** ahora se detectan. Lo que se publica en un canal le llega al bot como `channel_post`, y antes solo se leían los mensajes directos.
+  * **Grupos:** con el modo privacidad, que viene activado, el bot no lee un «hola» en un grupo. Ahora basta con agregarlo al grupo, o escribir `/start@NombreDelBot`.
+  * **Bot expulsado:** si lo sacan de un grupo, ese grupo deja de elegirse.
+  * **Grupo convertido en supergrupo:** el envío se reintenta en el id nuevo, y el chat conectado con `conectar_telegram` lo guarda solo.
+  * **Grupos con temas:** el aviso llega al tema desde donde se conectó (`COMPRA_AGIL_TELEGRAM_THREAD_ID` si se fija en el `.env`).
+  * **Errores comunes, explicados:** sin permiso para publicar, bot expulsado, chat inexistente, webhook ajeno, entre otros.
+  * **Instrucciones por caso:** el asistente, `--configurar` y el manual dicen qué hacer para un chat personal, un grupo o un canal.
 * **El servidor arranca sin ticket** (9-oct). Glama y otros catálogos de MCP lo lanzan sin credenciales para listar sus herramientas, y terminaba con código 1 al arrancar. Ahora arranca y lista las 23 herramientas, y cada consulta a la API responde «Falta el ticket», con cómo pedirlo y dónde ponerlo, sin salir a la red. La vigilancia no se retoma sin ticket.
+
+### Cambiado
+* **Textos más simples:** los avisos del sistema que llegan por Telegram y correo, el encabezado de la vigilancia en la terminal, el README y las guías ahora hablan en palabras del usuario. Ya no aparecen «lotes», «API» ni nombres de variables donde no hacen falta. Ejemplos: «Resumen del día: revisó 50 compras y te avisó de 2», o «La vigilancia no puede revisar las compras».
 
 ---
 

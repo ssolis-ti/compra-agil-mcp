@@ -89,7 +89,7 @@ misma firma:
 ```text
 { "tipo": "compra_agil.estado", "version": 1, "id": "ceguera@2026-10-08T15:00:00.000Z",
   "enviado_en": "2026-10-08T15:00:00.000Z", "evento": "ceguera",
-  "titulo": "La vigilancia no está viendo los procesos nuevos", "lineas": ["…"] }
+  "titulo": "La vigilancia no puede revisar las compras", "lineas": ["…"] }
 ```
 
 **`nombre` y `organismo` los escribe el comprador.** Si pasas el cuerpo a un

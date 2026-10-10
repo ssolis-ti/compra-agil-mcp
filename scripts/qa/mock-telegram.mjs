@@ -36,6 +36,7 @@ export async function iniciarMockTelegram({ puerto = 0, token = '123456789:AApru
         return responder(res, p.status, {
           ok: false, error_code: p.status, description: p.description ?? `Error ${p.status}`,
           ...(p.retry_after ? { parameters: { retry_after: p.retry_after } } : {}),
+          ...(p.migrate_to_chat_id ? { parameters: { migrate_to_chat_id: p.migrate_to_chat_id } } : {}),
         });
       }
       recibidos.push({ ...mensaje, recibido: Date.now() });
@@ -51,6 +52,8 @@ export async function iniciarMockTelegram({ puerto = 0, token = '123456789:AApru
     programar: (lista) => { programadas.push(...lista); },
     /** Simula que alguien le escribió al bot desde un chat. */
     mensajeAlBot: (chat) => { actualizaciones.push({ update_id: actualizaciones.length + 1, message: { message_id: 1, chat, text: 'hola' } }); },
+    /** Cualquier actualización de la Bot API (channel_post, my_chat_member…), tal cual. */
+    actualizacion: (u) => { actualizaciones.push({ update_id: actualizaciones.length + 1, ...u }); },
     cerrar: () => new Promise((r) => servidor.close(r)),
   };
 }

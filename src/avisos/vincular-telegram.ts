@@ -13,7 +13,7 @@
  */
 
 import { randomBytes, randomInt, scryptSync, timingSafeEqual } from 'crypto';
-import { ultimoChat, CanalTelegram } from './canales/telegram.js';
+import { ultimoChat, CanalTelegram, COMO_CONECTAR_TELEGRAM } from './canales/telegram.js';
 import { actualizarPreferencias, leerPreferencias } from './preferencias.js';
 
 const VIGENCIA_MS = 10 * 60_000;
@@ -37,17 +37,17 @@ export async function iniciarVinculo(o: { token?: string; rutaPreferencias: stri
   if (!o.token) return { estado: 'sin_token', detalle: 'Falta el token del bot.' };
   const r = await ultimoChat(o.token, { apiBase: o.apiBase });
   if ('error' in r) return { estado: 'error', detalle: r.error };
-  if (!r.chat) return { estado: 'sin_mensajes', detalle: 'El bot no ha recibido mensajes todavía.' };
+  if (!r.chat) return { estado: 'sin_mensajes', detalle: `El bot todavía no ve ningún chat. ${COMO_CONECTAR_TELEGRAM}` };
   const codigo = String(randomInt(100_000, 1_000_000));
-  const canal = new CanalTelegram({ token: o.token, chatId: r.chat.id, apiBase: o.apiBase });
+  const canal = new CanalTelegram({ token: o.token, chatId: r.chat.id, hilo: r.chat.hilo, apiBase: o.apiBase });
   const envio = await canal.enviarTexto(
     `<b>Código para conectar los avisos de Compra Ágil: ${codigo}</b>\nEscríbelo en la conversación con tu asistente. Vence en 10 minutos.\nSi no lo pediste tú, ignora este mensaje.`,
   );
   if (!envio.ok) return { estado: 'error', detalle: envio.motivo };
-  const chatNombre = r.chat.nombre || r.chat.tipo;
+  const chatNombre = r.chat.nombre || ({ private: 'chat personal', group: 'grupo', supergroup: 'grupo', channel: 'canal' } as Record<string, string>)[r.chat.tipo] || r.chat.tipo;
   actualizarPreferencias(o.rutaPreferencias, (p) => {
     const sal = randomBytes(16).toString('hex');
-    p.verificacion = { hash: hash(codigo, sal), sal, chatId: r.chat!.id, chatNombre, expira: o.ahoraMs + VIGENCIA_MS, intentos: 0 };
+    p.verificacion = { hash: hash(codigo, sal), sal, chatId: r.chat!.id, chatNombre, ...(r.chat!.hilo ? { hilo: r.chat!.hilo } : {}), expira: o.ahoraMs + VIGENCIA_MS, intentos: 0 };
   });
   return { estado: 'codigo_enviado', chatNombre };
 }
@@ -68,12 +68,13 @@ export async function confirmarVinculo(o: { token?: string; codigo: string; ruta
     }
     p.telegramChatId = v.chatId;
     p.telegramChatNombre = v.chatNombre;
+    if (v.hilo) p.telegramHilo = v.hilo; else delete p.telegramHilo;
     delete p.verificacion;
     return { estado: 'conectado', chatNombre: v.chatNombre };
   });
   if (resultado.estado === 'conectado' && o.token) {
     const p = leerPreferencias(o.rutaPreferencias);
-    await new CanalTelegram({ token: o.token, chatId: p.telegramChatId!, apiBase: o.apiBase })
+    await new CanalTelegram({ token: o.token, chatId: p.telegramChatId!, hilo: p.telegramHilo, apiBase: o.apiBase })
       .enviarTexto('✅ <b>Listo:</b> desde ahora aquí te llegarán los avisos de Compra Ágil que calcen con lo que vendes.')
       .catch(() => undefined);
   }

@@ -102,13 +102,13 @@ export function notificacionesPendientes(e: EstadoVigilancia, ahoraMs: number, c
     const error = e.pendientes.at(-1)?.ultimoError;
     n.push({
       clave: 'ceguera', evento: 'ceguera',
-      titulo: 'La vigilancia no está viendo los procesos nuevos',
+      titulo: 'La vigilancia no puede revisar las compras',
       lineas: [
         s.ultimoCicloBueno
-          ? `No hay una revisión completa desde las ${horaChile(Date.parse(s.ultimoCicloBueno))} (hora de Chile).`
-          : `No ha habido ninguna revisión completa desde que arrancó, a las ${horaChile(Date.parse(s.inicio!))} (hora de Chile).`,
-        error ? `Último error: ${error}` : 'La API no responde o la ronda no termina.',
-        `Lotes pendientes: ${e.pendientes.length}. Se revisarán apenas la API responda; hasta entonces puede haber procesos sin avisar.`,
+          ? `Última revisión completa: ${horaChile(Date.parse(s.ultimoCicloBueno))}.`
+          : `No ha podido revisar desde que arrancó, a las ${horaChile(Date.parse(s.inicio!))}.`,
+        'Mercado Público no responde o no hay internet. Mientras tanto puede haber compras sin avisar; cuando vuelva, revisa lo atrasado.',
+        ...(error ? [`Detalle: ${error}`] : []),
       ],
     });
   }
@@ -119,12 +119,11 @@ export function notificacionesPendientes(e: EstadoVigilancia, ahoraMs: number, c
     const huecos = e.huecos.filter((h) => h.registrado >= desde);
     n.push({
       clave: 'recuperacion', evento: 'recuperacion',
-      titulo: 'La vigilancia volvió a la normalidad',
+      titulo: 'La vigilancia volvió a funcionar',
       lineas: [
-        `Desde las ${horaChile(Date.parse(s.ultimoCicloBueno))} (hora de Chile) se revisa con normalidad.`,
         huecos.length === 0
-          ? 'Se revisaron todos los lotes del período sin respuesta: no quedó nada sin mirar.'
-          : `Quedaron sin revisar (más de 48 h): ${huecos.map((h) => `${horaChile(Date.parse(h.desde))}–${horaChile(Date.parse(h.hasta))}`).join(', ')}.`,
+          ? `Desde las ${horaChile(Date.parse(s.ultimoCicloBueno))} revisa con normalidad, y ya revisó todo lo atrasado.`
+          : `Desde las ${horaChile(Date.parse(s.ultimoCicloBueno))} revisa con normalidad. No alcanzó a revisar: ${huecos.map((h) => `${horaChile(Date.parse(h.desde))}–${horaChile(Date.parse(h.hasta))}`).join(', ')}.`,
       ],
     });
   }
@@ -135,17 +134,16 @@ export function notificacionesPendientes(e: EstadoVigilancia, ahoraMs: number, c
   if (s.ultimoResumen === null) s.ultimoResumen = hoyChile; // primer arranque: no un resumen vacío
   if (s.ultimoResumen !== hoyChile && paredHoy.slice(11, 16) >= cfg.resumenHora) {
     const a = s.acumulado;
-    const porCanal = Object.keys({ ...a.entregados, ...a.fallidos })
-      .map((c) => `${c}: ${a.entregados[c] ?? 0} entregados, ${a.fallidos[c] ?? 0} fallidos`);
+    const porCanal = Object.keys(a.fallidos).filter((c) => (a.fallidos[c] ?? 0) > 0).map((c) => `${c} ${a.fallidos[c]}`);
+    const sinEntregar = Object.values(a.fallidos).reduce((x, y) => x + y, 0);
     n.push({
       clave: `resumen:${hoyChile}`, evento: 'resumen',
-      titulo: `Resumen de la vigilancia (desde el ${s.ultimoResumen})`,
+      titulo: 'Resumen del día',
       lineas: [
-        `${miles(a.revisados)} procesos revisados en ${miles(a.lotesLeidos)} lotes; ${miles(a.alertas)} alertas.`,
-        `${a.lotesFallidos} lote(s) fallaron y se reintentaron; ${a.incompletos} quedaron incompletos; ${a.huecos} hueco(s) de más de 48 h.`,
-        `${miles(a.consultas)} consultas a la API.`,
-        ...(porCanal.length > 0 ? [`Avisos — ${porCanal.join('; ')}.`] : []),
-        'Si mañana no llega este resumen, la vigilancia está detenida.',
+        `Revisó ${miles(a.revisados)} compras y te avisó de ${miles(a.alertas)}.`,
+        ...(sinEntregar > 0 ? [`${miles(sinEntregar)} aviso(s) no llegaron: ${porCanal.join('; ')}.`] : []),
+        ...(a.huecos > 0 ? [`Hubo ${a.huecos} período(s) de más de 48 h sin poder revisar.`] : []),
+        'Si mañana no llega este resumen, la vigilancia está apagada.',
       ],
     });
   }
@@ -155,10 +153,10 @@ export function notificacionesPendientes(e: EstadoVigilancia, ahoraMs: number, c
     if ((s.fallosPorCanal[canal] ?? 0) >= 3 && !s.canalesCaidosAvisados.includes(canal)) {
       n.push({
         clave: `canal_caido:${canal}`, evento: 'canal_caido', excluirCanal: canal,
-        titulo: `El canal ${canal} no está entregando avisos`,
+        titulo: `Los avisos por ${canal} no están llegando`,
         lineas: [
-          `Falló en ${s.fallosPorCanal[canal]} rondas seguidas. Los avisos quedan en espera y se reintentan.`,
-          'Revisa su configuración en el .env o corre `mcp-compra-agil --probar-avisos`.',
+          `Fallaron ${s.fallosPorCanal[canal]} veces seguidas. Quedan guardados y se reintentan.`,
+          'Pídele a tu asistente «prueba los avisos» para ver qué pasa.',
         ],
       });
     }
@@ -171,11 +169,11 @@ export function notificacionesPendientes(e: EstadoVigilancia, ahoraMs: number, c
   if (s.cuotaAvisada !== hoyUtc && (hubo429 || proyeccion > cfg.presupuestoConsultasDia)) {
     n.push({
       clave: `cuota:${hoyUtc}`, evento: 'cuota',
-      titulo: 'Atención con la cuota de la API',
+      titulo: 'Se está usando mucho el ticket',
       lineas: [
-        ...(hubo429 ? [`La API respondió 429 (cuota): las rondas se espacian ×${s.factorIntervalo} hasta que se normalice.`] : []),
-        `A este ritmo se gastarían ~${miles(proyeccion)} consultas hoy; el presupuesto es ${miles(cfg.presupuestoConsultasDia)}.`,
-        'Con la lectura por lotes, espaciar las rondas no ahorra consultas. Si el ticket se agota seguido, sube COMPRA_AGIL_VIGILANCIA_CONSULTAS_DIA solo si tu ticket lo permite.',
+        ...(hubo429 ? ['Mercado Público pidió bajar el ritmo: la vigilancia revisa más espaciado hasta que se normalice.'] : []),
+        `Hoy se usarían unas ${miles(proyeccion)} consultas (límite: ${miles(cfg.presupuestoConsultasDia)}).`,
+        'Si se repite, revisa con quien te instaló esto.',
       ],
     });
   }

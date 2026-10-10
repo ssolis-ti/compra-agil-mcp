@@ -22,10 +22,9 @@ avisa de compras antiguas que solo cambiaron. Si quieres, además de lo de tu
 rubro te avisa de **todas** las compras nuevas de tu región, en una lista
 breve al final del mismo mensaje.
 
-También te cuenta cuando algo anda mal: si Mercado Público no responde por
-más de 2 horas te avisa que no está viendo, y cada mañana te manda un
-resumen del día anterior. **Si una mañana no llega el resumen, la vigilancia
-está apagada.**
+También te avisa si algo anda mal: si Mercado Público no responde por más de
+2 horas. Y cada mañana te manda un resumen del día anterior. **Si una mañana
+no llega el resumen, la vigilancia está apagada.**
 
 ## Lo que necesitas antes
 
@@ -101,13 +100,28 @@ avisos](guia-vigilancia-y-avisos.md).
 
 1. **Revisa qué falta.**
 2. **Te pregunta qué vendes, dónde y desde qué monto.** Prueba las palabras contra compras reales («con "resma" hay 14 compras abiertas ahora; por ejemplo…») y guarda los criterios cuando le confirmas. Si le das tu región, te ofrece también la **alerta total de la región**: además de lo de tu rubro, toda compra ágil nueva de tu región, en una lista breve al final del mismo aviso.
-3. **Conecta tu Telegram.** Le escribes «hola» a tu bot, te llega un **código de 6 dígitos** por Telegram y se lo dictas a tu asistente. Así nadie más puede desviar tus avisos.
+3. **Conecta tu Telegram.** Le muestras al bot dónde quieres los avisos (ver abajo), te llega un **código de 6 dígitos** ahí y se lo dictas a tu asistente. Así nadie más puede desviar tus avisos.
 4. **Enciende la vigilancia.** Puede ser «mientras Claude esté abierto», sin instalar nada, o «siempre, aunque cierres Claude». Para la segunda te pide un sí explícito, porque instala una tarea en Windows. Con la extensión en el Claude Desktop de la Microsoft Store, «siempre» no está disponible: Windows aísla la extensión y una tarea programada no puede usarla. Para vigilar con Claude cerrado, usa el camino 2 o 3.
 5. **Te manda un mensaje de prueba** y te resume cómo quedó.
 
 Para cambiar algo después, pídeselo: «agrega "tóner" a lo que vigilo», «avísame
 solo desde $300.000», «avísame también todo lo de la Araucanía», «apaga la vigilancia». Cada cambio de criterios te llega
 también a Telegram, para que sepas si alguien los tocó.
+
+## Avisos en un grupo o canal de Telegram
+
+Los avisos pueden llegar a tu chat personal, a un grupo o a un canal. Antes de
+conectar, muéstrale al bot cuál:
+
+| Dónde | Qué hacer |
+| :--- | :--- |
+| **Chat personal** | Abre tu bot y escríbele «hola». |
+| **Grupo** | Agrega el bot al grupo. Si ya estaba, escribe en el grupo `/start@NombreDeTuBot`: con la configuración normal, el bot no lee los mensajes comunes de un grupo. |
+| **Grupo con temas** | Escribe `/start@NombreDeTuBot` dentro del tema donde quieres los avisos. |
+| **Canal** | Agrega el bot como **administrador** con permiso para «Publicar mensajes» y publica cualquier mensaje en el canal. |
+
+Después dile a tu asistente «conecta mi Telegram». El código llega a ese chat,
+grupo o canal. Si un grupo se convierte en supergrupo, el cambio se sigue solo.
 
 ## Recibir los avisos también por correo
 
@@ -130,15 +144,16 @@ Los avisos llegan a la misma dirección. Si quieres que lleguen a otras personas
 
 | Mensaje | Qué significa | Qué hacer |
 | :--- | :--- | :--- |
-| **N procesos nuevos calzan con tus criterios** | Hay compras abiertas de lo tuyo | Abre la ficha, revisa plazo y requisitos, y cotiza |
-| **🔁 Segundo llamado** (dentro de un aviso) | Una compra de días atrás se volvió a abrir porque el primer llamado no resultó | Es una oportunidad nueva: revísala igual que las demás |
-| **N de tu rubro y M compras más en tu región** | Con la alerta total de la región: arriba (🎯) lo de tu rubro, completo; abajo (📍) todo lo demás de tu región, una línea cada una | Lo de arriba, igual; lo de abajo, una mirada rápida por si algo te sirve |
-| **Procesos publicados durante el horario de silencio** | Lo que apareció de noche, junto | Igual que arriba |
-| **La vigilancia no está viendo los procesos nuevos** | Mercado Público no responde hace 2 h, o no hay internet | Nada: cuando vuelva, revisa lo que se perdió y te avisa |
-| **La vigilancia volvió a la normalidad** | Se recuperó y revisó lo pendiente | Nada |
-| **Resumen de la vigilancia** | El día anterior: cuánto se revisó y cuántas alertas hubo | Si un día **no** llega, revisa que el computador esté encendido |
-| **Cambiaron los criterios de alerta** | Alguien cambió lo que se vigila | Si no fuiste tú, vuelve a correr `--configurar` |
-| **Atención con la cuota de la API** | Se está usando mucho el ticket | Si se repite, avísale a quien te instaló esto |
+| **🆕 N compras nuevas que calzan con tus criterios** | Hay compras abiertas de lo tuyo | Abre la ficha, revisa plazo y requisitos, y cotiza |
+| **🔁 Segundo llamado** (dentro de un aviso) | Una compra de días atrás se volvió a abrir | Es una oportunidad nueva: revísala igual |
+| **🆕 N de tu rubro y M compras más en tu región** | Arriba (🎯) lo de tu rubro; abajo (📍) lo demás de tu región | Lo de abajo, una mirada rápida por si algo te sirve |
+| **🌙 Compras publicadas durante el horario de silencio** | Lo que apareció de noche, junto | Igual que arriba |
+| **⚠️ La vigilancia no puede revisar las compras** | Mercado Público no responde hace 2 h, o no hay internet | Nada: cuando vuelva, revisa lo atrasado |
+| **✅ La vigilancia volvió a funcionar** | Ya revisó lo atrasado | Nada |
+| **📋 Resumen del día** | Cuántas compras revisó y de cuántas te avisó | Si un día **no** llega, revisa que el computador esté encendido y Claude abierto |
+| **⚠️ Los avisos por … no están llegando** | Un canal falló varias veces seguidas | Pídele a tu asistente «prueba los avisos» |
+| **🔧 Cambiaron los criterios de alerta** | Alguien cambió lo que se vigila | Si no fuiste tú, pídele a tu asistente que los revise |
+| **⚠️ Se está usando mucho el ticket** | Muchas consultas a Mercado Público hoy | Si se repite, revísalo con quien te instaló esto |
 
 Un aviso **no** dice que la compra sea un buen negocio ni que la vayas a
 ganar: dice que calza con lo que vendes. El plazo y los requisitos se

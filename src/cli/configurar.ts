@@ -142,7 +142,10 @@ export async function comandoConfigurar(d: DependenciasConfigurar): Promise<numb
       if (!token) {
         c.escribir('   Sin token no hay Telegram; puedes configurarlo después corriendo --configurar otra vez.');
       } else {
-        c.escribir('   3) Ahora escríbele «hola» a tu bot desde el chat donde quieres los avisos (o agrégalo a un grupo y escribe ahí).');
+        c.escribir('   3) Muéstrale al bot dónde quieres los avisos:');
+        c.escribir('      · Chat personal: escríbele «hola».');
+        c.escribir('      · Grupo: agrégalo al grupo; si ya estaba, escribe ahí /start@NombreDeTuBot.');
+        c.escribir('      · Canal: hazlo administrador con permiso para «Publicar mensajes» y publica cualquier cosa.');
         let chatId: string | null = null;
         for (let intento = 0; intento < 3 && !chatId; intento++) {
           await c.preguntar('      Cuando lo hayas hecho, presiona Enter… ');

@@ -49,24 +49,19 @@ const configAvisos = configAvisosDelEquipo(process.env, rutaDeDatos('.preferenci
 const canales = crearCanales(configAvisos);
 const salud = configSaludDesdeEntorno(process.env, canales.map((c) => c.nombre), intervaloDesdeEntorno(process.env), configAvisos.resumen);
 
-console.log('========================================================');
-console.log('  VIGILANCIA DE COMPRA ÁGIL (lote por lote, sin huecos)');
-console.log('========================================================');
-console.log(`Ronda cada            : ${intervaloDesdeEntorno(process.env) / 60_000} min`);
-console.log(`Palabras clave        : ${criterios.palabras.join(', ') || '(cualquiera)'}`);
-console.log(`Excluidas             : ${criterios.excluidas.join(', ') || '(ninguna)'}`);
-console.log(`Regiones              : ${criterios.regiones.join(', ') || '(todas)'}`);
-console.log(`Presupuesto mínimo    : ${criterios.presupuestoMinimo > 0 ? `$${criterios.presupuestoMinimo.toLocaleString('es-CL')} CLP` : 'sin mínimo'}`);
-console.log(`Solo sin ofertas      : ${criterios.soloSinOfertas ? 'sí' : 'no'}`);
-console.log(`Solo compras nuevas   : ${criterios.soloNuevas ? 'sí (publicadas en 24 h o en segundo llamado)' : 'no (también las modificadas)'}`);
-console.log(`Todas en la región    : ${criterios.todasEnRegion ? (criterios.regiones.length > 0 ? 'sí' : 'sí, pero sin regiones no aplica') : 'no'}`);
-console.log(`Alertas en            : ${rutaDeDatos('alerts.log')}`);
-console.log(`Avisos por            : ${canales.map((c) => c.nombre).join(', ') || '(ningún canal: solo alerts.log)'}`);
-if (configAvisos.bandeja.silencio) console.log(`Silencio              : ${configAvisos.bandeja.silencio.desde}–${configAvisos.bandeja.silencio.hasta} (hora de Chile)`);
+console.log('==================================');
+console.log('  VIGILANCIA DE COMPRA ÁGIL');
+console.log('==================================');
+console.log(`Revisa cada      : ${intervaloDesdeEntorno(process.env) / 60_000} min`);
+console.log(`Palabras         : ${criterios.palabras.join(', ') || 'cualquiera'}`);
+if (criterios.excluidas.length > 0) console.log(`Excluidas        : ${criterios.excluidas.join(', ')}`);
+console.log(`Regiones         : ${criterios.regiones.join(', ') || 'todas'}${criterios.todasEnRegion && criterios.regiones.length > 0 ? ' (todas sus compras)' : ''}`);
+console.log(`Monto mínimo     : ${criterios.presupuestoMinimo > 0 ? `$${criterios.presupuestoMinimo.toLocaleString('es-CL')}` : 'sin mínimo'}`);
+console.log(`Avisos por       : ${canales.map((c) => c.nombre).join(', ') || 'ninguno (solo alerts.log)'}`);
+if (configAvisos.bandeja.silencio) console.log(`Silencio         : ${configAvisos.bandeja.silencio.desde}–${configAvisos.bandeja.silencio.hasta}`);
+console.log(`Resumen diario   : ${salud.resumenHora}`);
 for (const error of configAvisos.errores) console.warn(`[AVISO] ${error}`);
-console.log(`Aviso de ceguera tras   : ${salud.umbralCegueraMs / 60_000} min sin una revisión completa`);
-console.log(`Resumen diario         : ${salud.resumenHora} (hora de Chile)`);
-console.log('========================================================');
+console.log('==================================');
 
 iniciarRelojOficial();
 crearBucleVigilancia({

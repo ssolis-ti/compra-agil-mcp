@@ -18,8 +18,10 @@ export type ModoVigilancia = 'con_claude' | 'siempre' | 'apagada';
 export interface Preferencias {
   telegramChatId?: string;
   telegramChatNombre?: string;
+  /** Tema del supergrupo (message_thread_id), si se conectó desde un tema. */
+  telegramHilo?: string;
   /** Verificación de un chat en curso: el código va solo como hash. */
-  verificacion?: { hash: string; sal?: string; chatId: string; chatNombre: string; expira: number; intentos: number };
+  verificacion?: { hash: string; sal?: string; chatId: string; chatNombre: string; hilo?: string; expira: number; intentos: number };
   vigilancia?: ModoVigilancia;
 }
 
@@ -39,5 +41,11 @@ export function actualizarPreferencias<T>(ruta: string, fn: (p: Preferencias) =>
 
 /** La configuración de avisos del entorno, completada con el chat confirmado en el chat. */
 export function configAvisosDelEquipo(env: Record<string, string | undefined>, rutaPreferencias: string): ConfigAvisos {
-  return leerConfigAvisos(env, { telegramChatId: leerPreferencias(rutaPreferencias).telegramChatId });
+  const p = leerPreferencias(rutaPreferencias);
+  return leerConfigAvisos(env, {
+    telegramChatId: p.telegramChatId,
+    telegramHilo: p.telegramHilo,
+    // Si el grupo pasa a supergrupo, el id nuevo queda guardado para la próxima vez.
+    alMigrar: (nuevo) => actualizarPreferencias(rutaPreferencias, (q) => { q.telegramChatId = nuevo; }),
+  });
 }

@@ -20,7 +20,7 @@ ${pasosDeCriterios()}
 - Si "conectar_telegram" dice que falta el token: explícame cómo crear el bot (Telegram → @BotFather → /newbot → elijo un nombre → me da un token). Dime dónde pegarlo, **sin pedírmelo en el chat**:
   - Si uso la extensión de Claude Desktop: Configuración → Extensiones → Compra Ágil → «Token del bot de Telegram», y luego reiniciar Claude.
   - Si instalé desde el repositorio: en la terminal, node dist/index.js --configurar.
-- Con el token puesto: pídeme que le escriba «hola» al bot, llama "conectar_telegram" sin código y luego pídeme el código de 6 dígitos que me llegó por Telegram. Llama de nuevo con ese código. Nunca inventes el código.
+- Con el token puesto: pregúntame dónde quiero los avisos. Chat personal: que le escriba «hola» al bot. Grupo: que agregue el bot al grupo (si ya estaba, que escriba /start@NombreDelBot). Canal: que haga al bot administrador con permiso para publicar y publique algo. Luego llama "conectar_telegram" sin código y luego pídeme el código de 6 dígitos que me llegó por Telegram. Llama de nuevo con ese código. Nunca inventes el código.
 
 **Paso 3 — Encenderla.** Si "vigilante_activo" es null, ofréceme:
 - «Mientras Claude esté abierto» (recomendado para empezar: no instala nada) → "activar_vigilancia" con modo "con_claude".

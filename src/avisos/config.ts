@@ -20,7 +20,7 @@ export interface ConfigAvisos {
   /** Canales listados y completos. Uno con variables faltantes no se activa. */
   canales: NombreCanal[];
   /** `apiBase`: solo para pruebas (COMPRA_AGIL_TELEGRAM_API apunta a la Bot API simulada). */
-  telegram?: { token: string; chatId: string; apiBase?: string };
+  telegram?: { token: string; chatId: string; hilo?: string; apiBase?: string; alMigrar?: (nuevoChatId: string) => void };
   webhook?: { url: string; secreto: string };
   correo?: { host: string; puerto: number; usuario: string; clave: string; de: string; para: string[] };
   bandeja: ConfigBandeja;
@@ -47,7 +47,10 @@ function urlAceptable(texto: string): boolean {
  * `guardado.telegramChatId`: el chat confirmado con código por la herramienta
  * conectar_telegram (anexo de instalación, RA3/RA4). El entorno manda si lo fija.
  */
-export function leerConfigAvisos(env: Record<string, string | undefined>, guardado: { telegramChatId?: string } = {}): ConfigAvisos {
+export function leerConfigAvisos(
+  env: Record<string, string | undefined>,
+  guardado: { telegramChatId?: string; telegramHilo?: string; alMigrar?: (nuevoChatId: string) => void } = {},
+): ConfigAvisos {
   const c: ConfigAvisos = { canales: [], bandeja: {}, resumen: '08:00', errores: [] };
   // Un campo opcional vacío de la extensión puede llegar como «${user_config.x}» sin reemplazar.
   const valor = (k: string) => { const v = env[k]?.trim(); return v && !v.startsWith('${user_config.') ? v : undefined; };
@@ -79,7 +82,14 @@ export function leerConfigAvisos(env: Record<string, string | undefined>, guarda
     const faltan = [!token && 'COMPRA_AGIL_TELEGRAM_TOKEN', !chatId && 'COMPRA_AGIL_TELEGRAM_CHAT_ID'].filter(Boolean);
     if (faltan.length > 0) c.errores.push(`Telegram no se activa: falta ${faltan.join(' y ')}.`);
     else {
-      c.telegram = { token: token!, chatId: chatId!, apiBase: valor('COMPRA_AGIL_TELEGRAM_API') };
+      // El tema del grupo y el aviso de migración valen solo para el chat guardado
+      // con conectar_telegram; si el entorno fija el chat, el entorno manda.
+      const delEntorno = Boolean(valor('COMPRA_AGIL_TELEGRAM_CHAT_ID'));
+      const hilo = delEntorno ? valor('COMPRA_AGIL_TELEGRAM_THREAD_ID') : guardado.telegramHilo;
+      c.telegram = {
+        token: token!, chatId: chatId!, apiBase: valor('COMPRA_AGIL_TELEGRAM_API'),
+        ...(hilo ? { hilo } : {}), ...(!delEntorno && guardado.alMigrar ? { alMigrar: guardado.alMigrar } : {}),
+      };
       c.canales.push('telegram');
     }
   }

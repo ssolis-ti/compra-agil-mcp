@@ -1,17 +1,15 @@
 # Guía de vigilancia y avisos de mcp-compra-agil
 
-Cómo dejar una vigilancia de Compra Ágil encendida que avise por Telegram,
-correo o webhook cada proceso nuevo que calce con tus criterios, sin perder
-procesos en silencio. Hay dos formas. Elige una:
+Cómo dejar encendida una vigilancia que avise por Telegram, correo o webhook
+de las compras nuevas que calcen con tus criterios. Hay dos formas:
 
 | Modo | Para quién | Quién avisa |
 | :--- | :--- | :--- |
 | **Gateway** | Ya usas un agente siempre encendido (OpenClaw, Hermes) con su propio Telegram | El gateway, con sus canales |
 | **Daemon** | No usas gateway | El propio servidor, con los canales del `.env` |
 
-Los dos usan el mismo núcleo: leen la API lote por lote (la API registra los
-cambios cada 5 minutos), recuperan lo que no pudieron leer cuando la API
-falla y avisan cuando la vigilancia está ciega.
+En los dos, si Mercado Público falla, la vigilancia reintenta lo que no pudo
+leer y avisa si se queda atrás.
 
 > **¿No eres técnico?** El [manual de uso](manual-de-uso.md) explica lo mismo en lenguaje simple, y `node dist/index.js --configurar` te pregunta todo y deja la vigilancia encendida.
 
@@ -87,13 +85,18 @@ cae entre recibir y enviar, no se pierde nada.
 
 ## 2b. Modo daemon (sin gateway)
 
-**Configura al menos un canal** en el `.env`. Los destinos solo se configuran
-aquí: ninguna herramienta puede cambiarlos.
+**Configura al menos un canal** en el `.env` (o, para Telegram, con
+`conectar_telegram` y su código).
 
 - **Telegram:**
   1. Crea un bot con @BotFather y pega su token en `COMPRA_AGIL_TELEGRAM_TOKEN`.
-  2. Escríbele algo al bot desde el chat donde quieres los avisos.
-  3. Corre `node dist/index.js --telegram-chat-id` y copia la línea que te da al `.env`.
+  2. Muéstrale al bot dónde quieres los avisos:
+     - **chat personal:** escríbele «hola»;
+     - **grupo:** agrégalo (con el modo privacidad, que viene activado, no lee los mensajes comunes; si ya estaba, escribe `/start@NombreDeTuBot`); en un grupo con temas, hazlo dentro del tema;
+     - **canal:** hazlo administrador con permiso para «Publicar mensajes» y publica algo.
+  3. Corre `node dist/index.js --telegram-chat-id` y copia al `.env` la línea que te da (en un tema, también `COMPRA_AGIL_TELEGRAM_THREAD_ID`).
+
+  Si el grupo pasa a supergrupo, el chat id cambia: los avisos siguen llegando, y con `conectar_telegram` el id nuevo queda guardado solo. Si fijaste el chat en el `.env`, actualízalo con `--telegram-chat-id`.
 - **Correo:** `COMPRA_AGIL_CORREO` y `COMPRA_AGIL_CORREO_CLAVE`, una contraseña de aplicación. El servidor se deduce del dominio: Gmail, Yahoo, iCloud, Zoho, o Google Workspace y Microsoft 365 por sus MX al configurar. Outlook y Hotmail personales no sirven, porque exigen OAuth. Para otro servidor, `COMPRA_AGIL_SMTP_HOST`/`_PUERTO`; las `SMTP_*` anteriores siguen valiendo. Con correo y clave, el canal se activa solo si `COMPRA_AGIL_AVISOS` no está.
 - **Webhook:** `COMPRA_AGIL_WEBHOOK_URL` y `COMPRA_AGIL_WEBHOOK_SECRETO`. El contrato está en [webhook-alertas.md](webhook-alertas.md).
 
@@ -118,11 +121,11 @@ rotado a los 5 MB.
 | Aviso | Cuándo |
 | :--- | :--- |
 | Procesos nuevos | Cada ronda con procesos que calzan; en el horario de silencio (`COMPRA_AGIL_AVISOS_SILENCIO`) se juntan para el final |
-| La vigilancia no está viendo | 2 h sin una revisión completa (la API caída, sin red); una sola vez por episodio |
-| La vigilancia volvió | Al recuperarse, con lo que quedó sin revisar si fue más de 48 h |
-| Resumen diario | A las 08:00 de Chile. **Si no llega, la vigilancia está detenida** |
-| Canal caído | Un canal falló 3 rondas seguidas (lo avisan los otros) |
-| Cuota | La API respondió 429, o el gasto del día va sobre el presupuesto |
+| La vigilancia no puede revisar las compras | 2 h sin una revisión completa (la API caída, sin red, o atrasada); una vez por episodio |
+| La vigilancia volvió a funcionar | Al ponerse al día, con lo que quedó sin revisar si fue más de 48 h |
+| Resumen del día | A las 08:00 de Chile. **Si no llega, la vigilancia está apagada** |
+| Los avisos por … no están llegando | Un canal falló 3 rondas seguidas (lo avisan los otros) |
+| Se está usando mucho el ticket | La API respondió 429, o el gasto del día va sobre el presupuesto |
 | Criterios cambiados | Alguien usó `configurar_criterios`, con el antes y el después |
 
 ## 4. Lo que la vigilancia no hace

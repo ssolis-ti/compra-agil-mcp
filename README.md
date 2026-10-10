@@ -16,16 +16,17 @@
 >
 > Paso a paso en el [**manual de uso**](docs/api/manual-de-uso.md). Avanzados (OpenClaw, Hermes, webhook, systemd): [guía de vigilancia y avisos](docs/api/guia-vigilancia-y-avisos.md). Nunca escribas el ticket ni el token del bot en el chat.
 
-Servidor [MCP (Model Context Protocol)](https://modelcontextprotocol.io) desarrollado en TypeScript que envuelve e integra de forma avanzada la API REST de **Compra Ágil v2** y la API de **Órdenes de Compra (OC)** de [Mercado Público](https://www.mercadopublico.cl). Permite a cualquier IA, agente autónomo o cliente compatible interrogar, filtrar, auditar y prospectar procesos de compra estatal del gobierno de Chile.
+Servidor [MCP](https://modelcontextprotocol.io) para la API de **Compra Ágil** y de **Órdenes de Compra** de [Mercado Público](https://www.mercadopublico.cl). Le permite a tu asistente de IA buscar, analizar y vigilar las compras del Estado de Chile.
 
-El proyecto está diseñado bajo una arquitectura modular y cuenta con tres modos de operación:
-1. **Servidor Interactivo MCP:** Comunicación bidireccional vía Stdio para integrarse directamente con el chat y herramientas de tu IDE o cliente (Cursor, Claude Desktop, Windsurf, etc.).
-2. **Vigilancia con avisos (2.9.0):** lee los procesos nuevos lote por lote, sin huecos, y avisa por **Telegram, correo o webhook firmado**, o los entrega a un gateway siempre encendido (OpenClaw, Hermes). Avisa también cuando la vigilancia está ciega y manda un resumen diario. Ver la [guía](docs/api/guia-vigilancia-y-avisos.md).
-   - **Solo compras nuevas:** las publicadas en las últimas 24 h y las reabiertas en segundo llamado (🔁). No avisa procesos antiguos que solo cambiaron.
-   - **Por rubro y por región:** lo que calza con tus palabras va completo; con la *alerta total de la región*, el resto de tus regiones va al final, en dos líneas cada uno.
-   - **Mensajes claros:** numerados, ordenados por cierre y con una etiqueta por dato (código, organismo, presupuesto, publicación, cierre con día y horas restantes, ficha).
-   - **Se configura conversando:** criterios, Telegram (con un código de 6 dígitos) y encendido, sin que el ticket ni los tokens pasen por el chat. El correo se configura con solo dos datos: tu dirección y una contraseña de aplicación.
-3. **Generador de Informes:** Produce documentos imprimibles autocontenidos en formatos **Carta, Oficio y A4**.
+Hace tres cosas:
+1. **Consultas desde el chat:** buscar compras, ver su detalle, analizar precios y auditar procesos desiertos, desde Claude Desktop, Claude Code, Cursor u otro cliente MCP.
+2. **Vigilancia con avisos:** te avisa de las compras nuevas que calzan con lo que vendes, por **Telegram** (chat, grupo o canal), **correo** o **webhook**.
+   - Solo compras nuevas: publicadas en las últimas 24 h, o reabiertas en segundo llamado (🔁).
+   - Por rubro y, si quieres, todas las de tu región.
+   - Mensajes numerados y ordenados por cierre.
+   - Te avisa si deja de poder revisar, y manda un resumen cada mañana.
+   - Se configura conversando; el ticket y los tokens nunca pasan por el chat. Detalles en la [guía](docs/api/guia-vigilancia-y-avisos.md).
+3. **Informes imprimibles** en formato Carta, Oficio y A4.
 
 > 📌 **Antes de usarlo en decisiones de negocio**, lee [Limitaciones conocidas de la API](#️-limitaciones-conocidas-de-la-api). La documentación oficial de ChileCompra difiere del comportamiento real en puntos importantes — este servidor implementa lo que la API **hace**, no lo que promete.
 
@@ -90,7 +91,7 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 * **Hora de Chile y reloj oficial:** La API entrega hora de Chile aunque algunos campos digan "Z" (ver [Limitaciones](#-las-fechas-están-en-hora-de-chile-aunque-digan-z)); el servidor la lee así, manda las ventanas de cambios como la API las compara y calcula los plazos con la hora del SHOA (`ntp.shoa.cl`), no solo con el reloj de la máquina.
 * **Errores en un solo formato:** Todo rechazo de una entrada llega como `Error de validación: … No se consultó la API.`, en español, venga del esquema o de la herramienta, y los códigos con formato imposible se rechazan antes de gastar cuota.
 * **Métricas de uso:** `obtener_estadisticas_uso` informa la latencia y los errores de cada herramienta y el resultado de las consultas a la API (caché, 504, 429, timeouts) desde que arrancó el servidor.
-* **Paginación y vigilancia sin huecos:** La herramienta de cambios recientes admite navegación de páginas (`numero_pagina`). La vigilancia lee la API lote por lote (la API registra los cambios cada 5 minutos), comprueba cada lote paginado, reintenta los que fallan antes de avanzar e informa lo que no pudo leer.
+* **Vigilancia que no se salta compras:** si Mercado Público falla, reintenta lo que no pudo leer antes de seguir, y te avisa si se queda atrás.
 * **Integración del Detalle de OC:** Resuelve de forma dinámica el código alfanumérico o ID numérico de las Órdenes de Compra utilizando la API legada de Mercado Público.
 * **Validado contra la API real:** El comportamiento documentado por ChileCompra difiere del real en varios puntos. Este servidor implementa lo que la API **hace**, no lo que promete, y lo documenta en [Limitaciones conocidas](#️-limitaciones-conocidas-de-la-api). Hay tests de regresión que blindan cada hallazgo.
 * **Redacción de credenciales:** Todo texto que sale del proceso (logs, errores, respuestas) pasa por un punto único de redacción que borra el ticket. Es relevante porque `sendLoggingMessage` envía los logs al cliente MCP — es decir, al contexto del modelo y a la transcripción.
@@ -242,7 +243,7 @@ npm start
 ```
 
 ### Monitoreo Autónomo
-La vigilancia revisa los procesos nuevos cada 15 minutos, sin huecos aunque la API falle. Avisa por los canales del `.env` (Telegram, correo, webhook firmado) y deja todo en `alerts.log` y `vigilancia.log`, rotado a los 5 MB:
+La vigilancia revisa las compras nuevas cada 15 minutos. Avisa por los canales del `.env` (Telegram, correo, webhook firmado) y deja todo en `alerts.log` y `vigilancia.log`, rotado a los 5 MB:
 ```bash
 node dist/index.js --configurar     # asistente: ticket, rubro, región, Telegram y encendido automático
 node dist/index.js --check          # ¿quedó bien instalado? (código 0 = sí)

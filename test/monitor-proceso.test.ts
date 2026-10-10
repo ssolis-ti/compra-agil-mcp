@@ -65,7 +65,7 @@ describe('daemon de vigilancia', () => {
     const limite = Date.now() + 60_000;
     // Se espera la línea del resumen de la ronda: el daemon la escribe justo después de
     // guardar el estado, y bajo carga mirar solo el archivo de estado era una carrera.
-    while (!/Lotes leídos/.test(salida) && Date.now() < limite) await new Promise((r) => setTimeout(r, 200));
+    while (!/compras, \d+ para avisar/.test(salida) && Date.now() < limite) await new Promise((r) => setTimeout(r, 200));
     expect(fs.existsSync(estado), salida).toBe(true);
 
     const e = JSON.parse(fs.readFileSync(estado, 'utf8'));
@@ -75,11 +75,11 @@ describe('daemon de vigilancia', () => {
     const alertas = fs.readFileSync(path.join(datos, 'alerts.log'), 'utf8').trim().split('\n');
     expect(alertas.length).toBe(Object.keys(e.alertados).length);
     expect(alertas.length).toBeGreaterThanOrEqual(30);
-    expect(salida).toMatch(/Lotes leídos: 1[23], fallidos: 0/);
+    expect(salida).toMatch(/\(1[23] lotes, \d+ consultas\)/);
     expect(salida).not.toContain('TICKET-DE-PRUEBA-NO-REAL-0000');
     // T9.3: la salida queda también en vigilancia.log, sin códigos de color.
     const log = fs.readFileSync(path.join(datos, 'vigilancia.log'), 'utf8');
-    expect(log).toMatch(/Lotes leídos: 1[23]/);
+    expect(log).toMatch(/\(1[23] lotes/);
     expect(log).not.toMatch(new RegExp(String.fromCharCode(27)));
   }, 90_000);
 
@@ -136,7 +136,7 @@ describe('mcp-compra-agil --vigilar', () => {
     p.stdout!.on('data', (d) => { salida += String(d); });
     p.stderr!.on('data', (d) => { salida += String(d); });
     const limite = Date.now() + 30_000;
-    while (!/Lotes leídos|Falló la ronda/.test(salida) && Date.now() < limite) await new Promise((r) => setTimeout(r, 200));
+    while (!/para avisar|Falló la ronda/.test(salida) && Date.now() < limite) await new Promise((r) => setTimeout(r, 200));
     expect(salida).toMatch(/VIGILANCIA DE COMPRA ÁGIL/);
     expect(salida).not.toMatch(/Servidor MCP Compra Ágil v2 listo/);
     expect(p.exitCode).toBeNull(); // sigue corriendo

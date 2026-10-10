@@ -93,8 +93,8 @@ export function crearBucleVigilancia(o: {
         registrar('aviso', `[${t}] [${n.evento.toUpperCase()}] ${n.titulo}${por}: ${n.lineas.join(' ')}`);
       }
       const c = r.ciclo!;
-      registrar('info', `[${t}] Lotes leídos: ${c.lotesLeidos}, fallidos: ${c.lotesFallidos}, incompletos: ${c.incompletosNuevos}, ` +
-        `procesos revisados: ${c.revisados}, alertas nuevas: ${c.alertas.length}, consultas: ${c.consultas}`);
+      registrar('info', `[${t}] Revisadas ${c.revisados} compras, ${c.alertas.length} para avisar ` +
+        `(${c.lotesLeidos} lotes, ${c.consultas} consultas${c.lotesFallidos ? `, ${c.lotesFallidos} fallidos` : ''}${c.incompletosNuevos ? `, ${c.incompletosNuevos} incompletos` : ''}).`);
       for (const [canal, n] of Object.entries(r.envios?.porCanal ?? {})) {
         if (n.entregados + n.fallidos + n.reintentos > 0) {
           registrar('info', `[${t}] Avisos por ${canal}: ${n.entregados} entregados, ${n.reintentos} por reintentar, ${n.fallidos} fallidos.`);
