@@ -359,6 +359,9 @@ export class CompraAgilClient {
     // un ticket temporalmente limitado igual pueda servir lo ya conocido.
     // Se normaliza también al leer: el archivo pudo escribirlo una versión
     // anterior que guardaba la respuesta cruda.
+    // Sin ticket el servidor igual arranca (para listar sus herramientas, como
+    // hacen los catálogos de MCP), pero ninguna consulta sale.
+    if (!this.ticket) throw new CompraAgilApiError(0, [], '', { causa: 'sin_ticket' });
     const claveCache = ResponseCache.clave(path, params);
     const enCache = opciones.fresco ? undefined : this.cache.obtener<unknown>(claveCache);
     if (enCache !== undefined) {

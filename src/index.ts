@@ -85,16 +85,18 @@ if (process.argv.includes('--vigilar')) {
 // respuestas de tools). Ver src/utils/redact.ts.
 registrarSecreto(TICKET);
 
+// Sin ticket el servidor arranca igual: los catálogos de MCP (Glama, el
+// Inspector) lo lanzan sin credenciales para listar sus herramientas, y
+// terminar aquí los hacía fallar. Cada consulta a la API responde «falta el
+// ticket» con cómo conseguirlo (CompraAgilApiError, causa sin_ticket), y la
+// vigilancia no se retoma.
 if (!TICKET) {
-  logger.error(
-    'Variable de entorno COMPRA_AGIL_TICKET no configurada. ' +
-    'Obtén tu ticket en https://www.chilecompra.cl/api/ y configúrala antes de iniciar el servidor.'
+  logger.warn(
+    'Falta COMPRA_AGIL_TICKET: el servidor arranca, pero no consultará la API hasta que se configure. ' +
+    'Pídelo en https://www.chilecompra.cl/api/.'
   );
-  process.exit(1);
 }
-
-// Ticket validado — asignar a const tipada para usar dentro de main()
-const VALID_TICKET: string = TICKET;
+const VALID_TICKET: string = TICKET ?? '';
 
 // ─── Inicialización ─────────────────────────────────────────────────
 

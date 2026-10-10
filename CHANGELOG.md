@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Corregido
+* **El servidor arranca sin ticket** (9-oct). Glama y otros catálogos de MCP lo lanzan sin credenciales para listar sus herramientas, y terminaba con código 1 al arrancar. Ahora arranca y lista las 23 herramientas, y cada consulta a la API responde «Falta el ticket», con cómo pedirlo y dónde ponerlo, sin salir a la red. La vigilancia no se retoma sin ticket.
+
 ---
 
 ## [2.9.0] - 2026-10-09

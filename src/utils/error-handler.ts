@@ -25,7 +25,7 @@ export interface ApiErrorResponse {
  * se pudo leer. Van como `causa` y no como un status inventado: un 408 o un 0
  * se confundirían con algo que la API dijo.
  */
-export type CausaLocal = 'timeout' | 'red' | 'respuesta_invalida' | 'tiempo_agotado';
+export type CausaLocal = 'timeout' | 'red' | 'respuesta_invalida' | 'tiempo_agotado' | 'sin_ticket';
 
 export interface DetalleLocal {
   causa?: CausaLocal;
@@ -78,6 +78,10 @@ function getLocalMessage(local: DetalleLocal, consulta: string): string {
       const presupuesto = Math.round((local.presupuestoMs ?? 0) / 1000);
       return `Esta consulta habría tenido que esperar ~${espera} s en el límite propio de consultas por minuto, y no cabe en los ${presupuesto} s que tiene la herramienta antes de que el cliente MCP la corte.${llamada} No se envió ni gastó cuota. Reintenta en ~${espera} s, o pide menos de una vez (por ejemplo, un "limite_analisis" menor).`;
     }
+    case 'sin_ticket':
+      return 'Falta el ticket de Mercado Público (COMPRA_AGIL_TICKET): sin él no se puede consultar la API y no se envió ninguna consulta. ' +
+        'Se pide gratis en https://www.chilecompra.cl/api/ («Pide tu ticket», con Clave Única) y va en la configuración de la extensión (Configuración → Extensiones → Compra Ágil) ' +
+        'o en el .env (node dist/index.js --configurar). Nunca lo escribas en el chat.';
     case 'red':
       return `No se pudo conectar con la API de Mercado Público (error de red: ${safeError(local.origen)}).${llamada} Se reintentó una vez. Revisa la conexión a internet o un proxy, y reintenta en unos minutos.`;
     case 'respuesta_invalida':
