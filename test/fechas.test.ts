@@ -181,6 +181,8 @@ describe('la nota advierte lo que hay que advertir', () => {
     expect(NOTA_ZONA_HORARIA).toMatch(/"Z"/);
     expect(NOTA_ZONA_HORARIA).toMatch(/2\.7\.0/);
     expect(NOTA_ZONA_HORARIA).toMatch(/ficha/i);
+    // MEJORA-003: fecha_ultimo_cambio parece exacto (con milisegundos) y es un sello de lote.
+    expect(NOTA_ZONA_HORARIA).toMatch(/fecha_ultimo_cambio es el sello del lote de 5 minutos/);
   });
 
   it('ya no afirma que se interpretan como UTC', () => {

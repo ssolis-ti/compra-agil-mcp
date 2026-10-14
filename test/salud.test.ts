@@ -60,6 +60,25 @@ describe('ceguera y recuperación (R8.1, R8.2)', () => {
     expect(eventos(e, T0 + 200 * MIN)).toEqual(['recuperacion']);
   });
 
+  it('tras un reinicio (corte de luz) dice que se reinició, sin culpar a la red (MEJORA-002)', () => {
+    const e = conBueno(T0); // última completa: 12:00 de Chile
+    e.salud.arranque = new Date(T0 + 95 * MIN).toISOString(); // volvió a las 13:35
+    const [ceguera] = notificacionesPendientes(e, T0 + 121 * MIN, cfg);
+    const texto = ceguera.lineas.join(' ');
+    expect(texto).toMatch(/se reinició a las .*13:35.* todavía no completa una revisión\. La última completa fue a las .*12:00/);
+    expect(texto).not.toMatch(/internet|no responde/);
+  });
+
+  it('sin reinicio: solo el hecho y el último error real, sin adivinar la causa', () => {
+    const e = conBueno(T0);
+    e.salud.arranque = new Date(T0 - HORA).toISOString(); // arrancó antes de la última revisión completa
+    e.pendientes = [{ lote: new Date(T0 + 5 * MIN).toISOString(), intentos: 3, ultimoError: 'HTTP 504' }];
+    const texto = notificacionesPendientes(e, T0 + 121 * MIN, cfg)[0].lineas.join(' ');
+    expect(texto).toMatch(/Sin revisiones completas desde las .*12:00/);
+    expect(texto).toMatch(/Último error: HTTP 504/);
+    expect(texto).not.toMatch(/internet|reinició/);
+  });
+
   it('si ningún canal la entregó, la ceguera se vuelve a intentar en la ronda siguiente', () => {
     const e = conBueno(T0);
     e.salud.fallosSeguidos = 9;

@@ -158,12 +158,20 @@ export async function estimarPrecioUnitario(
   };
 }
 
+/** «1 día corrido», «5 días hábiles»: el singular, en una carta que va al comprador. */
+export function diasEnTexto(n: number, tipo: 'corridos' | 'habiles'): string {
+  const uno = n === 1;
+  return `${n} ${uno ? 'día' : 'días'} ${tipo === 'habiles' ? (uno ? 'hábil' : 'hábiles') : (uno ? 'corrido' : 'corridos')}`;
+}
+
 export interface ArgsBorradorCotizacion extends FiltroPalabras {
   codigo_compra: string;
   rut_proveedor?: string;
   razon_social?: string;
   precio_unitario_personalizado?: number;
   plazo_entrega_dias?: number;
+  /** Cómo se cuentan los días del plazo: el TDR suele decirlo. */
+  tipo_dias?: 'corridos' | 'habiles';
   descripcion_propuesta?: string;
 }
 
@@ -323,7 +331,7 @@ export async function construirBorradorCotizacion(
     // S10: decía «Cumplimiento garantizado con todas las especificaciones» sin
     // conocerlas. Es el proveedor quien debe afirmarlo, punto por punto.
     `- [Detalla aquí cómo cumple tu oferta cada especificación solicitada]\n` +
-    `- Plazo de entrega: ${plazoEntrega} días corridos contados desde la recepción de la Orden de Compra.\n` +
+    `- Plazo de entrega: ${diasEnTexto(plazoEntrega, args.tipo_dias ?? 'corridos')} contados desde la recepción de la Orden de Compra.\n` +
     `- Validez de la oferta: 30 días corridos.\n\n` +
     `Agradecemos de antemano su consideración y nos mantenemos a su disposición para aclarar cualquier duda técnica o comercial.\n\n` +
     `Atentamente,\n` +
@@ -403,7 +411,8 @@ const inputSchema = {
   rut_proveedor: z.string().optional().describe('RUT del proveedor que realiza la cotización (ej: "76.123.456-7").'),
   razon_social: z.string().optional().describe('Razón social/Nombre de fantasía de la empresa (ej: "Mi Pyme SpA").'),
   precio_unitario_personalizado: z.number().optional().describe('Precio unitario neto personalizado para aplicar a los ítems. Si se omite, se buscará un precio estimado de mercado.'),
-  plazo_entrega_dias: z.number().optional().describe('Plazo de entrega en días corridos/hábiles. Si se omite, se adopta el sugerido por el comprador o 5 días.'),
+  plazo_entrega_dias: z.number().optional().describe('Plazo de entrega en días. Si se omite, se adopta el sugerido por el comprador o 5 días.'),
+  tipo_dias: z.enum(['corridos', 'habiles']).optional().describe('Si el plazo es en días corridos (por defecto) o hábiles. Úsalo como lo pida el TDR.'),
   descripcion_propuesta: z.string().optional().describe('Mensaje comercial o aclaraciones técnicas del proveedor para adjuntar a la propuesta.'),
   ...esquemaPalabrasComparables(),
 };

@@ -175,6 +175,7 @@ export function ventanaUltimosMinutos(minutos: number, ahoraMs: number): { cambi
 export const NOTA_ZONA_HORARIA =
   'Las fechas de la API (fecha_cierre, fecha_publicacion y fecha_ultimo_cambio, aunque esta última traiga "Z") están en hora de Chile continental (America/Santiago): ' +
   'los campos *_hora_chile las muestran tal cual, ya validadas. ' +
+  'fecha_ultimo_cambio es el sello del lote de 5 minutos en que se registró el cambio, no su hora exacta: no lo uses como marca exacta para seguir cambios, solapa la ventana. ' +
   'Medido contra la API real el 6 de octubre de 2026; hasta la versión 2.7.0 este servidor las leía como UTC y mostraba los cierres 3 horas antes. ' +
   'Confirma el plazo exacto en la ficha del proceso antes de comprometerte.';
 

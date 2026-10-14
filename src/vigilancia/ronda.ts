@@ -108,6 +108,8 @@ export async function rondaDeVigilancia(deps: DependenciasRonda, limites: Limite
   podarBandeja(estado.bandeja, deps.ahora());
 
   // Salud (fase 7): qué avisar sobre la vigilancia misma.
+  // Otro proceso que el de la ronda anterior: la vigilancia se reinició.
+  if (estado.salud.pid !== deps.pid) { estado.salud.pid = deps.pid; estado.salud.arranque = new Date(inicio).toISOString(); }
   registrarRonda(estado, ciclo, envios, deps.ahora(), salud);
   const notificaciones: NotificacionEnviada[] = [];
   for (const n of notificacionesPendientes(estado, deps.ahora(), salud)) {

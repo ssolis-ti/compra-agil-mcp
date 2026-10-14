@@ -125,11 +125,32 @@ export interface ResultadoBusqueda {
  * cualquier coincidencia parcial: si el usuario acertó la frase exacta, esa
  * es la mejor respuesta posible.
  */
+/**
+ * Los PDF cortan las palabras con guion al final de la línea («con-» /
+ * «tribuir»): sin unirlas, los fragmentos empezaban a mitad de palabra.
+ */
+export const unirGuiones = (texto: string) => texto.replace(/([a-záéíóúüñ])-[ \t]*\r?\n[ \t]*([a-záéíóúüñ])/g, '$1$2');
+
+/**
+ * Peso de cada término según cuántos documentos lo contienen (IDF): «multas»
+ * en 2 de 13 documentos vale más que «servicio» en 12. MEJORA-004.
+ */
+export function pesosPorRareza(terminos: string[], textosNormalizados: string[]): Record<string, number> {
+  const n = Math.max(1, textosNormalizados.length);
+  return Object.fromEntries(terminos.map((t) => {
+    const df = textosNormalizados.filter((x) => x.includes(t)).length;
+    return [t, 1 + Math.log(n / Math.max(1, df))];
+  }));
+}
+
 export function buscarEnTexto(
-  texto: string,
+  textoOriginal: string,
   query: string,
-  maxFragmentos = 12
+  maxFragmentos = 12,
+  /** Peso de cada término (2.9.3): los raros en el corpus valen más que los comunes. Sin esto, 1. */
+  pesos: Record<string, number> = {},
 ): ResultadoBusqueda {
+  const texto = unirGuiones(textoOriginal);
   const terminos = tokenizar(query);
   if (terminos.length === 0) {
     return { fragmentos: [], terminos: [], ausentes: [] };
@@ -163,7 +184,7 @@ export function buscarEnTexto(
     candidatos.push({
       texto: contexto.join('\n'),
       terminos: presentes,
-      puntaje: presentes.length + bonus,
+      puntaje: presentes.reduce((suma, t) => suma + (pesos[t] ?? 1), 0) + bonus,
       linea: i,
     });
   }

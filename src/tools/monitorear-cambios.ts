@@ -29,6 +29,7 @@ La ventana se define de UNA de dos formas, mutuamente excluyentes:
     o retomar desde el último timestamp procesado, sin el techo de 24 horas.
 Puede combinarse con filtros de estado y región para acotar los resultados.
 La API no entrega los resultados ordenados por último cambio (los agrupa, por ejemplo, por estado): para no perder el cambio más reciente, revisa todas las páginas o acota la ventana.
+«ultimo_cambio» es el sello del lote de 5 minutos en que la API registró el cambio, no su hora exacta: varias compras comparten el mismo valor. Para retomar desde el último visto, solapa al menos 5 minutos.
 Las fechas de la API están en hora de Chile: la respuesta trae "fecha_cierre_hora_chile" y "ultimo_cambio_hora_chile". Confirma el plazo en la ficha del proceso.
 Las fechas que indiques en "cambio_desde"/"cambio_hasta" deben declarar su zona; para hora de Chile usa el desfase vigente (ej. "-03:00").`;
 

@@ -62,6 +62,9 @@ export interface EstadoVigilancia {
     consultasPorDia: Record<string, number>;
     /** Primera ronda (para la ceguera cuando nunca hubo un ciclo bueno). */
     inicio: string | null;
+    /** Proceso que vigila y cuándo arrancó: distingue un reinicio de una falla (2.9.3). */
+    pid: number | null;
+    arranque: string | null;
     cegueraAvisada: boolean;
     cegueraDesde: string | null;
     /** Día de Chile del último resumen enviado (R8.3). */
@@ -106,7 +109,7 @@ export function estadoVacio(): EstadoVigilancia {
   return {
     version: 2, marca: null, leidos: [], pendientes: [], incompletos: [], huecos: [], alertados: {},
     salud: {
-      ultimoCicloBueno: null, fallosSeguidos: 0, consultasPorDia: {}, inicio: null,
+      ultimoCicloBueno: null, fallosSeguidos: 0, consultasPorDia: {}, inicio: null, pid: null, arranque: null,
       cegueraAvisada: false, cegueraDesde: null, ultimoResumen: null, acumulado: acumuladoVacio(),
       fallosPorCanal: {}, canalesCaidosAvisados: [], factorIntervalo: 1, proximaRonda: null, ultimo429: null, cuotaAvisada: null,
     },
@@ -141,7 +144,8 @@ export function parsearEstado(crudo: unknown): EstadoVigilancia {
     if (esNumero(crudo.salud.fallosSeguidos)) e.salud.fallosSeguidos = crudo.salud.fallosSeguidos;
     e.salud.consultasPorDia = numeros(crudo.salud.consultasPorDia);
     const s = crudo.salud;
-    for (const k of ['inicio', 'cegueraDesde', 'proximaRonda', 'ultimo429'] as const) if (esFecha(s[k])) e.salud[k] = s[k];
+    for (const k of ['inicio', 'cegueraDesde', 'proximaRonda', 'ultimo429', 'arranque'] as const) if (esFecha(s[k])) e.salud[k] = s[k];
+    if (esNumero(s.pid)) e.salud.pid = s.pid;
     for (const k of ['ultimoResumen', 'cuotaAvisada'] as const) if (typeof s[k] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s[k])) e.salud[k] = s[k];
     if (typeof s.cegueraAvisada === 'boolean') e.salud.cegueraAvisada = s.cegueraAvisada;
     if (esNumero(s.factorIntervalo) && s.factorIntervalo >= 1) e.salud.factorIntervalo = s.factorIntervalo;

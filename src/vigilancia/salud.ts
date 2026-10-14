@@ -100,15 +100,21 @@ export function notificacionesPendientes(e: EstadoVigilancia, ahoraMs: number, c
   const referencia = s.ultimoCicloBueno ?? s.inicio;
   if (!s.cegueraAvisada && referencia && ahoraMs - Date.parse(referencia) > cfg.umbralCegueraMs) {
     const error = e.pendientes.at(-1)?.ultimoError;
+    const reinicio = Boolean(s.arranque) && (!s.ultimoCicloBueno || Date.parse(s.arranque!) > Date.parse(s.ultimoCicloBueno));
     n.push({
       clave: 'ceguera', evento: 'ceguera',
       titulo: 'La vigilancia no puede revisar las compras',
+      // Solo hechos: un reinicio (el equipo o Claude estuvo apagado) o el último
+      // error visto. Antes culpaba a «Mercado Público o internet» sin saberlo,
+      // y tras un corte de luz eso mandaba a revisar la red (MEJORA-002).
       lineas: [
-        s.ultimoCicloBueno
-          ? `Última revisión completa: ${horaChile(Date.parse(s.ultimoCicloBueno))}.`
-          : `No ha podido revisar desde que arrancó, a las ${horaChile(Date.parse(s.inicio!))}.`,
-        'Mercado Público no responde o no hay internet. Mientras tanto puede haber compras sin avisar; cuando vuelva, revisa lo atrasado.',
-        ...(error ? [`Detalle: ${error}`] : []),
+        reinicio
+          ? `La vigilancia se reinició a las ${horaChile(Date.parse(s.arranque!))} y todavía no completa una revisión.${s.ultimoCicloBueno ? ` La última completa fue a las ${horaChile(Date.parse(s.ultimoCicloBueno))}.` : ''}`
+          : s.ultimoCicloBueno
+            ? `Sin revisiones completas desde las ${horaChile(Date.parse(s.ultimoCicloBueno))}.`
+            : `No ha completado ninguna revisión desde que arrancó, a las ${horaChile(Date.parse(s.inicio!))}.`,
+        'Mientras tanto puede haber compras sin avisar; cuando vuelva a revisar, se pone al día.',
+        ...(error ? [`Último error: ${error}`] : []),
       ],
     });
   }

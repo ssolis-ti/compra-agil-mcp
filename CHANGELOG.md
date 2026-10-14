@@ -8,6 +8,17 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ---
 
+## [2.9.3] - 2026-10-14
+
+Mejoras reportadas por Hermes al usar el servidor.
+
+### Corregido
+* **Leer una sección de un adjunto** (MEJORA-001). `query` devuelve la sección completa de cada coincidencia (hasta el siguiente encabezado I., II.…), no una sola línea, y respeta `max_caracteres`. Con `desde_caracter` se lee un documento largo por partes.
+* **El aviso de que la vigilancia no puede revisar ya no adivina la causa** (MEJORA-002). Tras un reinicio (por ejemplo, un corte de luz) dice que se reinició; en los demás casos da solo el hecho y el último error real.
+* **`fecha_ultimo_cambio` advierte que es el sello del lote de 5 minutos** (MEJORA-003), no la hora exacta del cambio.
+* **`consultar_documentos_locales` ordena mejor** (MEJORA-004). Las palabras raras pesan más que las comunes, y el nombre del archivo cuenta. Además, los fragmentos ya no empiezan a mitad de palabra.
+* **«1 día corrido» en la carta de cotización** (MEJORA-005), y el nuevo `tipo_dias` permite días hábiles.
+
 ## [2.9.2] - 2026-10-10
 
 ### Corregido
