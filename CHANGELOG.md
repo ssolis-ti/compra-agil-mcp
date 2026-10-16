@@ -6,6 +6,15 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Añadido
+* **Se leen los adjuntos en Word, Excel, CSV y ZIP** (2.10.0, fase 1). `descargar_y_leer_documento` leía solo PDF, y en una muestra de 244 adjuntos reales el 43 % era de otro formato (33 % `.docx`, 7 % `.doc`).
+  * **Formatos:** ahora lee `.docx` (con sus tablas, fila por fila), `.doc`, `.xlsx` (cada hoja), `.csv` y `.zip` (lee lo que trae adentro).
+  * **Detección:** el formato se reconoce por el contenido, no por el nombre del archivo.
+  * **Caché:** el texto de cada adjunto se guarda 24 h, así que consultarlo de nuevo no lo vuelve a descargar.
+  * **Lo que no se lee:** imágenes y `.xls` antiguos; la herramienta lo dice y entrega la ficha.
+  * **Seguridad:** las fórmulas y macros nunca se ejecutan, y hay límites contra archivos enormes y bombas ZIP.
+  * **Sin módulos nativos:** la extensión sigue arrancando con el Node de Claude.
+
 ---
 
 ## [2.9.3] - 2026-10-14

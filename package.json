@@ -35,8 +35,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "fflate": "0.8.3",
     "nodemailer": "^10.0.16",
     "pdf-parse": "^2.4.5",
+    "word-extractor": "1.0.4",
     "zod": "^3.24.0"
   },
   "devDependencies": {

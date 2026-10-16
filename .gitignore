@@ -64,3 +64,8 @@ extension/*.mcpb
 
 # Configuración local de Claude Code (skills y hooks personales)
 .claude/
+
+# Datos de la 2.10+: texto de adjuntos, exportaciones y cotizaciones (locales)
+adjuntos/
+exportaciones/
+cotizaciones/

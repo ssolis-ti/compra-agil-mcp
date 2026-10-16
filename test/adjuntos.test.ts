@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -48,6 +49,8 @@ beforeAll(async () => {
   await Promise.all([server.connect(a), cliente.connect(b)]);
 });
 afterAll(async () => { await cliente.close(); });
+// Cada prueba con su carpeta de datos: la caché del texto (2.10.0) no debe pasar de una a otra.
+beforeEach(() => { vi.stubEnv('COMPRA_AGIL_DATA_DIR', fs.mkdtempSync(path.join(os.tmpdir(), 'adjuntos-'))); });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe('descargar_y_leer_documento', () => {
@@ -137,11 +140,27 @@ describe('descargar_y_leer_documento', () => {
     expect(t).toMatch(/MB/);
   });
 
-  it('un archivo que no es PDF se nombra, sin intentar leerlo', async () => {
-    portal({ descargar: [() => new Response('PK\u0003\u0004 un zip', { status: 200, headers: { 'content-type': 'application/zip' } })] });
-    const { t } = await llamar('descargar_y_leer_documento', { codigo_compra: '1-1-COT26', id_documento: UUID });
-    expect(t).toMatch(/no es un PDF \(application\/zip\)/);
+  it('un archivo dañado dice que no se pudo leer, sin tratarlo como error del servidor', async () => {
+    portal({ descargar: [() => new Response('PK\u0003\u0004 un zip roto', { status: 200, headers: { 'content-type': 'application/zip' } })] });
+    const { r, t } = await llamar('descargar_y_leer_documento', { codigo_compra: '1-1-COT26', id_documento: UUID });
+    expect(r.isError).toBeFalsy();
+    expect(t).toMatch(/no se pudo leer/);
   });
+
+  it('una imagen dice que no tiene texto, y da la ficha', async () => {
+    portal({ descargar: [() => new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]), { status: 200 })] });
+    const { t } = await llamar('descargar_y_leer_documento', { codigo_compra: '1-1-COT26', id_documento: UUID });
+    expect(t).toMatch(/es una imagen/);
+    expect(t).toMatch(/ficha\?code=1-1-COT26/);
+  });
+
+  it('la segunda lectura del mismo adjunto no lo vuelve a descargar (caché 24 h)', async () => {
+    const { pedidas } = portal({ descargar: [pdf] });
+    await llamar('descargar_y_leer_documento', { codigo_compra: '1-1-COT26', id_documento: UUID, max_caracteres: 500 });
+    const { t } = await llamar('descargar_y_leer_documento', { codigo_compra: '1-1-COT26', id_documento: UUID, query: 'multa' });
+    expect(pedidas.filter((u) => u.includes('/descargar/'))).toHaveLength(1);
+    expect(t.toLowerCase()).toMatch(/multa/);
+  }, 60_000);
 
   it('COMPRA_AGIL_ADJUNTOS=off: no sale al portal y da la ficha', async () => {
     vi.stubEnv('COMPRA_AGIL_ADJUNTOS', 'off');

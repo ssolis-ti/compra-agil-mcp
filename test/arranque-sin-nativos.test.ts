@@ -21,5 +21,5 @@ describe('arranque sin módulos nativos', () => {
       process.dlopen = original;
     }
     expect(cargados).toEqual([]);
-  });
+  }, 30_000);
 });

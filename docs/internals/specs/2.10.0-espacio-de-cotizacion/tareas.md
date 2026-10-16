@@ -11,20 +11,20 @@ fase se suman a la puerta común del [README](README.md).
 | T0.2 ✅ | Revisar alternativas y librerías (licencia, mantenimiento, sin nativos) | `diseno.md` §2 |
 | T0.3 ✅ | Requisitos, diseño, tareas y ADR 0029–0032 | Esta carpeta |
 
-## Fase 1 — Lectura multiformato · 2.10.0
+## Fase 1 — Lectura multiformato · 2.10.0 ✅ (16-oct-2026)
 
 | Id | Tarea | Prueba | Cubre |
 | :--- | :--- | :--- | :--- |
-| T1.1 | `documentos/formato.ts`: detectar por firma (PDF, ZIP→docx/xlsx/zip, OLE→doc/xls, texto) | `documentos-formato.test.ts`: archivos reales de cada tipo y uno con extensión engañosa | L6 |
-| T1.2 | Lector `.docx` (mammoth, tablas aplanadas) | `documentos-leer.test.ts` con un `.docx` de la medición | L1 |
-| T1.3 | Lector `.doc` (word-extractor) | Ídem con un `.doc` | L2 |
-| T1.4 | Lector `.xlsx` propio sobre fflate (valores, nunca fórmulas) y `.csv` | Ídem; una celda con fórmula entrega su valor guardado | L3, S2 |
-| T1.5 | Lector `.zip` con límites | Ídem; bomba ZIP y ZIP dentro de ZIP se rechazan | L4, S3 |
-| T1.6 | `documentos/leer.ts` y su uso en `descargar_y_leer_documento`; formatos no soportados con la ficha | `adjuntos.test.ts` ampliado | L5, L7 |
-| T1.7 | Caché del texto por id de adjunto (24 h) | Segunda llamada sin descarga | L8 |
-| T1.8 | `arranque-sin-nativos` cubre `documentos/` | Test existente | N1 |
+| T1.1 ✅ | `documentos/formato.ts`: detectar por firma (PDF, ZIP→docx/xlsx/zip, OLE→doc/xls, texto) | `documentos-formato.test.ts`: archivos reales de cada tipo y uno con extensión engañosa | L6 |
+| T1.2 ✅ | Lector `.docx` propio sobre fflate, tablas aplanadas (mammoth se descartó: arrastraba un aviso de seguridad sin corrección) | `documentos-leer.test.ts` con un `.docx` de la medición | L1 |
+| T1.3 ✅ | Lector `.doc` (word-extractor) | Ídem con un `.doc` | L2 |
+| T1.4 ✅ | Lector `.xlsx` propio sobre fflate (valores, nunca fórmulas) y `.csv` | Ídem; una celda con fórmula entrega su valor guardado | L3, S2 |
+| T1.5 ✅ | Lector `.zip` con límites | Ídem; bomba ZIP y ZIP dentro de ZIP se rechazan | L4, S3 |
+| T1.6 ✅ | `documentos/leer.ts` y su uso en `descargar_y_leer_documento`; formatos no soportados con la ficha | `adjuntos.test.ts` ampliado | L5, L7 |
+| T1.7 ✅ | Caché del texto por id de adjunto (24 h) | Segunda llamada sin descarga | L8 |
+| T1.8 ✅ | `arranque-sin-nativos` cubre `documentos/` | Test existente | N1 |
 
-**Puerta:** los 5 ejemplos de la medición, leídos contra el portal real.
+**Puerta:** los 5 ejemplos de la medición, leídos contra el portal real. ✅ docx, doc y xlsx leídos; png y xls, rechazados con su motivo. Cobertura de los módulos nuevos: 92–100 % de líneas.
 
 ## Fase 2 — `exportar_procesos` · 2.10.0
 
