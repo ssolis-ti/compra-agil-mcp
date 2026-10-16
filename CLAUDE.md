@@ -10,6 +10,8 @@ herramientas de ingeniería, no hacen falta para usarlo.
 
 ## Retomar el trabajo
 
+**Primero, si existe, lee `.claude/bitacora.md`:** es la bitácora local del dueño y el agente (no se sube a GitHub). Tiene la fase en curso, las reglas de trabajo acordadas, los pendientes de cada uno y las decisiones con fecha. Actualízala al cerrar cada fase o decisión. El grafo del código está en `graphify-out/` (`graphify update .` lo pone al día sin costo).
+
 El estado del proyecto, lo hecho y lo pendiente está en
 [`docs/internals/qa/README.md`](docs/internals/qa/README.md). Léelo antes de
 proponer cambios: la 2.10.0 (adjuntos en Word, Excel, CSV y ZIP, `exportar_procesos` y varios tickets) está publicada en npm desde el 16-oct, con la extensión `.mcpb` en la release. Es la base del espacio de cotización: la 2.11 y la 2.12 se suben de a una, publicadas y probadas antes de seguir, según [`docs/internals/specs/2.10.0-espacio-de-cotizacion/`](docs/internals/specs/2.10.0-espacio-de-cotizacion/README.md). La vigilancia y los avisos (2.9.0) tienen su seguimiento en [`docs/internals/specs/2.9.0-vigilancia-y-avisos/`](docs/internals/specs/2.9.0-vigilancia-y-avisos/README.md). Una versión nueva se trabaja igual: especificación primero, y no se codifica una fase sin su puerta anterior cerrada. Las decisiones de arquitectura y su porqué están en [`docs/internals/adr/`](docs/internals/adr/README.md).
