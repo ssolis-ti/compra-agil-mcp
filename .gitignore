@@ -66,6 +66,6 @@ extension/*.mcpb
 .claude/
 
 # Datos de la 2.10+: texto de adjuntos, exportaciones y cotizaciones (locales)
-adjuntos/
-exportaciones/
-cotizaciones/
+/adjuntos/
+/exportaciones/
+/cotizaciones/
