@@ -9,6 +9,11 @@ describe('instrucciones que recibe el agente al conectar', () => {
     expect(INSTRUCCIONES).not.toMatch(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
   });
 
+  it('nombran los formatos de adjuntos y cómo seguir una exportación (2.10.1)', () => {
+    expect(INSTRUCCIONES).toContain('PDF, Word, Excel, CSV o ZIP');
+    expect(INSTRUCCIONES).toMatch(/exportar_procesos.*en_curso.*mismos filtros/);
+  });
+
   it('el servidor las publica en el initialize', () => {
     const src = readFileSync(new URL('../src/servidor.ts', import.meta.url), 'utf8');
     expect(src).toContain('instructions: INSTRUCCIONES');

@@ -6,6 +6,9 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+### Corregido
+* **Las instrucciones que recibe el agente al conectar** nombran los formatos de adjuntos que se leen y cómo seguir una exportación en curso con `exportar_procesos`. La 2.10.0 no lo decía.
+
 ---
 
 ## [2.10.0] - 2026-10-16

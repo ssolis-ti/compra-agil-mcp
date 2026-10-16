@@ -99,7 +99,9 @@ Este servidor MCP maneja datos públicos de la API de Compra Ágil de Mercado P�
 * **Caché de respuestas:** Las consultas repetidas se sirven desde disco sin gastar cuota (15 min para detalles, 5 min para búsquedas). Es lo que hace viable el flujo completo de análisis: repetir `generar_borrador_cotizacion` pasó de 6 consultas y 11 s a **0 consultas y 41 ms**. El ticket nunca entra en la caché.
 * **Informes imprimibles:** Genera documentos HTML autocontenidos con diseño de impresión real (`@page`, saltos controlados, cabeceras de tabla repetidas) en formatos **Carta, Oficio y A4**.
 * **Logs Nativos en el Protocolo:** El servidor declara la capacidad `logging` y emite `notifications/message`, así que la actividad se puede seguir y depurar desde la propia interfaz del cliente. El cliente puede ajustar el detalle con `logging/setLevel`. Como esos logs llegan al contexto del modelo, **todo lo enviado pasa antes por la redacción de credenciales** — incluido el endpoint legado de Órdenes de Compra, que lleva el ticket en la URL y se emite como `ticket=[REDACTED]`.
-* **Lectura de adjuntos:** lee las bases y términos de referencia de una compra (PDF) y busca dentro de ellos.
+* **Lectura de adjuntos:** lee las bases y términos de referencia de una compra en PDF, Word (`.docx`, `.doc`), Excel (`.xlsx`), CSV o ZIP, y busca dentro de ellos. Las fórmulas y macros nunca se ejecutan.
+* **Exportar búsquedas completas:** `exportar_procesos` deja en un archivo Excel, CSV o JSON todas las compras de una búsqueda, con un resumen por organismo y por región.
+* **Varios tickets:** con `COMPRA_AGIL_TICKETS`, un 429 o un ticket rechazado no detienen el servidor.
 
 ---
 
