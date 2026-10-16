@@ -9,11 +9,10 @@
 
 import { logger } from '../utils/logger.js';
 import { handleApiResponse, CompraAgilApiError } from '../utils/error-handler.js';
-import { RateLimiter, rutaEstadoPorDefecto } from '../utils/rate-limiter.js';
+import { Tickets, type Ticket } from './tickets.js';
 import { rutaDeDatos } from '../utils/rutas.js';
 import { ResponseCache } from '../utils/cache.js';
 import { LimitadorConcurrencia } from '../utils/concurrencia.js';
-import { registrarSecreto } from '../utils/redact.js';
 import { TAMANO_PAGINA_SEGURO } from '../utils/paginacion.js';
 import { contextoActual, tiempoRestante } from '../utils/presupuesto.js';
 import { normalizarDetalle, normalizarListado, normalizarOrdenCompra, RespuestaInvalidaError } from './normalizar.js';
@@ -301,8 +300,7 @@ const MINIMO_UTIL_MS = 5_000;
 
 export class CompraAgilClient {
   private readonly baseUrl: string;
-  private readonly ticket: string;
-  private readonly rateLimiter: RateLimiter;
+  private readonly tickets: Tickets;
   private readonly cache: ResponseCache;
   /**
    * Compartido por todas las herramientas: lo que una aprende sobre el estado
@@ -327,22 +325,24 @@ export class CompraAgilClient {
    *   `COMPRA_AGIL_TIMEOUT_MS` o `TIMEOUT_POR_DEFECTO_MS`.
    */
   constructor(
-    ticket: string,
+    ticket: string | string[] | Tickets,
     baseUrl?: string,
     opciones: { persistir?: boolean; timeoutMs?: number } = {}
   ) {
-    this.ticket = ticket;
     this.baseUrl = baseUrl || 'https://api2.mercadopublico.cl';
     const persistir = opciones.persistir === true;
     // Con persistencia: la cuota es del ticket y del día, no del proceso, así
-    // que reiniciar el servidor no debe borrar la memoria de un 429.
-    this.rateLimiter = new RateLimiter(15, persistir ? rutaEstadoPorDefecto() : null);
+    // que reiniciar el servidor no debe borrar la memoria de un 429. Cada
+    // ticket lleva la suya (2.10.0): ver api/tickets.ts.
+    this.tickets = ticket instanceof Tickets
+      ? ticket
+      : new Tickets((Array.isArray(ticket) ? ticket : [ticket]).map((t) => t?.trim()).filter(Boolean), { persistir });
     this.cache = new ResponseCache({ rutaEstado: persistir ? rutaCachePorDefecto() : null });
     this.concurrencia = new LimitadorConcurrencia({ maximo: 5 });
     this.timeoutMs = opciones.timeoutMs ?? timeoutDesdeEntorno();
-    // El cliente se auto-protege: cualquier consumidor (servidor MCP, daemon,
-    // scripts, tests) queda cubierto sin tener que acordarse de registrarlo.
-    registrarSecreto(ticket);
+    // El cliente se auto-protege: Tickets registra cada valor como secreto, así
+    // que cualquier consumidor (servidor MCP, daemon, scripts, tests) queda
+    // cubierto sin tener que acordarse de registrarlo.
   }
 
   /**
@@ -361,7 +361,7 @@ export class CompraAgilClient {
     // anterior que guardaba la respuesta cruda.
     // Sin ticket el servidor igual arranca (para listar sus herramientas, como
     // hacen los catálogos de MCP), pero ninguna consulta sale.
-    if (!this.ticket) throw new CompraAgilApiError(0, [], '', { causa: 'sin_ticket' });
+    if (this.tickets.cantidad === 0) throw new CompraAgilApiError(0, [], '', { causa: 'sin_ticket' });
     const claveCache = ResponseCache.clave(path, params);
     const enCache = opciones.fresco ? undefined : this.cache.obtener<unknown>(claveCache);
     if (enCache !== undefined) {
@@ -375,22 +375,9 @@ export class CompraAgilClient {
       }
     }
 
-    // Verificar rate limit diario antes de enviar
-    const limitCheck = this.rateLimiter.checkLimit();
-    if (limitCheck.limited) {
-      throw new CompraAgilApiError(429, [{
-        codigo: '429',
-        mensaje: `Esta instalación ya vio un 429 y espera hasta ${limitCheck.resetIn}. Es un token bucket, no el saldo del ticket ni un bloqueo hasta el día siguiente.`,
-        detalle: null,
-      }]);
-    }
-
-    // Construir URL con query params
+    // Construir URL con query params (el ticket de /servicios se agrega al enviar)
     const base = path.startsWith('/servicios') ? 'https://api.mercadopublico.cl' : this.baseUrl;
     const url = new URL(path, base);
-    if (path.startsWith('/servicios')) {
-      url.searchParams.set('ticket', this.ticket);
-    }
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== null && value !== '') {
@@ -398,51 +385,74 @@ export class CompraAgilClient {
         }
       }
     }
+    const consulta = `GET ${url.pathname}${url.search}`;
 
-    const sanitizedUrl = new URL(url.toString());
-    if (sanitizedUrl.searchParams.has('ticket')) {
-      sanitizedUrl.searchParams.set('ticket', 'REDACTED');
-    }
-    const consulta = `GET ${sanitizedUrl.pathname}${sanitizedUrl.search}`;
-    // Dentro de una herramienta, la espera en el freno tiene que caber en su
-    // presupuesto de tiempo (ver utils/presupuesto.ts). Si no cabe, no se
-    // envía: mejor una respuesta parcial que una herramienta cortada por el
-    // cliente MCP. Comprobar y reservar el turno ocurre sin `await` en medio.
-    const restante = tiempoRestante();
-    if (restante !== undefined) {
-      const espera = this.rateLimiter.esperaPrevista();
-      if (espera + MINIMO_UTIL_MS > restante) {
-        registrarOmitidaPorTiempo();
-        throw new CompraAgilApiError(0, [], consulta, {
-          causa: 'tiempo_agotado', esperaMs: espera, presupuestoMs: contextoActual()?.presupuestoMs,
-        });
-      }
-    }
-
-    // Throttle proactivo: espaciar solicitudes bajo el máximo por minuto para no gatillar 429 por ráfagas
-    await this.rateLimiter.throttle();
-
-    logger.debug(`API Request: GET ${sanitizedUrl.toString()}`);
-
+    // Con varios tickets, un 429, 401 o 403 se reintenta con el siguiente
+    // activo (T3, T4). Con uno solo, el resultado es el de siempre.
+    const probados = new Set<string>();
     let response: Response;
-    try {
-      response = await this.enviar(url.toString(), consulta);
-    } catch (error) {
-      // Métricas (fase 2.2): una consulta que no tuvo respuesta también cuenta.
-      if (error instanceof CompraAgilApiError && (error.causa === 'timeout' || error.causa === 'red')) {
-        registrarConsultaApi(error.causa);
-      }
-      throw error;
-    }
-    registrarConsultaApi(response.status);
+    for (;;) {
+      const t = this.tickets.elegir(probados);
+      if (!t) throw new CompraAgilApiError(401, [], consulta);
 
-    if (response.status === 429) {
-      // La guía (§7) indica esperar lo que diga Retry-After; si no viene, el
-      // limitador aplica su propia espera progresiva.
-      const retryAfter = Number(response.headers?.get?.('retry-after'));
-      this.rateLimiter.markLimited(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined);
-    } else {
-      this.rateLimiter.recordRequest();
+      // Verificar rate limit antes de enviar
+      const limitCheck = t.limitador.checkLimit();
+      if (limitCheck.limited) {
+        throw new CompraAgilApiError(429, [{
+          codigo: '429',
+          mensaje: `${this.tickets.cantidad > 1 ? 'Todos los tickets ya vieron un 429; el primero se libera' : 'Esta instalación ya vio un 429 y espera'} hasta ${limitCheck.resetIn}. Es un token bucket, no el saldo del ticket ni un bloqueo hasta el día siguiente.`,
+          detalle: null,
+        }]);
+      }
+
+      // Dentro de una herramienta, la espera en el freno tiene que caber en su
+      // presupuesto de tiempo (ver utils/presupuesto.ts). Si no cabe, no se
+      // envía: mejor una respuesta parcial que una herramienta cortada por el
+      // cliente MCP. Comprobar y reservar el turno ocurre sin `await` en medio.
+      const restante = tiempoRestante();
+      if (restante !== undefined) {
+        const espera = t.limitador.esperaPrevista();
+        if (espera + MINIMO_UTIL_MS > restante) {
+          registrarOmitidaPorTiempo();
+          throw new CompraAgilApiError(0, [], consulta, {
+            causa: 'tiempo_agotado', esperaMs: espera, presupuestoMs: contextoActual()?.presupuestoMs,
+          });
+        }
+      }
+
+      // Throttle proactivo: espaciar solicitudes bajo el máximo por minuto para no gatillar 429 por ráfagas
+      await t.limitador.throttle();
+
+      logger.debug(`API Request: ${consulta}`);
+
+      const destino = new URL(url.toString());
+      if (path.startsWith('/servicios')) destino.searchParams.set('ticket', t.valor);
+      try {
+        response = await this.enviar(destino.toString(), consulta, t);
+      } catch (error) {
+        // Métricas (fase 2.2): una consulta que no tuvo respuesta también cuenta.
+        if (error instanceof CompraAgilApiError && (error.causa === 'timeout' || error.causa === 'red')) {
+          registrarConsultaApi(error.causa);
+        }
+        throw error;
+      }
+      registrarConsultaApi(response.status);
+
+      if (response.status === 429) {
+        // La guía (§7) indica esperar lo que diga Retry-After; si no viene, el
+        // limitador aplica su propia espera progresiva.
+        const retryAfter = Number(response.headers?.get?.('retry-after'));
+        t.limitador.markLimited(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined);
+      } else {
+        t.limitador.recordRequest();
+        if ((response.status === 401 || response.status === 403) && this.tickets.cantidad > 1) {
+          this.tickets.rechazar(t, response.status);
+        }
+      }
+      probados.add(t.clave);
+      const reintentable = response.status === 429 || response.status === 401 || response.status === 403;
+      if (!reintentable || !this.tickets.hayOtro(probados)) break;
+      logger.info(`HTTP ${response.status} con el ticket ${t.mascara}; se reintenta con otro.`);
     }
 
     let payload: T;
@@ -486,18 +496,18 @@ export class CompraAgilClient {
     return restante === undefined ? this.timeoutMs : Math.min(this.timeoutMs, Math.max(MINIMO_UTIL_MS, restante));
   }
 
-  private async enviar(url: string, consulta: string): Promise<Response> {
+  private async enviar(url: string, consulta: string, t: Ticket): Promise<Response> {
     for (let intento = 1; ; intento++) {
       try {
         return await fetch(url, {
           method: 'GET',
-          headers: { 'ticket': this.ticket },
+          headers: { 'ticket': t.valor },
           signal: AbortSignal.timeout(this.timeoutEfectivo()),
         });
       } catch (error) {
         if (esTimeout(error)) {
           // La consulta salió: la API pudo contarla contra la cuota.
-          this.rateLimiter.recordRequest();
+          t.limitador.recordRequest();
           throw new CompraAgilApiError(0, [], consulta, { causa: 'timeout', timeoutMs: this.timeoutEfectivo() });
         }
         if (!esFalloDeRed(error)) throw error;
@@ -508,7 +518,7 @@ export class CompraAgilClient {
         logger.warn(`Fallo de red en ${consulta}; se reintenta una vez.`);
         // Espera con jitter para no sincronizar el reintento de varias tareas.
         await esperar(250 + Math.random() * 500);
-        await this.rateLimiter.throttle();
+        await t.limitador.throttle();
       }
     }
   }
@@ -692,8 +702,18 @@ export class CompraAgilClient {
   /**
    * Obtener estadísticas del rate limiter.
    */
-  getRateLimitStats() {
-    return this.rateLimiter.getStats();
+  getRateLimitStats(): { requestsToday: number; isLimited: boolean; resetTime: string | null } {
+    const todos = this.tickets.lista.map((t) => t.limitador.getStats());
+    if (todos.length <= 1) return todos[0] ?? { requestsToday: 0, isLimited: false, resetTime: null };
+    // Con varios: limitado solo si lo están todos, y se libera con el primero.
+    const limitado = this.tickets.estado().every((e) => e.estado !== 'activo');
+    const fines = todos.map((x) => x.resetTime).filter((r): r is string => !!r).sort();
+    return { requestsToday: todos.reduce((a, x) => a + x.requestsToday, 0), isLimited: limitado, resetTime: limitado ? fines[0] ?? null : null };
+  }
+
+  /** Cada ticket enmascarado, con su estado y su consumo del día (T5). */
+  estadoTickets() {
+    return this.tickets.estado();
   }
 
   /** HTTP del último fallo de la tanda de detalles en paralelo. Null si no hubo status. */

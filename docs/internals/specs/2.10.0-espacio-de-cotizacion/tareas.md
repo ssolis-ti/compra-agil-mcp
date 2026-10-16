@@ -37,17 +37,17 @@ fase se suman a la puerta común del [README](README.md).
 
 **Puerta:** un mes de una región real exportado y abierto en Excel. ✅ Aysén, septiembre: 2.422 procesos (243 páginas). Se exportaron 500 en 50 páginas (9 min, en segundo plano), y el siguiente tramo siguió sin repetir ni saltar procesos (2.422 → 2.412). El `.xlsx` y el `.csv` abren en Excel sin reparar, con montos numéricos y tildes correctas.
 
-## Fase 3 — Rotación de tickets · 2.10.0
+## Fase 3 — Rotación de tickets · 2.10.0 ✅ (16-oct-2026)
 
 | Id | Tarea | Prueba | Cubre |
 | :--- | :--- | :--- | :--- |
-| T3.1 | `api/tickets.ts`: turno, limitar, rechazar, estado | `tickets.test.ts` | T1, T3, T4 |
-| T3.2 | Cuota por ticket (hash) y migración del archivo anterior | `rate-limiter.test.ts` ampliado | T2 |
-| T3.3 | `CompraAgilClient` con `Tickets`; un ticket = como hoy | Suite actual sin cambios + casos nuevos | T1 |
-| T3.4 | `verificar_ticket`, estadísticas y `--check` por ticket | Salida enmascarada, test de secretos | T5 |
-| T3.5 | Advertencia de términos en `.env.example`, manual y README | Revisión | T6 |
+| T3.1 ✅ | `api/tickets.ts`: turno, limitar, rechazar, estado | `tickets.test.ts` | T1, T3, T4 |
+| T3.2 ✅ | Cuota por ticket (hash) y migración del archivo anterior | `tickets.test.ts`: un archivo por hash, el anterior pasa al primero | T2 |
+| T3.3 ✅ | `CompraAgilClient` con `Tickets`; un ticket = como hoy | Suite actual sin cambios + casos nuevos | T1 |
+| T3.4 ✅ | `verificar_ticket`, estadísticas y `--check` por ticket | Salida enmascarada, test de secretos | T5 |
+| T3.5 ✅ | Advertencia de términos en `.env.example`, manual y README | Revisión | T6 |
 
-**Puerta:** con dos tickets y un 429 simulado en uno, la vigilancia no se detiene. Publicar **2.10.0**.
+**Puerta:** con dos tickets y un 429 simulado en uno, la vigilancia no se detiene. ✅ La consulta sale por el otro ticket sin fallar (`tickets.test.ts`); la vigilancia usa el mismo cliente. Contra la API real, `--check` con el ticket real y uno falso: el real responde y el falso sale rechazado, los dos enmascarados. Publicar **2.10.0**.
 
 ## Fase 4 — Espacio de cotización · 2.11.0
 

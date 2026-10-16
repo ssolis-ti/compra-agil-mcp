@@ -156,7 +156,7 @@ function getActionableMessage(httpStatus: number, apiErrors: ApiError[], consult
       return `Parámetros inválidos enviados a la API de Compra Ágil. Verifica el formato de fechas (ISO-8601), que 'q' e 'id' no se usen juntos, y que los códigos de región estén entre 1 y 16.${detail}`;
     }
     case 401:
-      return `Ticket de acceso no proporcionado. Configura la variable de entorno COMPRA_AGIL_TICKET con un ticket válido obtenido en https://www.chilecompra.cl/api/.${detail}`;
+      return `La API no reconoce el ticket (no existe o es inválido). Revisa COMPRA_AGIL_TICKET (y COMPRA_AGIL_TICKETS si usas varios), o pide uno en https://www.chilecompra.cl/api/.${detail}`;
     case 403:
       return `Ticket de acceso inválido, inactivo o bloqueado. Verifica que el ticket sea correcto y esté vigente. Si fue bloqueado, solicita uno nuevo en https://www.chilecompra.cl/api/.${detail}`;
     case 404: {

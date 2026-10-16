@@ -43,6 +43,16 @@ describe('--check', () => {
     expect(r.codigo).toBe(0);
   });
 
+  it('varios tickets: prueba cada uno por separado y no los muestra (T5)', async () => {
+    const malo = 'TICKET-RECHAZADO-NO-REAL-9999';
+    const r = await correr('comandoCheck', { COMPRA_AGIL_TICKET: TICKET, COMPRA_AGIL_TICKETS: malo, COMPRA_AGIL_BASE_URL: api });
+    expect(r.salida).toMatch(/✔ Ticket ••••0000: responde/);
+    expect(r.salida).toMatch(/✘ Ticket ••••9999:/);
+    expect(r.salida).not.toContain(TICKET);
+    expect(r.salida).not.toContain(malo);
+    expect(r.codigo).toBe(1);
+  });
+
   it('sin ticket: código 1 y dice qué falta', async () => {
     const r = await correr('comandoCheck', {});
     expect(r.codigo).toBe(1);

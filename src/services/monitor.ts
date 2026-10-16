@@ -10,6 +10,7 @@
 import { loadEnvManual } from '../utils/env-loader.js';
 import { rutaDeDatos } from '../utils/rutas.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { ticketsDelEntorno } from '../api/tickets.js';
 import { registrarSecreto } from '../utils/redact.js';
 import { iniciarRelojOficial } from '../utils/reloj.js';
 import { criteriosDesdeEntorno } from '../vigilancia/criterios.js';
@@ -21,7 +22,8 @@ import { crearBucleVigilancia, intervaloDesdeEntorno } from './bucle-vigilancia.
 
 loadEnvManual();
 
-const TICKET = process.env.COMPRA_AGIL_TICKET;
+const TICKETS = ticketsDelEntorno(process.env);
+const TICKET = TICKETS[0];
 const BASE_URL = process.env.COMPRA_AGIL_BASE_URL || 'https://api2.mercadopublico.cl';
 
 // El daemon es un proceso independiente: debe registrar el secreto por su cuenta.
@@ -65,7 +67,7 @@ console.log('==================================');
 
 iniciarRelojOficial();
 crearBucleVigilancia({
-  client: new CompraAgilClient(TICKET, BASE_URL, { persistir: true }),
+  client: new CompraAgilClient(TICKETS, BASE_URL, { persistir: true }),
   env: process.env,
   mantenerVivo: true,
   registrar: (nivel, mensaje) => {

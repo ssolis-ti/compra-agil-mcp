@@ -136,7 +136,7 @@ describe('servidor lanzado desde otra carpeta (como lo hace un cliente MCP)', ()
     expect(ticketRecibido).toBe(TICKET);
     // La caché se escribe diferida, ~1 s después de la última respuesta (fase 1.2).
     await vi.waitFor(() => expect(fs.existsSync(path.join(datos, '.api-cache.json'))).toBe(true), { timeout: 5_000 });
-    expect(fs.existsSync(path.join(datos, '.rate-limit-state.json'))).toBe(true);
+    expect(fs.readdirSync(datos).some((n) => /^\.rate-limit-state-[0-9a-f]{16}\.json$/.test(n))).toBe(true);
     expect(fs.readdirSync(cwdAjeno)).toEqual([]);
   }, 30_000);
 });

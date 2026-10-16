@@ -79,17 +79,20 @@ en curso no se lanza dos veces.
 
 ```
 api/tickets.ts
+  ticketsDelEntorno(env)      // COMPRA_AGIL_TICKET primero, luego COMPRA_AGIL_TICKETS
   class Tickets {
-    siguiente(): { ticket, clave } | null   // turno entre los activos; null si ninguno
-    limitar(clave, hastaMs)                 // 429
-    rechazar(clave)                         // 401/403: fuera por la sesión
-    estado(): [{ mascara: '••••12DC', estado, consultasHoy }]
+    elegir(excepto)           // el activo de menor espera; a igual espera, por turno
+    hayOtro(excepto)          // ¿queda uno utilizable para reintentar?
+    rechazar(ticket, http)    // 401/403: fuera hasta reiniciar
+    estado()                  // [{ ticket: '••••12DC', estado, consultas_hoy, limitado_hasta }]
   }
 ```
 
-- **Clave:** `sha256(ticket).slice(0,16)`, como `bandeja.ts`. El archivo de cuota pasa a `{ tickets: { <clave>: {...} } }` y migra el formato anterior al primer ticket.
-- El **limitador de concurrencia** sigue siendo uno solo y compartido: la velocidad hacia la API no cambia, solo cuál ticket se usa.
-- `CompraAgilClient` recibe `Tickets` en vez de un `string`. Con un solo ticket se comporta como hoy.
+- **Un limitador por ticket:** su freno por minuto, su 429 y su conteo del día. Se guarda en `.rate-limit-state-<sha256(ticket)[0:16]>.json`; el archivo anterior (`.rate-limit-state.json`) se copia al primer ticket una vez. Un archivo por ticket, y no uno con todos, para no cambiar el formato que ya lee `RateLimiter` ni su candado.
+- **Reintento:** un 429, 401 o 403 reintenta la misma consulta con otro ticket utilizable. Un 5xx o un timeout no (como hoy).
+- **Con un solo ticket** un 401 no lo marca rechazado: se informa como siempre en cada llamada.
+- El **limitador de concurrencia** sigue siendo uno solo y compartido.
+- `CompraAgilClient` recibe `string | string[] | Tickets`.
 
 ## 6. Espacio de cotización (2.11, ADR 0030)
 

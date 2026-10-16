@@ -28,7 +28,7 @@ alerts.log
 .vigilancia.json.*
 .vigilante.lock
 .preferencias.json
-.rate-limit-state.json
+.rate-limit-state*.json
 .api-cache.json
 
 # IDEs and Editors

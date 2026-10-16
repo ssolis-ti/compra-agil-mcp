@@ -41,7 +41,8 @@ export function registerEstadisticasUso(server: McpServer, client: CompraAgilCli
     },
     async () => {
       const stats = client.getRateLimitStats();
-      const salida = { ...cuerpoEstadisticas(stats), metricas: resumenMetricas() };
+      const tickets = client.estadoTickets();
+      const salida = { ...cuerpoEstadisticas(stats), ...(tickets.length > 1 ? { tickets } : {}), metricas: resumenMetricas() };
       return {
         content: [{
           type: 'text' as const,

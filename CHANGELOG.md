@@ -21,6 +21,15 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
   * **Más páginas que el tope:** la respuesta dice con qué `publicado_hasta` seguir.
   * **Una página que falla:** se exporta lo leído y se dice desde qué página falta.
   * **El CSV** usa `;` y abre directo en Excel en español.
+* **Varios tickets con rotación** (2.10.0, fase 3; MEJORA-006). Con `COMPRA_AGIL_TICKETS` (separados por coma) las consultas se reparten entre varios tickets.
+  * **Si uno recibe 429** se salta hasta que pase su espera; **si es rechazado** (401/403) queda fuera hasta reiniciar. En los dos casos la consulta sale por otro.
+  * **Cuota por ticket:** cada uno lleva su conteo, guardado con un hash, nunca con el ticket. El conteo de antes pasa al primero.
+  * **`verificar_ticket`, `obtener_estadisticas_uso` y `--check`** muestran cada ticket enmascarado con su estado.
+  * Con un solo ticket todo funciona igual que antes.
+  * ⚠ Usa solo tickets de tu propia organización: juntar tickets de distintas personas para multiplicar la cuota puede ir contra los términos de ChileCompra.
+
+### Corregido
+* **El `.gitignore` dejaba fuera un archivo de prueba** (`test/fixtures/adjuntos/`), y la CI fallaba. Las reglas de datos quedan ancladas a la raíz.
 
 ---
 

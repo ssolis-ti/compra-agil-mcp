@@ -16,6 +16,8 @@
  *   NOEXISTE-*  404     HANG-*  nunca responde     SLOW-*  504
  *   XSS-*       HTML/JS en nombre y razón social de los cotizantes
  *
+ * Un ticket que contiene RECHAZADO recibe 401 (rotación de tickets, 2.10.0).
+ *
  * GET /__stats devuelve las llamadas recibidas (y si el ticket vino por header).
  *
  * Modo realista (para simulaciones de uso, scripts/qa/puente-mcp.mjs):
@@ -81,6 +83,7 @@ function atender(req, res) {
   if (u.pathname === '/__stats') return send(res, 200, { hits, log });
   log.push(`${req.method} ${u.pathname}${u.search} ticket=${req.headers.ticket ? 'header' : 'none'}`);
 
+  if (String(req.headers.ticket ?? '').includes('RECHAZADO')) return send(res, 401, { success: 'NOK', errors: [{ codigo: '401', mensaje: 'ticket no válido' }] });
   if (q === 'HANG') return;
   if (q === 'E504') return send(res, 504, 'Gateway Timeout');
   if (q === 'E429') return send(res, 429, { success: 'NOK', errors: [{ codigo: '429', mensaje: 'rate' }] }, { 'retry-after': '60' });

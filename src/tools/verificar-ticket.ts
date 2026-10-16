@@ -10,6 +10,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { ticketsDelEntorno } from '../api/tickets.js';
 import { ventanaUltimosMinutos } from '../utils/fechas.js';
 import { ahora } from '../utils/reloj.js';
 import { CompraAgilApiError } from '../utils/error-handler.js';
@@ -26,9 +27,10 @@ export function registerVerificarTicket(server: McpServer, client: CompraAgilCli
     TOOL_NAME,
     { title: "Verificar el ticket de acceso", description: TOOL_DESCRIPTION, annotations: { readOnlyHint: true, openWorldHint: true } },
     async () => {
-      const referencia = pista(process.env.COMPRA_AGIL_TICKET);
+      const configurados = ticketsDelEntorno(process.env);
+      const referencia = configurados.map(pista).join(', ');
 
-      if (!process.env.COMPRA_AGIL_TICKET) {
+      if (configurados.length === 0) {
         return {
           content: [{
             type: 'text' as const,
@@ -57,13 +59,15 @@ export function registerVerificarTicket(server: McpServer, client: CompraAgilCli
         //   (hora de Chile con "Z") contra la hora UTC real. Informaba "0 cambios
         //   en la última hora" en pleno horario hábil. Ver utils/fechas.ts.
         const resp = await client.buscar({ ...ventanaUltimosMinutos(10, ahora()), tamano_pagina: 10, numero_pagina: 1 });
+        const tickets = client.estadoTickets();
         return {
           content: [{
             type: 'text' as const,
             text: [
               '✅ Ticket válido y operativo.',
               '',
-              `Ticket configurado: ${referencia}`,
+              tickets.length > 1 ? `Tickets configurados: ${tickets.length}, con rotación.` : `Ticket configurado: ${referencia}`,
+              ...(tickets.length > 1 ? tickets.map((t) => `  ${t.ticket}: ${t.estado}, ${t.consultas_hoy} consulta(s) hoy${t.limitado_hasta ? `, limitado hasta ${t.limitado_hasta}` : ''}`) : []),
               `Consulta de prueba: cambios en los últimos 10 minutos → ${resp.paginacion.total_resultados} resultado(s).`,
               `Conteo local del día UTC, compartido por todos los procesos de esta instalación: ${client.getRateLimitStats().requestsToday} request(s). No es el saldo del ticket ni la cuota de este chat.`,
               '',

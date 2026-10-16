@@ -25,6 +25,7 @@ const require = createRequire(import.meta.url);
 const { version: PKG_VERSION } = require('../package.json') as { version: string };
 
 import { CompraAgilClient } from './api/compra-agil-client.js';
+import { ticketsDelEntorno } from './api/tickets.js';
 import { logger, setMcpServer } from './utils/logger.js';
 import { registrarSecreto } from './utils/redact.js';
 import { iniciarRelojOficial } from './utils/reloj.js';
@@ -34,6 +35,8 @@ import { crearControlVigilancia } from './services/control-vigilancia.js';
 // ─── Configuración ──────────────────────────────────────────────────
 
 const TICKET = process.env.COMPRA_AGIL_TICKET;
+// Varios tickets (2.10.0): COMPRA_AGIL_TICKET primero y COMPRA_AGIL_TICKETS después.
+const TICKETS = ticketsDelEntorno(process.env);
 const BASE_URL = process.env.COMPRA_AGIL_BASE_URL || 'https://api2.mercadopublico.cl';
 
 // Comandos de terminal (2.9.0): no abren el servidor ni necesitan el ticket.
@@ -90,20 +93,20 @@ registrarSecreto(TICKET);
 // terminar aquí los hacía fallar. Cada consulta a la API responde «falta el
 // ticket» con cómo conseguirlo (CompraAgilApiError, causa sin_ticket), y la
 // vigilancia no se retoma.
-if (!TICKET) {
+if (TICKETS.length === 0) {
   logger.warn(
     'Falta COMPRA_AGIL_TICKET: el servidor arranca, pero no consultará la API hasta que se configure. ' +
     'Pídelo en https://www.chilecompra.cl/api/.'
   );
 }
-const VALID_TICKET: string = TICKET ?? '';
 
 // ─── Inicialización ─────────────────────────────────────────────────
 
 async function main() {
   logger.info('Iniciando servidor MCP Compra Ágil v2...');
 
-  const client = new CompraAgilClient(VALID_TICKET, BASE_URL, { persistir: true });
+  const client = new CompraAgilClient(TICKETS, BASE_URL, { persistir: true });
+  if (TICKETS.length > 1) logger.info(`${TICKETS.length} tickets configurados: las consultas se reparten entre ellos.`);
 
   // Plazos, radar y ventanas de cambios usan la hora del SHOA (utils/reloj.ts).
   // En segundo plano: si el UDP 123 está bloqueado, se sigue con el reloj local.

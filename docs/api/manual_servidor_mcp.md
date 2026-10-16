@@ -77,4 +77,6 @@ npm run inspect    # inspector MCP
 
 Variable obligatoria: `COMPRA_AGIL_TICKET`. La base por defecto es `https://api2.mercadopublico.cl`.
 
+`COMPRA_AGIL_TICKETS` (opcional) agrega más tickets, separados por coma. Cada uno lleva su propia cuota, su 429 y su conteo del día, guardados en la carpeta de datos con un hash del ticket como nombre (`.rate-limit-state-<hash>.json`), nunca con su valor. La consulta sale por el ticket que antes pueda enviar; a igual espera, por turno. Un 429 salta ese ticket hasta que pase su espera, y un 401 o 403 lo deja fuera hasta reiniciar; en ambos casos la misma consulta sale por otro ticket. Si todos están limitados, responde 429 como con uno solo. `verificar_ticket`, `obtener_estadisticas_uso` (campo `tickets`) y `--check` muestran cada ticket enmascarado con su estado. ⚠ Usa solo tickets de tu propia organización: juntar tickets de distintas personas para multiplicar la cuota puede ir contra los términos de uso de ChileCompra.
+
 El servidor no depende de la carpeta desde la que lo lanza el cliente MCP. Busca `.env` en esa carpeta, en la del proyecto y en la carpeta de datos. La carpeta de datos (caché, estado de cuota, daemon e informes) es `COMPRA_AGIL_DATA_DIR`, o la del proyecto si es un clon del repositorio, o `%LOCALAPPDATA%\mcp-compra-agil` / `~/.local/state/mcp-compra-agil` si se instaló con `npx`.

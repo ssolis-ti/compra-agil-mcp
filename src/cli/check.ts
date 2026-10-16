@@ -12,6 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import { CompraAgilClient } from '../api/compra-agil-client.js';
+import { ticketsDelEntorno } from '../api/tickets.js';
 import { carpetaDatos, rutaDeDatos } from '../utils/rutas.js';
 import { consultarHoraOficial } from '../utils/ntp.js';
 import { safeError, pista, registrarSecreto } from '../utils/redact.js';
@@ -27,17 +28,19 @@ export async function comandoCheck(env: Record<string, string | undefined>, escr
   let fallos = 0;
   const mal = (l: string) => { fallos++; escribir(`${MAL} ${l}`); };
 
-  const ticket = env.COMPRA_AGIL_TICKET?.trim();
-  registrarSecreto(ticket);
-  if (!ticket) mal('Ticket: falta COMPRA_AGIL_TICKET en el .env.');
-  else {
-    escribir(`${OK} Ticket configurado (${pista(ticket)}).`);
+  const tickets = ticketsDelEntorno(env);
+  tickets.forEach(registrarSecreto);
+  if (tickets.length === 0) mal('Ticket: falta COMPRA_AGIL_TICKET en el .env.');
+  // Cada ticket se prueba por separado (T5): uno rechazado no se esconde detrás de otro que funciona.
+  for (const ticket of tickets) {
+    const cual = tickets.length > 1 ? `Ticket ${pista(ticket)}` : 'API de Mercado Público';
+    if (tickets.length === 1) escribir(`${OK} Ticket configurado (${pista(ticket)}).`);
     try {
       const api = new CompraAgilClient(ticket, env.COMPRA_AGIL_BASE_URL || undefined, { persistir: false });
       const r = await api.buscarFresco({ ...ventanaUltimosMinutos(10, Date.now()), tamano_pagina: 10, numero_pagina: 1 });
-      escribir(`${OK} API de Mercado Público: responde (${r.paginacion.total_resultados} cambios en los últimos 10 minutos).`);
+      escribir(`${OK} ${cual}: responde (${r.paginacion.total_resultados} cambios en los últimos 10 minutos).`);
     } catch (e) {
-      mal(`API de Mercado Público: ${safeError(e).slice(0, 200)}`);
+      mal(`${cual}: ${safeError(e).slice(0, 200)}`);
     }
   }
 
