@@ -225,7 +225,7 @@ El ticket es una credencial personal. Aunque el servidor **redacta el ticket de 
 * Para comprobar que funciona usa la herramienta **`verificar_ticket`**: valida contra la API y solo muestra `••••1234`.
 * Si trabajas con un agente de IA con acceso a tu disco, considera añadir reglas que le impidan leer el `.env`.
 
-**Varios tickets.** Puedes agregar más en `COMPRA_AGIL_TICKETS`, separados por coma. Las consultas se reparten entre todos, y si uno recibe un 429 o es rechazado se sigue con los otros. `verificar_ticket` y `--check` muestran cada uno enmascarado. ⚠ Usa solo tickets de tu propia organización: juntar tickets de distintas personas para multiplicar la cuota puede ir contra los términos de uso de ChileCompra.
+**Varios tickets.** Puedes agregar más en `COMPRA_AGIL_TICKETS`, separados por coma. Las consultas se reparten entre todos, y si uno recibe un 429 o es rechazado se sigue con los otros. La velocidad no sube: el freno por minuto es el mismo. `verificar_ticket` y `--check` muestran cada uno enmascarado. ⚠ Usa solo tickets de tu propia organización: juntar tickets de distintas personas para multiplicar la cuota puede ir contra los términos de uso de ChileCompra.
 
 ---
 

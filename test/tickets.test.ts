@@ -41,12 +41,13 @@ describe('ticketsDelEntorno', () => {
 });
 
 describe('Tickets', () => {
-  it("reparte en turno; si uno tiene que esperar, sale por el otro", () => {
+  it('reparte en turno, con un solo freno por minuto para todos', () => {
     const t = new Tickets([A, B]);
     expect([t.elegir()!.valor, t.elegir()!.valor, t.elegir()!.valor]).toEqual([A, B, A]);
     const lento = new Tickets([A, B], { maximoPorMinuto: 1 });
-    lento.lista[1].limitador.reservarTurno(); // B ya usó su cupo del minuto
-    expect([lento.elegir()!.valor, lento.elegir()!.valor]).toEqual([A, A]);
+    lento.freno.reservarTurno();
+    // Con el cupo del minuto usado, la próxima espera aunque haya otro ticket.
+    expect(lento.freno.esperaPrevista()).toBeGreaterThan(50_000);
   });
 
   it('el estado muestra cada ticket enmascarado, nunca su valor', () => {

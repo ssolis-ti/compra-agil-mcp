@@ -11,6 +11,7 @@
 - **401/403:** se marca rechazado por la sesión y se avisa.
 - **Cuota:** se lleva por ticket, con la clave guardada como hash.
 - **Concurrencia:** el limitador sigue siendo uno solo y compartido.
+- **Velocidad:** el freno de 15 consultas por minuto es uno solo para todos los tickets. Varios tickets dan redundancia, no más velocidad (decidido el 16-oct, al cerrar la fase 3: una primera versión daba un freno a cada ticket y duplicaba la velocidad con dos).
 
 **Advertencia, que va en la documentación:** el ticket se pide con Clave Única y es personal. Repartir la carga entre tickets de distintas personas para multiplicar la cuota puede ir contra los términos de uso de ChileCompra, y conviene confirmarlo con ellos. La redundancia (sobrevivir a un ticket revocado) y el uso de tickets de la propia organización no tienen ese problema.
 

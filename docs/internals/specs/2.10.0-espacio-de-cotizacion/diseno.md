@@ -81,14 +81,15 @@ en curso no se lanza dos veces.
 api/tickets.ts
   ticketsDelEntorno(env)      // COMPRA_AGIL_TICKET primero, luego COMPRA_AGIL_TICKETS
   class Tickets {
-    elegir(excepto)           // el activo de menor espera; a igual espera, por turno
+    elegir(excepto)           // el siguiente activo en turno
+    freno                     // un solo freno por minuto, compartido
     hayOtro(excepto)          // ¿queda uno utilizable para reintentar?
     rechazar(ticket, http)    // 401/403: fuera hasta reiniciar
     estado()                  // [{ ticket: '••••12DC', estado, consultas_hoy, limitado_hasta }]
   }
 ```
 
-- **Un limitador por ticket:** su freno por minuto, su 429 y su conteo del día. Se guarda en `.rate-limit-state-<sha256(ticket)[0:16]>.json`; el archivo anterior (`.rate-limit-state.json`) se copia al primer ticket una vez. Un archivo por ticket, y no uno con todos, para no cambiar el formato que ya lee `RateLimiter` ni su candado.
+- **Un limitador por ticket** para su 429 y su conteo del día. **El freno por minuto es uno solo:** varios tickets no suben la velocidad hacia la API (ADR 0031). Se guarda en `.rate-limit-state-<sha256(ticket)[0:16]>.json`; el archivo anterior (`.rate-limit-state.json`) se copia al primer ticket una vez. Un archivo por ticket, y no uno con todos, para no cambiar el formato que ya lee `RateLimiter` ni su candado.
 - **Reintento:** un 429, 401 o 403 reintenta la misma consulta con otro ticket utilizable. Un 5xx o un timeout no (como hoy).
 - **Con un solo ticket** un 401 no lo marca rechazado: se informa como siempre en cada llamada.
 - El **limitador de concurrencia** sigue siendo uno solo y compartido.

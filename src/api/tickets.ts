@@ -1,10 +1,12 @@
 /**
  * Varios tickets con rotación (2.10.0, T1–T5; MEJORA-006 de Hermes; ADR 0031).
  *
- * Cada ticket tiene su propio limitador: su freno por minuto, su 429 y su
- * conteo del día. La consulta sale por el activo que antes pueda enviar. Un
- * ticket rechazado (401/403) queda fuera hasta reiniciar; uno con 429 se salta
- * hasta que pase su espera. Con un solo ticket todo funciona como antes.
+ * Cada ticket lleva su 429 y su conteo del día. El freno por minuto es uno
+ * solo y compartido: varios tickets no suben la velocidad hacia la API, solo
+ * evitan que un 429 o un ticket rechazado detenga el servidor (ADR 0031). Las
+ * consultas salen por turno entre los activos. Un ticket rechazado (401/403)
+ * queda fuera hasta reiniciar; uno con 429 se salta hasta que pase su espera.
+ * Con un solo ticket todo funciona como antes.
  *
  * En disco cada ticket se identifica por un hash, nunca por su valor.
  */
@@ -43,11 +45,14 @@ function rutaDeTicket(c: string): string {
 
 export class Tickets {
   readonly lista: Ticket[];
-  /** Índice del último usado: a igual espera, sigue el siguiente (turno, T1). */
+  /** Freno por minuto compartido por todos los tickets. */
+  readonly freno: RateLimiter;
+  /** Índice del último usado: la próxima consulta sale por el siguiente (turno, T1). */
   private ultimo = -1;
 
   constructor(valores: string[], opciones: { persistir?: boolean; maximoPorMinuto?: number } = {}) {
     const persistir = opciones.persistir === true;
+    this.freno = new RateLimiter(opciones.maximoPorMinuto ?? MAXIMO_POR_MINUTO, null);
     this.lista = valores.map((valor, i) => {
       registrarSecreto(valor);
       const c = clave(valor);
@@ -70,8 +75,8 @@ export class Tickets {
   get cantidad(): number { return this.lista.length; }
 
   /**
-   * El ticket por el que debe salir la próxima consulta: entre los activos no
-   * limitados, el de menor espera; a igual espera, por turno. Si todos los
+   * El ticket por el que debe salir la próxima consulta: el siguiente en turno
+   * entre los activos no limitados. Si todos los
    * activos están limitados, devuelve el que antes se libera, para que la
    * consulta informe su 429 como siempre. `null` si no queda ninguno activo.
    */
@@ -82,9 +87,7 @@ export class Tickets {
     if (libres.length === 0) {
       return [...activos].sort((a, b) => fin(a) - fin(b))[0];
     }
-    const minima = Math.min(...libres.map((t) => t.limitador.esperaPrevista()));
-    const candidatos = libres.filter((t) => t.limitador.esperaPrevista() === minima);
-    const elegido = candidatos.find((t) => this.lista.indexOf(t) > this.ultimo) ?? candidatos[0];
+    const elegido = libres.find((t) => this.lista.indexOf(t) > this.ultimo) ?? libres[0];
     this.ultimo = this.lista.indexOf(elegido);
     return elegido;
   }

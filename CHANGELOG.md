@@ -6,6 +6,12 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
 
 ## [Unreleased]
 
+---
+
+## [2.10.0] - 2026-10-16
+
+Base del espacio de cotización: leer todos los adjuntos, exportar búsquedas completas y trabajar con varios tickets.
+
 ### Añadido
 * **Se leen los adjuntos en Word, Excel, CSV y ZIP** (2.10.0, fase 1). `descargar_y_leer_documento` leía solo PDF, y en una muestra de 244 adjuntos reales el 43 % era de otro formato (33 % `.docx`, 7 % `.doc`).
   * **Formatos:** ahora lee `.docx` (con sus tablas, fila por fila), `.doc`, `.xlsx` (cada hoja), `.csv` y `.zip` (lee lo que trae adentro).
@@ -21,7 +27,7 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
   * **Más páginas que el tope:** la respuesta dice con qué `publicado_hasta` seguir.
   * **Una página que falla:** se exporta lo leído y se dice desde qué página falta.
   * **El CSV** usa `;` y abre directo en Excel en español.
-* **Varios tickets con rotación** (2.10.0, fase 3; MEJORA-006). Con `COMPRA_AGIL_TICKETS` (separados por coma) las consultas se reparten entre varios tickets.
+* **Varios tickets con rotación** (2.10.0, fase 3; MEJORA-006). Con `COMPRA_AGIL_TICKETS` (separados por coma) las consultas se reparten entre varios tickets. La velocidad no sube: el freno por minuto es uno solo.
   * **Si uno recibe 429** se salta hasta que pase su espera; **si es rechazado** (401/403) queda fuera hasta reiniciar. En los dos casos la consulta sale por otro.
   * **Cuota por ticket:** cada uno lleva su conteo, guardado con un hash, nunca con el ticket. El conteo de antes pasa al primero.
   * **`verificar_ticket`, `obtener_estadisticas_uso` y `--check`** muestran cada ticket enmascarado con su estado.

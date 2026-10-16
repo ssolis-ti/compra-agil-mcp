@@ -411,7 +411,7 @@ export class CompraAgilClient {
       // cliente MCP. Comprobar y reservar el turno ocurre sin `await` en medio.
       const restante = tiempoRestante();
       if (restante !== undefined) {
-        const espera = t.limitador.esperaPrevista();
+        const espera = this.tickets.freno.esperaPrevista();
         if (espera + MINIMO_UTIL_MS > restante) {
           registrarOmitidaPorTiempo();
           throw new CompraAgilApiError(0, [], consulta, {
@@ -421,7 +421,7 @@ export class CompraAgilClient {
       }
 
       // Throttle proactivo: espaciar solicitudes bajo el máximo por minuto para no gatillar 429 por ráfagas
-      await t.limitador.throttle();
+      await this.tickets.freno.throttle();
 
       logger.debug(`API Request: ${consulta}`);
 
@@ -518,7 +518,7 @@ export class CompraAgilClient {
         logger.warn(`Fallo de red en ${consulta}; se reintenta una vez.`);
         // Espera con jitter para no sincronizar el reintento de varias tareas.
         await esperar(250 + Math.random() * 500);
-        await t.limitador.throttle();
+        await this.tickets.freno.throttle();
       }
     }
   }
