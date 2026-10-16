@@ -34,6 +34,7 @@ import { registerRadarOportunidades } from './tools/radar-oportunidades.js';
 import { registerGenerarInforme } from './tools/generar-informe.js';
 import { registerVerificarTicket } from './tools/verificar-ticket.js';
 import { registerVerificarHora } from './tools/verificar-hora.js';
+import { registerExportar } from './tools/exportar.js';
 import { registerVigilanciaTools, type ControlDeVigilancia } from './tools/vigilancia.js';
 
 // Resources
@@ -90,6 +91,7 @@ export function crearServidor(client: CompraAgilClient, version: string, opcione
   // corte del cliente MCP (ver utils/presupuesto.ts).
   instalarPresupuesto(server);
   registerBuscarCompras(server, client);
+  registerExportar(server, client);
   registerDetalleCompra(server, client);
   registerMonitorearCambios(server, client);
   registerVerificarOC(server, client);

@@ -45,9 +45,10 @@ cambia, se anota la fecha y el motivo debajo.
 
 - **E1** Cuando se llame a `exportar_procesos` con los filtros de `buscar_compras_agiles`, el sistema deberá paginar por dentro (10 por página), con el limitador de cuota y la caché.
 - **E2** Deberá escribir el conjunto en la carpeta de datos (`exportaciones/`), en `csv`, `xlsx` o `json`, y devolver la ruta y agregados (cantidad, monto total, mediana, por organismo y por región), no las filas.
-- **E3** Si la primera página indica más páginas que `max_paginas` (por defecto 20, tope 50), deberá decirlo antes de seguir y exportar solo hasta el tope, marcado como truncado.
+- **E3** Si la búsqueda tiene más páginas que `max_paginas` (por defecto 20, tope 50), deberá exportar solo hasta el tope, marcado como truncado, con el total que existe.
 - **E4** Si una página falla a mitad, deberá exportar lo leído, marcado como parcial, y decir desde qué página falta.
 - **E5** La respuesta deberá informar las consultas a la API que gastó.
+- **E6** Si la exportación no termina dentro del tiempo de una herramienta, deberá seguir en segundo plano y responder con el avance. Al llamarla de nuevo con los mismos filtros, deberá entregar el resultado sin repetir consultas.
 
 ## T — Varios tickets con rotación (H3) · 2.10.0 · MEJORA-006
 

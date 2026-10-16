@@ -49,7 +49,7 @@ el ciclo completo, **en el equipo del usuario y gratis**:
 | :--- | :--- | :--- |
 | 0 | Medición, especificación y ADR | ✅ 16-oct |
 | 1 | Lectura multiformato | ✅ 16-oct |
-| 2 | `exportar_procesos` | ⏳ |
+| 2 | `exportar_procesos` | ✅ 16-oct |
 | 3 | Rotación de tickets | ⏳ |
 | 4 | Espacio de cotización | ⏳ |
 | 5 | Requisitos y recordatorio de cierre | ⏳ |

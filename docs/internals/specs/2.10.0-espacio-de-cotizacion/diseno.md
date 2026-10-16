@@ -62,12 +62,18 @@ descargar_y_leer_documento
 
 ## 4. Exportar (2.10)
 
-`exportar_procesos` usa `client.buscarTodo` (ya pagina con el limitador y la
-caché). Antes de seguir, mira `total_resultados` de la primera página: si pasa
-de `max_paginas`, lo dice y exporta hasta el tope. Escribe
+`exportar_procesos` pagina por su cuenta (10 por página, con el limitador y la
+caché) para poder cortar en la página que falla (E4). Escribe
 `datos/exportaciones/procesos-AAAAMMDD-HHMM.{csv|xlsx|json}` y devuelve
-agregados. Las columnas usan los mismos campos normalizados que
-`buscar_compras_agiles`, con las fechas en hora de Chile.
+agregados, no las filas. Las columnas son los campos de `buscar_compras_agiles`,
+con las fechas en hora de Chile.
+
+**Tiempo (E6).** Una herramienta tiene 45 s y una página tarda hasta ~8 s
+(Hermes midió 154 s para 20). La exportación corre como trabajo en segundo
+plano (`fueraDeLaHerramienta`), identificado por sus filtros. La herramienta
+espera hasta 35 s: si terminó, entrega el resultado; si no, el avance y la
+indicación de volver a llamarla igual. Un trabajo terminado se guarda 1 h; uno
+en curso no se lanza dos veces.
 
 ## 5. Tickets (2.10, ADR 0031)
 

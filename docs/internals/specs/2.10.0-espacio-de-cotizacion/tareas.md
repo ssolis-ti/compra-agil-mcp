@@ -26,15 +26,16 @@ fase se suman a la puerta común del [README](README.md).
 
 **Puerta:** los 5 ejemplos de la medición, leídos contra el portal real. ✅ docx, doc y xlsx leídos; png y xls, rechazados con su motivo. Cobertura de los módulos nuevos: 92–100 % de líneas.
 
-## Fase 2 — `exportar_procesos` · 2.10.0
+## Fase 2 — `exportar_procesos` · 2.10.0 ✅ (16-oct-2026)
 
 | Id | Tarea | Prueba | Cubre |
 | :--- | :--- | :--- | :--- |
-| T2.1 | Herramienta con los filtros de `buscar_compras_agiles` | `exportar.test.ts` contra la API simulada | E1 |
-| T2.2 | Escritores `csv` y `xlsx` (fflate) y `json` | Abrir el `.xlsx` con el lector de T1.4 | E2 |
-| T2.3 | Agregados y aviso de truncado y parcial | Casos de 0, 1 y 25 páginas; 504 en la página 3 | E2–E5 |
+| T2.1 ✅ | Herramienta con los filtros de `buscar_compras_agiles` | `exportar.test.ts` contra la API simulada | E1 |
+| T2.2 ✅ | Escritores `csv` y `xlsx` (fflate) y `json` | Abrir el `.xlsx` con el lector de T1.4 | E2 |
+| T2.3 ✅ | Agregados y aviso de truncado y parcial | Casos de 0, 1 y 25 páginas; 504 en la página 3 | E2–E5 |
+| T2.4 ✅ | Trabajo en segundo plano: avance, misma llamada entrega el resultado | Una exportación lenta con reloj simulado | E6 |
 
-**Puerta:** un mes de una región real exportado y abierto en Excel.
+**Puerta:** un mes de una región real exportado y abierto en Excel. ✅ Aysén, septiembre: 2.422 procesos (243 páginas). Se exportaron 500 en 50 páginas (9 min, en segundo plano), y el siguiente tramo siguió sin repetir ni saltar procesos (2.422 → 2.412). El `.xlsx` y el `.csv` abren en Excel sin reparar, con montos numéricos y tildes correctas.
 
 ## Fase 3 — Rotación de tickets · 2.10.0
 
@@ -94,7 +95,7 @@ fase se suman a la puerta común del [README](README.md).
 | Requisitos | Tareas |
 | :--- | :--- |
 | L1–L8, N1 | T1.1–T1.8 |
-| E1–E5 | T2.1–T2.3 |
+| E1–E6 | T2.1–T2.4 |
 | T1–T6 | T3.1–T3.5 |
 | C1–C6, S4, S5 | T4.1–T4.5 |
 | Q1–Q5 | T5.1–T5.3 |

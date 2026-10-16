@@ -14,6 +14,13 @@ Todos los cambios notables realizados en este proyecto se registrarán en este a
   * **Lo que no se lee:** imágenes y `.xls` antiguos; la herramienta lo dice y entrega la ficha.
   * **Seguridad:** las fórmulas y macros nunca se ejecutan, y hay límites contra archivos enormes y bombas ZIP.
   * **Sin módulos nativos:** la extensión sigue arrancando con el Node de Claude.
+* **Nueva herramienta `exportar_procesos`** (2.10.0, fase 2). Exporta a Excel, CSV o JSON todas las compras de una búsqueda, no solo una página de 10.
+  * **Filtros:** los mismos de `buscar_compras_agiles`, más `formato` y `max_paginas` (20 por defecto, máximo 50).
+  * **Respuesta:** la ruta del archivo y un resumen (cantidad, monto total, mediana, por organismo y por región), no las filas.
+  * **Búsquedas largas:** siguen en segundo plano. Se vuelve a llamar con los mismos filtros para obtener el archivo, sin repetir consultas.
+  * **Más páginas que el tope:** la respuesta dice con qué `publicado_hasta` seguir.
+  * **Una página que falla:** se exporta lo leído y se dice desde qué página falta.
+  * **El CSV** usa `;` y abre directo en Excel en español.
 
 ---
 
