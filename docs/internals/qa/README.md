@@ -40,6 +40,7 @@ npm test            # todos deben pasar (884 en la 2.9.0)
 
 Después, en este orden:
 
+1. **2.10–2.12, espacio de cotización:** [especificación](../specs/2.10.0-espacio-de-cotizacion/README.md) (fase 0 cerrada el 16-oct).
 1. **Seguimiento de la 2.9.0**, anotado en su [especificación](../specs/2.9.0-vigilancia-y-avisos/README.md):
    - semana real completa (T10.3);
    - correo con una cuenta real (T6.3);

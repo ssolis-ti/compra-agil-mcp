@@ -38,3 +38,7 @@ Una decisión nueva va en un archivo nuevo con el número siguiente. Una que cam
 | [0026](0026-un-nucleo-dos-modos-gateway-y-daemon.md) | *(2.9.0)* un núcleo, dos modos: el gateway entrega, el daemon vigila solo |
 | [0027](0027-vincular-telegram-con-codigo.md) | *(2.9.0)* el chat de Telegram se vincula con un código que el usuario dicta |
 | [0028](0028-vigilancia-con-claude-o-siempre.md) | *(2.9.0)* dos modos de vigilancia: «con Claude» y «siempre» |
+| [0029](0029-lectores-de-documentos-sin-modulos-nativos.md) | *(2.10.0)* lectores de documentos sin módulos nativos |
+| [0030](0030-espacio-de-cotizacion-en-archivos-json.md) | *(2.11.0)* el espacio de cotización vive en archivos JSON |
+| [0031](0031-varios-tickets-con-rotacion.md) | *(2.10.0)* varios tickets con rotación, y su advertencia |
+| [0032](0032-documentos-generados-los-revisa-el-usuario.md) | *(2.12.0)* los documentos generados los revisa el usuario |
